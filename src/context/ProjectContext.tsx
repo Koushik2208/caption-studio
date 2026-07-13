@@ -4,6 +4,8 @@ import { FONT_PRESETS, type FontPresetName } from '../captions/styles/presets';
 import type { CaptionStyleOverrides, CaptionStyleVariant } from '../captions/styles/types';
 import { DEFAULT_KEYWORDS } from '../captions/styles/applyKeywordEmphasis';
 import type { OverlaySettings, ProgressBarPosition, WatermarkPosition } from '../overlay/types';
+import type { FrameSettings, FrameVariant } from '../frames/types';
+import type { OverlayIntensity, TextureOverlaySettings } from '../textures/types';
 
 export type TranscribeStatus = 'idle' | 'uploading' | 'error';
 export type VerticalAlign = 'flex-start' | 'center' | 'end';
@@ -16,6 +18,12 @@ export type SaveStatus = 'saved' | 'saving';
 // the TopBar's "Saving..."/"Saved" indicator real instead of static text.
 const STORAGE_KEY = 'caption-studio:project';
 const SAVE_DEBOUNCE_MS = 600;
+
+// Dev-workflow convenience only: the transcript itself is small JSON (unlike
+// the media File it came from), so it's cheap to cache separately and
+// restore on reload - skips re-uploading + re-running Whisper on every
+// refresh while iterating on Style/Overlay/Export. Media never persists.
+const TRANSCRIPT_STORAGE_KEY = 'caption-studio:cached-transcript';
 
 type PersistedState = {
   id: string;
@@ -34,6 +42,13 @@ type PersistedState = {
   progressBarEnabled: boolean;
   progressBarColor: string;
   progressBarPosition: ProgressBarPosition;
+  frameVariant: FrameVariant;
+  frameBgColor: string;
+  filmDustEnabled: boolean;
+  halationEnabled: boolean;
+  halationIntensity: OverlayIntensity;
+  gridEnabled: boolean;
+  gridIntensity: OverlayIntensity;
 };
 
 const generateId = (): string =>
@@ -53,6 +68,17 @@ const readPersistedState = (): PersistedState | null => {
 // Read once at module load (i.e. once per app load) rather than per-render.
 const persisted = readPersistedState();
 
+const readCachedTranscript = (): Caption[] | null => {
+  try {
+    const raw = localStorage.getItem(TRANSCRIPT_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as Caption[]) : null;
+  } catch {
+    return null;
+  }
+};
+
+const cachedTranscript = readCachedTranscript();
+
 interface ProjectContextType {
   mediaFile: File | null;
   mediaUrl: string | null;
@@ -63,6 +89,10 @@ interface ProjectContextType {
   setSrtFile: (file: File | null) => void;
   transcribe: (mediaFile: File) => Promise<void>;
   reset: () => void;
+  // Dev-workflow convenience: clears just the cached-transcript localStorage
+  // entry (and the in-memory captions it restored), separate from clearing
+  // the rest of the project's Style/Overlay settings.
+  clearCachedTranscript: () => void;
   // Project identity - projectId is stable/real (not the old hardcoded
   // "CAP-2023-99X"-style strings), projectName is user-editable in the
   // TopBar and drives export filenames.
@@ -110,6 +140,28 @@ interface ProjectContextType {
   progressBarPosition: ProgressBarPosition;
   setProgressBarPosition: (position: ProgressBarPosition) => void;
   overlaySettings: OverlaySettings;
+  // Frame tab controls, lifted the same way as overlaySettings above - the
+  // same frameSettings object drives the live PreviewPlayer on every tab and
+  // gets baked into the real export render.
+  frameVariant: FrameVariant;
+  setFrameVariant: (variant: FrameVariant) => void;
+  frameBgColor: string;
+  setFrameBgColor: (color: string) => void;
+  frameSettings: FrameSettings;
+  // Texture overlay tab controls, lifted the same way as frameSettings above
+  // - each texture is independently toggleable (unlike Frame's single-select
+  // variant) since reel-craft's textures are designed to combine.
+  filmDustEnabled: boolean;
+  setFilmDustEnabled: (enabled: boolean) => void;
+  halationEnabled: boolean;
+  setHalationEnabled: (enabled: boolean) => void;
+  halationIntensity: OverlayIntensity;
+  setHalationIntensity: (intensity: OverlayIntensity) => void;
+  gridEnabled: boolean;
+  setGridEnabled: (enabled: boolean) => void;
+  gridIntensity: OverlayIntensity;
+  setGridIntensity: (intensity: OverlayIntensity) => void;
+  textureSettings: TextureOverlaySettings;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -118,7 +170,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [srtFile, setSrtFile] = useState<File | null>(null);
-  const [captions, setCaptions] = useState<Caption[] | null>(null);
+  const [captions, setCaptions] = useState<Caption[] | null>(cachedTranscript);
   const [transcribeStatus, setTranscribeStatus] = useState<TranscribeStatus>('idle');
   const [transcribeError, setTranscribeError] = useState<string | null>(null);
 
@@ -165,6 +217,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     persisted?.progressBarPosition ?? 'bottom',
   );
 
+  const [frameVariant, setFrameVariant] = useState<FrameVariant>(persisted?.frameVariant ?? 'none');
+  const [frameBgColor, setFrameBgColor] = useState(persisted?.frameBgColor ?? '#000000');
+
+  const [filmDustEnabled, setFilmDustEnabled] = useState(persisted?.filmDustEnabled ?? false);
+  const [halationEnabled, setHalationEnabled] = useState(persisted?.halationEnabled ?? false);
+  const [halationIntensity, setHalationIntensity] = useState<OverlayIntensity>(
+    persisted?.halationIntensity ?? 'medium',
+  );
+  const [gridEnabled, setGridEnabled] = useState(persisted?.gridEnabled ?? false);
+  const [gridIntensity, setGridIntensity] = useState<OverlayIntensity>(persisted?.gridIntensity ?? 'medium');
+
   const overlaySettings: OverlaySettings = useMemo(
     () => ({
       watermarkEnabled,
@@ -175,6 +238,16 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       progressBarPosition,
     }),
     [watermarkEnabled, watermarkOpacity, watermarkPosition, progressBarEnabled, progressBarColor, progressBarPosition],
+  );
+
+  const frameSettings: FrameSettings = useMemo(
+    () => ({ variant: frameVariant, bgColor: frameBgColor }),
+    [frameVariant, frameBgColor],
+  );
+
+  const textureSettings: TextureOverlaySettings = useMemo(
+    () => ({ filmDustEnabled, halationEnabled, halationIntensity, gridEnabled, gridIntensity }),
+    [filmDustEnabled, halationEnabled, halationIntensity, gridEnabled, gridIntensity],
   );
 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
@@ -198,6 +271,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       progressBarEnabled,
       progressBarColor,
       progressBarPosition,
+      frameVariant,
+      frameBgColor,
+      filmDustEnabled,
+      halationEnabled,
+      halationIntensity,
+      gridEnabled,
+      gridIntensity,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     setSaveStatus('saved');
@@ -218,6 +298,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     progressBarEnabled,
     progressBarColor,
     progressBarPosition,
+    frameVariant,
+    frameBgColor,
+    filmDustEnabled,
+    halationEnabled,
+    halationIntensity,
+    gridEnabled,
+    gridIntensity,
   ]);
 
   // Debounced autosave: "Saving..." is shown for real while a write is
@@ -264,6 +351,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         const data: { captions: Caption[] } = await response.json();
         setCaptions(data.captions);
+        localStorage.setItem(TRANSCRIPT_STORAGE_KEY, JSON.stringify(data.captions));
         setTranscribeStatus('idle');
       } catch (error) {
         setTranscribeStatus('error');
@@ -286,6 +374,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setTranscribeError(null);
   }, []);
 
+  const clearCachedTranscript = useCallback(() => {
+    localStorage.removeItem(TRANSCRIPT_STORAGE_KEY);
+    setCaptions(null);
+  }, []);
+
   return (
     <ProjectContext.Provider
       value={{
@@ -298,6 +391,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setSrtFile,
         transcribe,
         reset,
+        clearCachedTranscript,
         projectId,
         projectName,
         setProjectName,
@@ -334,6 +428,22 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         progressBarPosition,
         setProgressBarPosition,
         overlaySettings,
+        frameVariant,
+        setFrameVariant,
+        frameBgColor,
+        setFrameBgColor,
+        frameSettings,
+        filmDustEnabled,
+        setFilmDustEnabled,
+        halationEnabled,
+        setHalationEnabled,
+        halationIntensity,
+        setHalationIntensity,
+        gridEnabled,
+        setGridEnabled,
+        gridIntensity,
+        setGridIntensity,
+        textureSettings,
       }}
     >
       {children}

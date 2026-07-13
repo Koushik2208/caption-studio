@@ -22,7 +22,17 @@ const triggerBlobDownload = (blob: Blob, filename: string) => {
 
 export const ExportPage: React.FC = () => {
   const { layoutMode } = useLayout();
-  const { captions, mediaUrl, styleVariant, styleOverrides, overlaySettings, projectName, projectId } = useProject();
+  const {
+    captions,
+    mediaUrl,
+    styleVariant,
+    styleOverrides,
+    overlaySettings,
+    frameSettings,
+    textureSettings,
+    projectName,
+    projectId,
+  } = useProject();
   const durationInFrames = useMediaDurationFrames(mediaUrl, FPS);
   const safeFilename = toSafeFilename(projectName);
 
@@ -93,8 +103,11 @@ export const ExportPage: React.FC = () => {
           styleVariant,
           styleOverrides,
           overlaySettings,
+          frameSettings,
+          textureSettings,
           durationInFrames,
           scale: RESOLUTION_SCALE[resolution],
+          orientation: layoutMode,
         }),
       });
 

@@ -1,8 +1,10 @@
 import React from 'react';
 import { useLayout } from '../../context/LayoutContext';
+import { useProject } from '../../context/ProjectContext';
 
 export const SettingsModal: React.FC = () => {
   const { layoutMode, setLayoutMode, isSettingsOpen, setIsSettingsOpen } = useLayout();
+  const { clearCachedTranscript } = useProject();
 
   if (!isSettingsOpen) return null;
 
@@ -64,6 +66,19 @@ export const SettingsModal: React.FC = () => {
           <div className="flex flex-col gap-1 text-body-sm text-on-surface-variant leading-relaxed p-3 bg-primary-container/5 rounded-lg border border-primary-container/10">
             <span className="font-bold text-primary">Layout Adaptive Preview:</span>
             Switching layout formats instantly refits the player canvas and asset proportions across the Dashboard editing workflows.
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <span className="text-label-caps font-label-caps text-outline uppercase tracking-wider text-[11px]">
+              Developer
+            </span>
+            <button
+              onClick={clearCachedTranscript}
+              className="flex items-center justify-center gap-2 py-2 px-3 rounded-md text-body-sm font-semibold border border-outline-variant/60 text-on-surface-variant hover:text-error hover:border-error/40 transition-all cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
+              Clear cached transcript
+            </button>
           </div>
         </div>
 

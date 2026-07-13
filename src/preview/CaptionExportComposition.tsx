@@ -5,6 +5,10 @@ import type { CaptionStyleOverrides, CaptionStyleVariant } from '../captions/sty
 import type { OverlaySettings } from '../overlay/types';
 import { WatermarkOverlay } from '../overlay/WatermarkOverlay';
 import { ProgressBarOverlay } from '../overlay/ProgressBarOverlay';
+import type { FrameSettings } from '../frames/types';
+import { FrameRenderer } from '../frames/FrameRenderer';
+import type { TextureOverlaySettings } from '../textures/types';
+import { TextureOverlayRenderer } from '../textures/TextureOverlayRenderer';
 
 // DaVinci Resolve Ultra Key-compatible chroma green (see PLAN.md Part E).
 const CHROMA_GREEN = '#00B140';
@@ -14,10 +18,15 @@ export type CaptionExportProps = {
   styleVariant?: CaptionStyleVariant;
   styleOverrides?: CaptionStyleOverrides;
   overlaySettings?: OverlaySettings;
+  frameSettings?: FrameSettings;
+  textureSettings?: TextureOverlaySettings;
   // Read by Root.tsx's calculateMetadata, not by this component - kept on
   // the same props type so the server can pass one inputProps object through
   // both selectComposition and renderMedia.
   durationInFrames?: number;
+  // Also read only by calculateMetadata, to size the composition itself
+  // (1080x1920 vs 1920x1080) rather than always rendering vertical.
+  orientation?: 'vertical' | 'horizontal';
 };
 
 // Minimal export-only composition: captions over a solid chroma-key
@@ -29,16 +38,21 @@ export const CaptionExportComposition: React.FC<CaptionExportProps> = ({
   styleVariant,
   styleOverrides,
   overlaySettings,
+  frameSettings,
+  textureSettings,
 }) => {
   return (
-    <AbsoluteFill style={{ backgroundColor: CHROMA_GREEN }}>
-      <CaptionRenderer captions={captions} styleVariant={styleVariant} styleOverrides={styleOverrides} />
-      {overlaySettings?.watermarkEnabled && (
-        <WatermarkOverlay opacity={overlaySettings.watermarkOpacity} position={overlaySettings.watermarkPosition} />
-      )}
-      {overlaySettings?.progressBarEnabled && (
-        <ProgressBarOverlay color={overlaySettings.progressBarColor} position={overlaySettings.progressBarPosition} />
-      )}
-    </AbsoluteFill>
+    <FrameRenderer frameSettings={frameSettings}>
+      <AbsoluteFill style={{ backgroundColor: CHROMA_GREEN }}>
+        <TextureOverlayRenderer textureSettings={textureSettings} />
+        <CaptionRenderer captions={captions} styleVariant={styleVariant} styleOverrides={styleOverrides} />
+        {overlaySettings?.watermarkEnabled && (
+          <WatermarkOverlay opacity={overlaySettings.watermarkOpacity} position={overlaySettings.watermarkPosition} />
+        )}
+        {overlaySettings?.progressBarEnabled && (
+          <ProgressBarOverlay color={overlaySettings.progressBarColor} position={overlaySettings.progressBarPosition} />
+        )}
+      </AbsoluteFill>
+    </FrameRenderer>
   );
 };

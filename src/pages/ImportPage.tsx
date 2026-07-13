@@ -11,7 +11,8 @@ import { formatProjectId } from '../utils/filename';
 export const ImportPage: React.FC = () => {
   const navigate = useNavigate();
   const { layoutMode } = useLayout();
-  const { mediaUrl, srtFile, setSrtFile, transcribe, transcribeStatus, transcribeError, projectId } = useProject();
+  const { mediaUrl, captions, srtFile, setSrtFile, transcribe, transcribeStatus, transcribeError, projectId } =
+    useProject();
   const srtInputRef = useRef<HTMLInputElement>(null);
   const mainInputRef = useRef<HTMLInputElement>(null);
   const isTranscribing = transcribeStatus === 'uploading';
@@ -51,7 +52,7 @@ export const ImportPage: React.FC = () => {
     <div className="flex h-full w-full overflow-hidden">
       {/* Central Workspace Canvas */}
       <main className="flex-1 p-canvas-margin flex items-center justify-center bg-surface-container overflow-hidden relative">
-        {mediaUrl ? (
+        {mediaUrl || (captions && captions.length > 0) ? (
           <div
             className={`relative bg-black rounded-2xl overflow-hidden canvas-shadow border border-outline-variant/30 transition-all duration-300 ${layoutMode === 'horizontal'
                 ? 'aspect-video w-full max-w-[800px] h-auto'

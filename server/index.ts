@@ -12,6 +12,8 @@ import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
 import type { CaptionStyleOverrides, CaptionStyleVariant } from "../src/captions/styles/types.js";
 import type { OverlaySettings } from "../src/overlay/types.js";
+import type { FrameSettings } from "../src/frames/types.js";
+import type { TextureOverlaySettings } from "../src/textures/types.js";
 
 // ffmpeg-static's CJS export shape doesn't line up with its own .d.ts under
 // "module": "nodenext", so import it via require() and assert the type instead.
@@ -204,11 +206,18 @@ type GreenScreenRequestBody = {
   styleVariant?: CaptionStyleVariant;
   styleOverrides?: CaptionStyleOverrides;
   overlaySettings?: OverlaySettings;
+  frameSettings?: FrameSettings;
+  textureSettings?: TextureOverlaySettings;
   durationInFrames: number;
   // ExportPage's Resolution dropdown, converted client-side to a renderMedia
-  // scale factor (see src/export/resolutions.ts) - multiplies the fixed
-  // 1080x1920 composition rather than changing its logical size.
+  // scale factor (see src/export/resolutions.ts) - multiplies the composition's
+  // logical resolution (1080x1920 or 1920x1080, see orientation) rather than
+  // changing it.
   scale?: number;
+  // LayoutContext's layoutMode, forwarded through to Root.tsx's
+  // calculateMetadata so the render itself is sized 1920x1080 for horizontal
+  // instead of always rendering the vertical composition.
+  orientation?: "vertical" | "horizontal";
 };
 
 const runGreenScreenRender = async (jobId: string, body: GreenScreenRequestBody) => {
@@ -222,7 +231,10 @@ const runGreenScreenRender = async (jobId: string, body: GreenScreenRequestBody)
       styleVariant: body.styleVariant,
       styleOverrides: body.styleOverrides,
       overlaySettings: body.overlaySettings,
+      frameSettings: body.frameSettings,
+      textureSettings: body.textureSettings,
       durationInFrames: body.durationInFrames,
+      orientation: body.orientation ?? "vertical",
     };
 
     const composition = await selectComposition({

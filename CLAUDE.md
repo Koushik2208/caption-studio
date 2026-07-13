@@ -14,6 +14,7 @@ Remotion faceless-content video system: voiceover + word-synced animated caption
 - Never merge small component files into bigger ones "for convenience"
 - Verify ONCE per phase/step, not after every small edit. Make all changes for the current step first, then run a single verification pass (tsc/build, plus one live check only if the step is visual/UI). Don't spin up dev servers, sleep, and read logs after every individual file change.
 - When debugging a reported issue (screenshot, error, description): read the relevant code FIRST and form a hypothesis before running/restarting any server. Only reproduce live if the cause isn't identifiable from the code, or to confirm a fix after making it.
+- Default to manual verification by the user over automated browser verification (Playwright, headless Chrome, etc.). After a code change: verify via tsc/build, then describe exactly what to check and where (specific page, specific action, specific expected result) — let the user check in their own browser and report back. Only attempt to set up/run browser automation if explicitly asked, or if a fix genuinely cannot be confirmed any other way.
 
 ## Non-negotiable technical facts
 - Captions/timestamps are in MILLISECONDS; Remotion works in FRAMES. Convert: timeMs = (frame/fps)*1000
