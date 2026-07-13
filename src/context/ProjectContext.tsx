@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import type { Caption } from '@remotion/captions';
 import { FONT_PRESETS, type FontPresetName } from '../captions/styles/presets';
 import type { CaptionStyleOverrides, CaptionStyleVariant } from '../captions/styles/types';
+import { DEFAULT_KEYWORDS } from '../captions/styles/applyKeywordEmphasis';
 import type { OverlaySettings, ProgressBarPosition, WatermarkPosition } from '../overlay/types';
 
 export type TranscribeStatus = 'idle' | 'uploading' | 'error';
@@ -24,6 +25,7 @@ type PersistedState = {
   keywordHighlightEnabled: boolean;
   highlightIntensity: number;
   highlightColor: string;
+  keywords: string[];
   verticalAlign: VerticalAlign;
   horizontalAlign: HorizontalAlign;
   watermarkEnabled: boolean;
@@ -83,6 +85,8 @@ interface ProjectContextType {
   setHighlightIntensity: (intensity: number) => void;
   highlightColor: string;
   setHighlightColor: (color: string) => void;
+  keywords: string[];
+  setKeywords: (keywords: string[]) => void;
   verticalAlign: VerticalAlign;
   setVerticalAlign: (align: VerticalAlign) => void;
   horizontalAlign: HorizontalAlign;
@@ -131,6 +135,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   );
   const [highlightIntensity, setHighlightIntensity] = useState(persisted?.highlightIntensity ?? 0.4);
   const [highlightColor, setHighlightColor] = useState(persisted?.highlightColor ?? '#0066ff');
+  const [keywords, setKeywords] = useState<string[]>(persisted?.keywords ?? DEFAULT_KEYWORDS);
   const [verticalAlign, setVerticalAlign] = useState<VerticalAlign>(persisted?.verticalAlign ?? 'center');
   const [horizontalAlign, setHorizontalAlign] = useState<HorizontalAlign>(persisted?.horizontalAlign ?? 'center');
 
@@ -146,8 +151,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       alignItems: horizontalAlign,
       keywordHighlightEnabled,
       highlightIntensity,
+      keywords,
     }),
-    [preset, highlightColor, verticalAlign, horizontalAlign, keywordHighlightEnabled, highlightIntensity],
+    [preset, highlightColor, verticalAlign, horizontalAlign, keywordHighlightEnabled, highlightIntensity, keywords],
   );
 
   const [watermarkEnabled, setWatermarkEnabled] = useState(persisted?.watermarkEnabled ?? true);
@@ -183,6 +189,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       keywordHighlightEnabled,
       highlightIntensity,
       highlightColor,
+      keywords,
       verticalAlign,
       horizontalAlign,
       watermarkEnabled,
@@ -202,6 +209,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     keywordHighlightEnabled,
     highlightIntensity,
     highlightColor,
+    keywords,
     verticalAlign,
     horizontalAlign,
     watermarkEnabled,
@@ -305,6 +313,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setHighlightIntensity,
         highlightColor,
         setHighlightColor,
+        keywords,
+        setKeywords,
         verticalAlign,
         setVerticalAlign,
         horizontalAlign,

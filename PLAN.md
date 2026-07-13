@@ -337,7 +337,7 @@ Stretch idea: auto-suggest a font preset per content category (Tech/Mono for `sc
 Priority order — build in this sequence, each is independently shippable:
 1. **Typewriter** — characters reveal left to right, no bounce. Easiest to build, highest contrast against existing bouncy Signature style, good for calm/explanatory scenes.
 2. **Slide-up** — each word slides up + fades in on activation. Medium energy, good hook-adjacent option.
-3. **Outline Draw-on** — stroke-only text fills solid as spoken. More stylish/distinctive, slightly more CSS work (stroke via `-webkit-text-stroke` or SVG text).
+3. **Outline Draw-on** — stroke-only text fills solid as spoken. More stylish/distinctive, slightly more CSS work (stroke via `-webkit-text-stroke` or SVG text). Built via a single-element `background-clip: text` gradient-reveal technique (not two overlaid text nodes — see LEARNINGS.md for why two-node approaches drift out of sync token by token).
 
 Deferred further (not this phase): rotate/3D flip, elastic bounce, gradient sweep — same "~20 lines each" pattern as noted in Part B1.
 
@@ -350,13 +350,66 @@ Current single "Font Preset" grid (4 buttons, conflating animation+font+highligh
 - Position grid — unchanged
 
 ## Build order (phased, each phase independently shippable)
-**Phase 1 (do first — fixes both stated pain points with least effort):**
-- Decouple `keywordHighlightEnabled` from `animation` in types.ts and CaptionRenderer
-- Reduce default glow (lower shadow blur/opacity), expose `highlightIntensity` as a real prop
-- Style tab: split the single Font Preset grid into Animation Style selector + separate Keyword Highlight toggle+slider (font grid can stay as-is for this phase)
+**Phase 1 (done — fixed both stated pain points):** decoupled keywordHighlightEnabled from animation; reduced glow, exposed highlightIntensity; Style tab split into Animation Style selector + Keyword Highlight toggle/slider.
 
 **Phase 2:** Expand font presets to the 8-preset table above, wire into the now-separate Font section.
 
-**Phase 3:** Build Typewriter, then Slide-up, then Outline Draw-on (one PR each, verify live in Player before starting the next).
+**Phase 3 (done):** Typewriter, Slide-up, and Outline Draw-on all built and verified. Outline Draw-on required 3 iterations to get right — see LEARNINGS.md for the two-overlaid-text-nodes drift bug and the single-element gradient-clip fix.
 
 **Phase 4 (stretch, optional):** Editable keyword list UI (currently keywords may be hardcoded/parsed from bold-script only), auto-suggest font per content category.
+
+---
+
+# PART G — PORTING FRAMES & OVERLAYS FROM REEL CRAFT
+
+## Context
+A prior project (`reel-craft`, github.com/Koushik2208/reel-craft) built a broader visual toolkit — 18 frames, 10 texture overlays, 6 motion graphics, 12 named text styles, transitions, image effects — but lacked real transcription (Whisper modeled but never wired) and had a less intuitive UI. Caption Studio's caption engine (real local Whisper, verified split/sync correctness) is more solid; Reel Craft's peripheral visual features (frames/overlays) are more developed. Porting the reusable pieces rather than rebuilding from scratch.
+
+## What transfers cleanly vs. what doesn't
+**Transfers directly:** the frame and overlay React/Remotion components themselves. Reel Craft's own docs confirm they're driven purely by frame/spring interpolation, not CSS animation or DOM timers — meaning they render identically in live preview and in a server-side render, same discipline Caption Studio's caption engine already follows. No dependency on Reel Craft's Zustand store or Manual/Linked mode system.
+
+**Does NOT transfer, don't attempt:** Reel Craft's WebCodecs in-browser rendering pipeline, its Manual/Linked project-mode split, transitions/SceneSeries system. None of this applies to Caption Studio's single continuous-caption-track model.
+
+## Scope (phased — do not port all 18 frames + 10 overlays at once)
+**Phase 1:**
+- **Frames (4-5):** Minimal Bezel, Gradient Border, Neon Glow, Cinematic Scope. These suit vertical caption-first content without adding visual clutter; skip device-mockup frames (Browser Window, TV Frame, Floating Device) for now — lower relevance to this use case.
+- **Overlays (3):** Film Dust, Halation, Grid — Reel Craft's own documented "film look" combo (Halation + Film Dust + Noise), Grid added as a cheap "digital/tech" texture option.
+
+**Later phases (not now):** remaining frames, remaining overlays, motion graphics beyond the Progress Bar already built (Step Badge and Number Counter are the next most broadly useful if revisited).
+
+## Integration point
+Same pattern as Overlay tab's existing watermark/progress-bar: new `FrameSettings`/`TextureOverlaySettings` in `ProjectContext`, rendered by the same `PreviewPlayer` every tab already uses, baked into both the live preview and the actual Green Screen export via `CaptionExportComposition`. Frames wrap the whole composition (outermost layer); texture overlays sit between the background/media and the caption layer (don't obscure captions) — confirm this stacking order explicitly when building, since Reel Craft's fixed-stack-order note (subtle textures first, expressive effects on top) implies this matters for combinability.
+
+## Build order
+1. Port the 4-5 frame components as-is, adapt props to Caption Studio's existing style (no Zustand, plain props/context)
+2. Wire a Frame selector into a relevant tab (Overlay tab, alongside watermark/progress bar, or a new Frames section)
+3. Port the 3 overlay components, wire similarly with on/off + intensity where applicable
+4. Verify: live preview shows frame+overlay+captions all compositing correctly, AND a real Green Screen export confirms the same via ffmpeg frame extraction (same verification standard used throughout this project)
+
+---
+
+# PART H — TRANSCRIPT EDITING (fix Whisper mistakes before they're locked in)
+
+## Problem
+Whisper transcription is good but not perfect — occasional mis-heard words, especially on names, numbers, or unusual terms. Right now there's no way to fix a wrong word without either (a) not noticing until final export, or (b) re-recording. The SRT wording-cross-check (script wins wording) already covers this IF an SRT/script is attached — but for audio-only uploads with no reference script, there's no ground truth to check against, so errors go unnoticed.
+
+## Design
+A lightweight **Transcript Editor**: after transcription completes, the word-level `Caption[]` already in `ProjectContext` becomes editable in place — click a word, fix the text, timestamp stays untouched. This is deliberately narrow in scope for v1:
+- **In scope:** editing a token's text (fix a wrong word)
+- **In scope:** deleting a token (clear its text — treated as a skip, not rendered) for Whisper hallucinations (rare but real — an extra word Whisper inserted that was never actually spoken)
+- **Out of scope (defer):** inserting a new word, merging/splitting tokens, adjusting timestamps manually — these require recalculating neighboring timing and add real complexity for a rare need; text-only edits cover the overwhelming majority of real mistakes
+
+## UI placement
+Not a new top-level tab — an inline editable view, reachable from the Import tab right after transcription completes (review before moving on) AND from anywhere later (in case a mistake is spotted while previewing on the Style tab) via a small "Edit Transcript" entry point, likely near the Import tab's upload summary or as a modal/panel triggered from any tab.
+
+## Technical approach
+- `TranscriptEditor.tsx`: renders `ProjectContext`'s `captions` array as a sequence of inline-editable spans (click → contentEditable or a small input, blur/enter → save). Directly updates `captions` in context — no new state shape needed, since it's editing the same `Caption[]` everything else already consumes.
+- Deletion: setting a token's text to empty string. `processCaptions.ts` (or a filter step immediately before it) must skip empty-text tokens entirely so they don't produce a blank rendered "word" or break the char-budget/min-duration merge math — filter before the pipeline runs, not after.
+- No new API/server work — this is pure client-side state editing on data that's already local.
+
+## Build order
+1. `TranscriptEditor.tsx`: read-only rendering of tokens first (verify layout/scrolling works for a full 45-60s transcript's worth of words)
+2. Make tokens click-to-edit, wire saves back into `ProjectContext.captions`
+3. Empty-text deletion + the `processCaptions.ts` filter-before-pipeline fix
+4. Entry points: auto-show after transcription, plus a persistent small "Edit Transcript" trigger accessible from other tabs
+5. Verify: intentionally introduce a wrong word, fix it via the editor, confirm the Player preview and a real export both reflect the corrected text with unaffected timestamps

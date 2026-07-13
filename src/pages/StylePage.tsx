@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -21,11 +21,28 @@ export const StylePage: React.FC = () => {
     setHighlightIntensity,
     highlightColor,
     setHighlightColor,
+    keywords,
+    setKeywords,
     verticalAlign,
     setVerticalAlign,
     horizontalAlign,
     setHorizontalAlign,
   } = useProject();
+
+  // Local raw text mirrors the comma-separated input so mid-typing states
+  // (trailing comma, extra spaces) don't get collapsed by the parsed array
+  // re-rendering the field on every keystroke.
+  const [keywordsText, setKeywordsText] = useState(() => keywords.join(', '));
+
+  const handleKeywordsChange = (value: string) => {
+    setKeywordsText(value);
+    setKeywords(
+      value
+        .split(',')
+        .map((k) => k.trim())
+        .filter(Boolean),
+    );
+  };
 
   const animationStyles: { value: typeof animation; label: string }[] = [
     { value: 'signature', label: 'Signature' },
@@ -138,6 +155,17 @@ export const StylePage: React.FC = () => {
                   disabled={!keywordHighlightEnabled}
                   onChange={(e) => setHighlightIntensity(Number(e.target.value))}
                   className="w-full cursor-pointer accent-primary"
+                />
+              </label>
+
+              <label className="flex flex-col gap-1">
+                <span className="text-xs text-on-surface-variant">Keywords (comma-separated)</span>
+                <input
+                  type="text"
+                  value={keywordsText}
+                  onChange={(e) => handleKeywordsChange(e.target.value)}
+                  placeholder="e.g. bacteria, chemistry, hydrogen"
+                  className="w-full px-2 py-1.5 text-sm border border-outline-variant rounded-md bg-surface focus:outline-none focus:border-primary"
                 />
               </label>
             </div>
