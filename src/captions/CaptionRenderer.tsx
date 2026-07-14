@@ -7,6 +7,7 @@ import {
   useVideoConfig,
 } from "remotion";
 import type { Caption } from "@remotion/captions";
+import type { FrameContentInset } from "../frames/types";
 import { processCaptions } from "./processCaptions";
 import { CalmPhrase } from "./styles/CalmPhrase";
 import { OutlineDraw } from "./styles/OutlineDraw";
@@ -31,6 +32,11 @@ type CaptionRendererProps = {
   // rather than the faceless-app per-scene energetic/calm switching.
   styleVariant?: CaptionStyleVariant;
   styleOverrides?: CaptionStyleOverrides;
+  // How much space the active frame's own chrome already occupies (e.g.
+  // Cinematic Scope's letterbox bars) - passed through to every style
+  // component's getPositionStyle call. Undefined/zero for 'none' or frames
+  // that don't reduce usable content area.
+  frameContentInset?: FrameContentInset;
 };
 
 const defaultCaptionMode: CaptionMode = "energetic";
@@ -42,6 +48,7 @@ export const CaptionRenderer: React.FC<CaptionRendererProps> = ({
   getCaptionMode = () => defaultCaptionMode,
   styleVariant,
   styleOverrides,
+  frameContentInset,
 }) => {
   const { fps } = useVideoConfig();
   const [fetchedCaptions, setFetchedCaptions] = useState<Caption[] | null>(null);
@@ -86,15 +93,15 @@ export const CaptionRenderer: React.FC<CaptionRendererProps> = ({
             durationInFrames={page.durationInFrames}
           >
             {variant === "calmPhrase" ? (
-              <CalmPhrase page={page} overrides={styleOverrides} />
+              <CalmPhrase page={page} overrides={styleOverrides} contentInset={frameContentInset} />
             ) : variant === "typewriter" ? (
-              <Typewriter page={page} overrides={styleOverrides} />
+              <Typewriter page={page} overrides={styleOverrides} contentInset={frameContentInset} />
             ) : variant === "slideUp" ? (
-              <SlideUp page={page} overrides={styleOverrides} />
+              <SlideUp page={page} overrides={styleOverrides} contentInset={frameContentInset} />
             ) : variant === "outlineDraw" ? (
-              <OutlineDraw page={page} overrides={styleOverrides} />
+              <OutlineDraw page={page} overrides={styleOverrides} contentInset={frameContentInset} />
             ) : (
-              <Signature page={page} overrides={styleOverrides} />
+              <Signature page={page} overrides={styleOverrides} contentInset={frameContentInset} />
             )}
           </Sequence>
         );

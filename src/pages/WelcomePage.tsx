@@ -30,7 +30,7 @@ export const WelcomePage: React.FC = () => {
   ];
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-canvas-margin bg-surface-container overflow-y-auto h-full text-center">
+    <div className="min-h-screen w-full flex flex-col items-center justify-center p-canvas-margin bg-surface-container overflow-y-auto text-center">
       <div className="max-w-3xl w-full py-8 px-6 bg-surface-container-lowest border border-outline-variant/60 rounded-2xl canvas-shadow flex flex-col items-center gap-6">
         {/* Brand Icon */}
         <div className="w-20 h-20 rounded-2xl bg-primary-container/10 text-primary flex items-center justify-center shadow-xs">

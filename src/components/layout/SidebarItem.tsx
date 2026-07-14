@@ -11,7 +11,7 @@ interface SidebarItemProps {
 export const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, to, onClick }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const isActive = to ? location.pathname === to : false;
+  const isActive = to ? location.pathname === to || location.pathname.startsWith(`${to}/`) : false;
 
   const handleClick = () => {
     if (onClick) {

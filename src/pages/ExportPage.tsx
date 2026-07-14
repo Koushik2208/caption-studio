@@ -4,7 +4,6 @@ import { serializeSrt } from '@remotion/captions';
 import { useLayout } from '../context/LayoutContext';
 import { useProject } from '../context/ProjectContext';
 import { useMediaDurationFrames } from '../preview/useMediaDurationFrames';
-import { PreviewPlayer } from '../preview/PreviewPlayer';
 import { formatProjectId, toSafeFilename } from '../utils/filename';
 import { RESOLUTION_OPTIONS, RESOLUTION_SCALE, type ResolutionOption } from '../export/resolutions';
 
@@ -184,20 +183,7 @@ export const ExportPage: React.FC = () => {
   const hasCaptions = !!captions && captions.length > 0;
 
   return (
-    <div className="flex h-full w-full overflow-hidden">
-      {/* Central Workspace Canvas - same live PreviewPlayer as Import/Style/Overlay,
-          so this shows exactly what the export will bake in. */}
-      <main className="flex-1 bg-surface-container flex items-center justify-center p-canvas-margin overflow-hidden relative">
-        <div
-          className={`relative bg-black rounded-xl overflow-hidden preview-canvas-shadow border-8 border-white/5 transition-all duration-300 ${layoutMode === 'horizontal'
-              ? 'aspect-video w-full max-w-[800px] h-auto'
-              : 'aspect-9/16 h-[calc(100vh-160px)] max-h-[720px]'
-            }`}
-        >
-          <PreviewPlayer />
-        </div>
-      </main>
-
+    <>
       {/* Right Panel: Export Tool Panel */}
       <aside className="w-panel-width min-w-panel-width max-w-panel-width bg-[#FAFAFA] border-l border-[#E5E5E5] z-40 p-gutter flex flex-col h-full shrink-0 grow-0">
         <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-stack-gap">
@@ -358,6 +344,6 @@ export const ExportPage: React.FC = () => {
           </div>
         </div>
       </aside>
-    </div>
+    </>
   );
 };

@@ -1,15 +1,21 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../components/common/Card';
+import { CondensedCard } from '../components/common/CondensedCard';
 import { Button } from '../components/common/Button';
-import { PreviewPlayer } from '../preview/PreviewPlayer';
-import { useLayout } from '../context/LayoutContext';
 import { useProject } from '../context/ProjectContext';
 import { FONT_PRESETS } from '../captions/styles/presets';
+import type { CaptionPosition } from '../captions/styles/types';
+import { ANIMATION_STYLES, CONDENSED_ANIMATION_COUNT, CONDENSED_FONT_COUNT } from './styleOptions';
+
+const POSITION_OPTIONS: { value: CaptionPosition; label: string }[] = [
+  { value: 'top', label: 'Top' },
+  { value: 'center', label: 'Center' },
+  { value: 'bottom', label: 'Bottom' },
+];
 
 export const StylePage: React.FC = () => {
   const navigate = useNavigate();
-  const { layoutMode } = useLayout();
   const {
     presetName,
     setPresetName,
@@ -23,10 +29,10 @@ export const StylePage: React.FC = () => {
     setHighlightColor,
     keywords,
     setKeywords,
-    verticalAlign,
-    setVerticalAlign,
-    horizontalAlign,
-    setHorizontalAlign,
+    position,
+    setPosition,
+    fontSizeMultiplier,
+    setFontSizeMultiplier,
   } = useProject();
 
   // Local raw text mirrors the comma-separated input so mid-typing states
@@ -44,14 +50,6 @@ export const StylePage: React.FC = () => {
     );
   };
 
-  const animationStyles: { value: typeof animation; label: string }[] = [
-    { value: 'signature', label: 'Signature' },
-    { value: 'calmPhrase', label: 'Calm Phrase' },
-    { value: 'typewriter', label: 'Typewriter' },
-    { value: 'slideUp', label: 'Slide-up' },
-    { value: 'outlineDraw', label: 'Outline Draw' },
-  ];
-
   const colors = [
     { hex: '#0066ff', bgClass: 'bg-primary' },
     { hex: '#ba1a1a', bgClass: 'bg-error' },
@@ -61,37 +59,14 @@ export const StylePage: React.FC = () => {
   ];
 
   return (
-    <div className="flex h-full w-full overflow-hidden">
-      {/* Central Workspace Canvas */}
-      <main className="flex-1 p-canvas-margin flex items-center justify-center bg-surface overflow-hidden relative">
-        {/* Preview Canvas */}
-        <div
-          className={`relative bg-black rounded-2xl overflow-hidden canvas-shadow border border-outline-variant/30 transition-all duration-300 ${layoutMode === 'horizontal'
-              ? 'aspect-video w-full max-w-[800px] h-auto'
-              : 'aspect-9/16 h-[calc(100vh-160px)] max-h-[720px]'
-            }`}
-        >
-          <PreviewPlayer />
-        </div>
-
-        {/* Floating Info Tags */}
-        <div className="absolute top-8 left-8 flex items-center gap-2">
-          <div className="px-3 py-1 bg-surface-container-lowest rounded-full border border-outline-variant/60 flex items-center gap-1.5 shadow-xs">
-            <span className="material-symbols-outlined text-[15px] text-on-surface-variant">aspect_ratio</span>
-            <span className="text-label-caps font-label-caps text-[10px] text-on-surface-variant uppercase">
-              {layoutMode === 'horizontal' ? '16:9 Horizontal' : '9:16 Vertical'}
-            </span>
-          </div>
-        </div>
-      </main>
-
+    <>
       {/* Style Tool Panel (Right Sidebar) */}
       <aside className="w-panel-width min-w-panel-width max-w-panel-width bg-surface-bright border-l border-outline-variant flex flex-col p-gutter h-full shrink-0 grow-0">
         <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-stack-gap">
-          {/* Card 1: Animation Style */}
-          <Card title="ANIMATION STYLE">
+          {/* Card 1: Animation Style (condensed) */}
+          <CondensedCard title="ANIMATION STYLE" moreTo="/style/animations" moreLabel="More animations">
             <div className="grid grid-cols-2 gap-2">
-              {animationStyles.map((a) => (
+              {ANIMATION_STYLES.slice(0, CONDENSED_ANIMATION_COUNT).map((a) => (
                 <button
                   key={a.value}
                   onClick={() => setAnimation(a.value)}
@@ -102,12 +77,12 @@ export const StylePage: React.FC = () => {
                 </button>
               ))}
             </div>
-          </Card>
+          </CondensedCard>
 
-          {/* Card 2: Font */}
-          <Card title="FONT">
+          {/* Card 2: Font (condensed) */}
+          <CondensedCard title="FONT" moreTo="/style/fonts" moreLabel="More fonts">
             <div className="grid grid-cols-2 gap-2">
-              {FONT_PRESETS.map((p) => (
+              {FONT_PRESETS.slice(0, CONDENSED_FONT_COUNT).map((p) => (
                 <button
                   key={p.name}
                   onClick={() => setPresetName(p.name)}
@@ -120,7 +95,7 @@ export const StylePage: React.FC = () => {
                 </button>
               ))}
             </div>
-          </Card>
+          </CondensedCard>
 
           {/* Card 3: Keyword Highlight */}
           <Card title="KEYWORD HIGHLIGHT">
@@ -187,150 +162,40 @@ export const StylePage: React.FC = () => {
             </div>
           </Card>
 
-          {/* Card 5: Position Grid */}
+          {/* Card 5: Position */}
           <Card title="POSITION">
-            <div className="grid grid-cols-3 gap-1 aspect-square max-w-[120px] mx-auto bg-surface-container-low p-1 rounded-lg">
-              {/* Row 1 */}
-              <button
-                onClick={() => {
-                  setVerticalAlign('flex-start');
-                  setHorizontalAlign('start');
-                }}
-                className={`aspect-square bg-white border rounded flex items-center justify-center hover:bg-primary-container/20 transition-all cursor-pointer ${verticalAlign === 'flex-start' && horizontalAlign === 'start'
-                    ? 'border-primary/40 bg-primary-container/10'
-                    : 'border-outline-variant/30'
-                  }`}
-              >
-                <div
-                  className={`w-1.5 h-1.5 rounded-full ${verticalAlign === 'flex-start' && horizontalAlign === 'start' ? 'bg-primary' : 'bg-outline'
+            <div className="grid grid-cols-3 gap-1 bg-surface-container-low p-1 rounded-lg">
+              {POSITION_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setPosition(opt.value)}
+                  className={`h-10 flex items-center justify-center rounded-md text-sm font-medium transition-all cursor-pointer ${position === opt.value
+                      ? 'bg-white border border-primary/40 text-primary'
+                      : 'border border-transparent hover:bg-primary-container/20'
                     }`}
-                ></div>
-              </button>
-              <button
-                onClick={() => {
-                  setVerticalAlign('flex-start');
-                  setHorizontalAlign('center');
-                }}
-                className={`aspect-square bg-white border rounded flex items-center justify-center hover:bg-primary-container/20 transition-all cursor-pointer ${verticalAlign === 'flex-start' && horizontalAlign === 'center'
-                    ? 'border-primary/40 bg-primary-container/10'
-                    : 'border-outline-variant/30'
-                  }`}
-              >
-                <div
-                  className={`w-1.5 h-1.5 rounded-full ${verticalAlign === 'flex-start' && horizontalAlign === 'center' ? 'bg-primary' : 'bg-outline'
-                    }`}
-                ></div>
-              </button>
-              <button
-                onClick={() => {
-                  setVerticalAlign('flex-start');
-                  setHorizontalAlign('end');
-                }}
-                className={`aspect-square bg-white border rounded flex items-center justify-center hover:bg-primary-container/20 transition-all cursor-pointer ${verticalAlign === 'flex-start' && horizontalAlign === 'end'
-                    ? 'border-primary/40 bg-primary-container/10'
-                    : 'border-outline-variant/30'
-                  }`}
-              >
-                <div
-                  className={`w-1.5 h-1.5 rounded-full ${verticalAlign === 'flex-start' && horizontalAlign === 'end' ? 'bg-primary' : 'bg-outline'
-                    }`}
-                ></div>
-              </button>
-
-              {/* Row 2 */}
-              <button
-                onClick={() => {
-                  setVerticalAlign('center');
-                  setHorizontalAlign('start');
-                }}
-                className={`aspect-square bg-white border rounded flex items-center justify-center hover:bg-primary-container/20 transition-all cursor-pointer ${verticalAlign === 'center' && horizontalAlign === 'start'
-                    ? 'border-primary/40 bg-primary-container/10'
-                    : 'border-outline-variant/30'
-                  }`}
-              >
-                <div
-                  className={`w-1.5 h-1.5 rounded-full ${verticalAlign === 'center' && horizontalAlign === 'start' ? 'bg-primary' : 'bg-outline'
-                    }`}
-                ></div>
-              </button>
-              <button
-                onClick={() => {
-                  setVerticalAlign('center');
-                  setHorizontalAlign('center');
-                }}
-                className={`aspect-square bg-white border rounded flex items-center justify-center hover:bg-primary-container/20 transition-all cursor-pointer ${verticalAlign === 'center' && horizontalAlign === 'center'
-                    ? 'border-primary/40 bg-primary-container/10'
-                    : 'border-outline-variant/30'
-                  }`}
-              >
-                <div
-                  className={`w-1.5 h-1.5 rounded-full ${verticalAlign === 'center' && horizontalAlign === 'center' ? 'bg-primary' : 'bg-outline'
-                    }`}
-                ></div>
-              </button>
-              <button
-                onClick={() => {
-                  setVerticalAlign('center');
-                  setHorizontalAlign('end');
-                }}
-                className={`aspect-square bg-white border rounded flex items-center justify-center hover:bg-primary-container/20 transition-all cursor-pointer ${verticalAlign === 'center' && horizontalAlign === 'end'
-                    ? 'border-primary/40 bg-primary-container/10'
-                    : 'border-outline-variant/30'
-                  }`}
-              >
-                <div
-                  className={`w-1.5 h-1.5 rounded-full ${verticalAlign === 'center' && horizontalAlign === 'end' ? 'bg-primary' : 'bg-outline'
-                    }`}
-                ></div>
-              </button>
-
-              {/* Row 3 */}
-              <button
-                onClick={() => {
-                  setVerticalAlign('end');
-                  setHorizontalAlign('start');
-                }}
-                className={`aspect-square bg-white border rounded flex items-center justify-center hover:bg-primary-container/20 transition-all cursor-pointer ${verticalAlign === 'end' && horizontalAlign === 'start'
-                    ? 'border-primary/40 bg-primary-container/10'
-                    : 'border-outline-variant/30'
-                  }`}
-              >
-                <div
-                  className={`w-1.5 h-1.5 rounded-full ${verticalAlign === 'end' && horizontalAlign === 'start' ? 'bg-primary' : 'bg-outline'
-                    }`}
-                ></div>
-              </button>
-              <button
-                onClick={() => {
-                  setVerticalAlign('end');
-                  setHorizontalAlign('center');
-                }}
-                className={`aspect-square bg-white border rounded flex items-center justify-center hover:bg-primary-container/20 transition-all cursor-pointer ${verticalAlign === 'end' && horizontalAlign === 'center'
-                    ? 'border-primary/40 bg-primary-container/10'
-                    : 'border-outline-variant/30'
-                  }`}
-              >
-                <div
-                  className={`w-1.5 h-1.5 rounded-full ${verticalAlign === 'end' && horizontalAlign === 'center' ? 'bg-primary' : 'bg-outline'
-                    }`}
-                ></div>
-              </button>
-              <button
-                onClick={() => {
-                  setVerticalAlign('end');
-                  setHorizontalAlign('end');
-                }}
-                className={`aspect-square bg-white border rounded flex items-center justify-center hover:bg-primary-container/20 transition-all cursor-pointer ${verticalAlign === 'end' && horizontalAlign === 'end'
-                    ? 'border-primary/40 bg-primary-container/10'
-                    : 'border-outline-variant/30'
-                  }`}
-              >
-                <div
-                  className={`w-1.5 h-1.5 rounded-full ${verticalAlign === 'end' && horizontalAlign === 'end' ? 'bg-primary' : 'bg-outline'
-                    }`}
-                ></div>
-              </button>
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
+          </Card>
+
+          {/* Card 6: Font Size */}
+          <Card title="FONT SIZE">
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-on-surface-variant">
+                Size ({Math.round(fontSizeMultiplier * 100)}%)
+              </span>
+              <input
+                type="range"
+                min={0.7}
+                max={1.3}
+                step={0.05}
+                value={fontSizeMultiplier}
+                onChange={(e) => setFontSizeMultiplier(Number(e.target.value))}
+                className="w-full cursor-pointer accent-primary"
+              />
+            </label>
           </Card>
         </div>
 
@@ -345,6 +210,6 @@ export const StylePage: React.FC = () => {
           </Button>
         </div>
       </aside>
-    </div>
+    </>
   );
 };

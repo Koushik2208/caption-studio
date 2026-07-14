@@ -4,9 +4,13 @@ import { AbsoluteFill } from 'remotion';
 export type CinematicScopeProps = { children: React.ReactNode; width: number; height: number };
 
 // Bar height anchored to a true 2.39:1 scope crop (~14% of height, taller
-// than the 8% letterbox used by the cinematic finish).
+// than the 8% letterbox used by the cinematic finish). Exported so caption
+// positioning (getFrameContentInset) can reserve the same amount of space
+// instead of duplicating the ratio.
+export const CINEMATIC_SCOPE_BAR_RATIO = 0.14;
+
 export const CinematicScope: React.FC<CinematicScopeProps> = ({ children, height }) => {
-  const barHeight = height * 0.14;
+  const barHeight = height * CINEMATIC_SCOPE_BAR_RATIO;
 
   return (
     <AbsoluteFill>

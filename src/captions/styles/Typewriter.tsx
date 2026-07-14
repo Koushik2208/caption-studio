@@ -1,9 +1,11 @@
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import type { FrameContentInset } from "../../frames/types";
 import type { CaptionPage } from "../processCaptions";
 import type { CaptionStyleOverrides } from "./types";
 import { applyKeywordEmphasis, DEFAULT_KEYWORDS, isKeywordToken } from "./applyKeywordEmphasis";
+import { getResponsiveFontSize } from "./fontSize";
+import { getPositionStyle } from "./position";
 
-const FONT_SIZE = 85;
 const HIGHLIGHT_COLOR = "#ffd23f";
 const CURSOR_BLINK_FRAMES = 10;
 
@@ -12,12 +14,14 @@ const CURSOR_BLINK_FRAMES = 10;
 // Part F, Phase 3a). Words already spoken render in full; the active word
 // reveals character-by-character between its own fromMs and the next
 // token's fromMs; unspoken words aren't rendered yet.
-export const Typewriter: React.FC<{ page: CaptionPage; overrides?: CaptionStyleOverrides }> = ({
-  page,
-  overrides,
-}) => {
+export const Typewriter: React.FC<{
+  page: CaptionPage;
+  overrides?: CaptionStyleOverrides;
+  contentInset?: FrameContentInset;
+}> = ({ page, overrides, contentInset }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, height } = useVideoConfig();
+  const fontSize = getResponsiveFontSize(height, overrides?.fontSizeMultiplier);
   const currentTimeMs = page.startMs + (frame / fps) * 1000;
   const pageEndMs = page.startMs + (page.durationInFrames / fps) * 1000;
 
@@ -35,15 +39,10 @@ export const Typewriter: React.FC<{ page: CaptionPage; overrides?: CaptionStyleO
   const isTyping = frame % (CURSOR_BLINK_FRAMES * 2) < CURSOR_BLINK_FRAMES;
 
   return (
-    <AbsoluteFill
-      style={{
-        justifyContent: overrides?.justifyContent ?? "center",
-        alignItems: overrides?.alignItems ?? "center",
-      }}
-    >
+    <AbsoluteFill style={getPositionStyle(overrides?.position, height, contentInset)}>
       <div
         style={{
-          fontSize: FONT_SIZE,
+          fontSize,
           fontWeight: overrides?.fontWeight ?? 700,
           fontStyle: overrides?.fontStyle ?? "normal",
           fontFamily: overrides?.fontFamily ?? "Arial, sans-serif",

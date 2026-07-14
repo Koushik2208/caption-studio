@@ -1,75 +1,60 @@
 # PROGRESS.md
 
 ## CURRENT STATE (update after every completed step)
-Next action: Session 5 G3 (Reel Craft texture overlay ports) done. Next is G4 - verify frame+overlay+captions compositing together in live preview AND real Green Screen export (see "what to check" in the G3 entry below). H2 (click-to-edit transcript tokens) remains independent and can go instead.
-Blockers: none
+Verification backlog (items 1-5 below) is CLEARED — all confirmed live by the user, including real export checks for position, Cinematic Scope inset, and texture overlays. G4 (frame+overlay+caption compositing, live AND export) is satisfied by that same pass.
 
-Session 5 G3 done: ported 3 Reel Craft texture overlay components verbatim into new `src/textures/` dir (Film Dust, Halation, Grid) - direct ports except `FilmDust`/`Grid` now read `width`/`height` from `useVideoConfig()` instead of reel-craft's fixed `WIDTH`/`HEIGHT` constants (same adaptation G1/G2's `FrameRenderer` made), so both render correctly in the horizontal 1920x1080 composition too; `Halation` is a byte-for-byte port since it only uses relative gradients. `src/textures/types.ts` defines `OverlayIntensity`/`TextureOverlaySettings` (mirrors `src/frames/types.ts`'s pattern) - unlike Frame's single-select variant, each texture is independently toggleable (`filmDustEnabled`/`halationEnabled`/`gridEnabled`), since reel-craft's stack-order doc treats them as combinable; Film Dust has no intensity control (on/off only, matches its reel-craft origin), Halation/Grid each get a low/medium/high intensity selector. `src/textures/TextureOverlayRenderer.tsx` renders active textures in reel-craft's documented stack order (grid → film dust → halation, subtle-first) and is mounted in both `CaptionPreviewComposition` and `CaptionExportComposition` between the background/media layer and `CaptionRenderer` (never obscures captions), matching `FrameRenderer`'s wrap-the-whole-composition precedent but at a different stacking point per PLAN.md Part G's integration note. `ProjectContext` gained `filmDustEnabled`/`halationEnabled`/`halationIntensity`/`gridEnabled`/`gridIntensity`/`textureSettings` (persisted to localStorage like frame/overlay settings). `OverlayPage` gained a fourth "Texture Overlays" card (3 independent toggle rows, Halation/Grid each reveal a low/medium/high segmented control when enabled). `PreviewPlayer`/`ExportPage`/`server/index.ts`/`Root.tsx` all thread `textureSettings` through the same path `frameSettings` already used (POST body → `inputProps` → `selectComposition`/`renderMedia`). Verified via `npx tsc -b` and `npm run build` (both clean, same pre-existing chunk-size warning only). Not yet verified live in a browser or via a real export render - that's G4.
+Next action: H4 (entry points) is done — `TranscriptEditor` is now reachable two ways: (1) `TranscriptEditorModal.tsx` auto-opens right after a fresh `transcribe()` call succeeds (`useImportUpload.ts`, not triggered by the cached-transcript restore path), and (2) a persistent "Transcript" item in the Sidebar (`icon="subtitles"`) opens it on demand from any tab, since the modal is rendered once at the App root (`App.tsx`, alongside `SettingsModal`) rather than per-route. Both just flip `LayoutContext.isTranscriptEditorOpen`. `tsc`/`build` clean. **This is what makes H2's click-to-edit testable for the first time — needs a live check before H3.**
 
-Dev-workflow convenience (not a PLAN.md phase) done: transcripts now survive a reload without re-uploading media. `ProjectContext` caches `captions` alone to a second localStorage key (`caption-studio:cached-transcript`, separate from the existing `caption-studio:project` settings key) on every successful `transcribe()`, and initializes `captions` state from that cache at provider mount - no IndexedDB/media caching, single entry, dev-only. `PreviewPlayer` now branches: when `mediaUrl` is absent but cached `captions` exist, it renders `CaptionExportComposition` (the same chroma-key-background component used for real export) instead of `CaptionPreviewComposition`, with duration derived from the last caption's `endMs` instead of the media-duration hook (which would otherwise fall back to a flat 150 frames with no media element to read). `ImportPage` now shows `PreviewPlayer` instead of the upload prompt whenever captions exist even without `mediaUrl`, so a cached transcript skips straight past the upload/transcribe step. `SettingsModal` gained a "Clear cached transcript" button (new `ProjectContext.clearCachedTranscript`) that removes only the transcript cache key and resets in-memory `captions`, independent of the existing settings-clear path (which doesn't exist as a wired button yet - `reset()` is defined but still unused elsewhere). Verified via `npx tsc -b` (clean); not yet verified live in a browser.
+Live-verification checklist for H4 (unblocks re-verifying H2 for real):
+1. Import a fresh file (not a cached transcript) and let transcription finish — the transcript modal should pop open automatically, landing on top of whichever page you're on (should be Style, since navigate('/style') fires first).
+2. Close it (X button or click the backdrop), then click the Sidebar's new "Transcript" item from Style, Overlay, and Export in turn — modal should open over each without navigating away from that tab.
+3. Inside the modal, click a word — it should become an editable input, pre-filled and text-selected. Type a fix, press Enter — it should commit and go back to being a plain word matching the new text.
+4. Click another word, this time press Escape — it should revert to the original text, discarding the edit.
+5. Click a word, edit it, then click elsewhere in the page (not Enter) — blur should also commit, same as Enter.
+6. Close the modal, reopen it (Sidebar trigger) — edited word(s) should still show the fix (confirms the write actually landed in `ProjectContext.captions`, not just local input state).
+7. Reload the page (if a cached transcript was in play) — edited text should survive, since `updateCaptionText` also rewrites the localStorage transcript cache.
 
-Session 5 G1/G2 done: ported 4 Reel Craft frame components verbatim into new `src/frames/` dir (Minimal Bezel, Gradient Border, Neon Glow, Cinematic Scope) - no Zustand store dependency existed in the originals to strip, they already took `children`/`width`/`height`/(`bgColor` for Minimal Bezel) as plain props, so this was a direct port with only cosmetic mojibake-comment cleanup. `src/frames/types.ts` defines `FrameVariant`/`FrameSettings` (mirrors `src/overlay/types.ts`'s pattern). `src/frames/FrameRenderer.tsx` is a new switch component that reads `useVideoConfig()` for width/height and wraps its `children` in the selected frame (or passes through unwrapped for `'none'`) - this is what both `CaptionPreviewComposition` and `CaptionExportComposition` now wrap their existing root `AbsoluteFill` in, so the two compositions render byte-identical frame chrome live and on export, matching the watermark/progress-bar precedent. `ProjectContext` gained `frameVariant`/`frameBgColor`/`frameSettings` (persisted to localStorage like the other Style/Overlay controls). `OverlayPage` gained a third "Frame" card (5-button grid: None/Minimal Bezel/Gradient Border/Neon Glow/Cinematic Scope, plus a shell-color swatch row that only appears when Minimal Bezel is selected). `PreviewPlayer`/`ExportPage`/`server/index.ts`/`Root.tsx` all thread `frameSettings` through the same path `overlaySettings` already used (POST body → `inputProps` → `selectComposition`/`renderMedia`). Verified via `npx tsc -b` (clean) and `npm run build` (clean, chunk-size warning only - pre-existing, unrelated). Confirmed both compositions work at 1080x1920 and 1920x1080 by construction, since `FrameRenderer` reads dimensions from `useVideoConfig()` rather than any hardcoded literal. Not yet verified live in a browser - see "what to check" below.
+Remaining Part H steps, in order:
+- H3. Empty-text deletion support: `processCaptions.ts` needs a filter-before-pipeline step to skip empty-text tokens (editing a token to empty already works in the UI/context via H2, but an empty token isn't yet guaranteed safe through char-budget/min-duration merge math)
+- H5. Final live verify: introduce a wrong word (or use a real Whisper mis-transcription), fix it via the editor, confirm both the live preview and a real export reflect the corrected word
 
-Horizontal/16:9 orientation bug fixed (was: toggling layout only resized the outer CSS container - `PreviewPlayer`/`Root.tsx` were hardcoded to the 1080x1920 composition regardless of `LayoutContext.layoutMode`, so horizontal showed a letterboxed vertical clip with watermark positioned for the wrong frame). Fix: `PreviewPlayer.tsx` now reads `layoutMode` and passes `compositionWidth`/`compositionHeight` of 1920x1080 (horizontal) or 1080x1920 (vertical) to `<Player>`. `CaptionExportProps` gained an `orientation` field; `Root.tsx`'s `calculateMetadata` now computes `width`/`height` from it instead of returning only `durationInFrames`. `ExportPage.tsx` sends `orientation: layoutMode` in the `/api/export-green-screen` POST body; `server/index.ts` forwards it through `inputProps` to `selectComposition`/`renderMedia`. Audited watermark/progress bar/caption code for hardcoded 1080/1920 literals outside the dimension props themselves - none found (all use %/relative offsets), so no other files needed changes. Verified live (Playwright screenshot: toggling to horizontal renders a genuine 16:9 canvas, watermark correctly at top-right of the new frame, not a vertical clip in a wider box) and via a real server-side export render for both orientations (`ffmpeg -i` confirmed output streams at actual 1920x1080 and 1080x1920 respectively).
+Blockers: none.
 
-Session 5 H1 done: `src/transcript/TranscriptEditor.tsx` (new top-level feature dir, matching `src/preview`/`src/overlay`/`src/export` convention - not nested under `components/`). Reads `captions` straight from `ProjectContext`, renders each `Caption` as a `<span>` in a `flex flex-wrap` token stream inside a `flex-1 overflow-y-auto` region below a fixed header (word count), sized to fill whatever container it's dropped into (`h-full flex flex-col`) since PLAN.md's UI placement is a modal/panel, not a new route. Verified live via Playwright against the real dev server: mocked a 261-word (~90s) transcript through `page.route('**/api/transcribe', ...)`, confirmed the token stream wraps correctly and the scroll region actually clips content (`scrollHeight` 780 vs `clientHeight` 495 in a 556px-tall test container) - a marker token placed at the very end was outside the container's visible bounds before scrolling and inside after. Verification used a temporary route (`/transcript-debug` in `App.tsx`) + a one-line temp redirect in `ImportPage.tsx`, both fully reverted after (`git diff` on those two files is empty) - the component itself has no wiring into the app yet, that's H4's job. `npx tsc -b` clean.
+## Session summaries (condensed — see PLAN.md for full technical detail per part)
 
-Session 4 Phase 4 (partial) done: `keywords: string[]` added to `ProjectContext` (default `DEFAULT_KEYWORDS`, persisted to localStorage, flows into `styleOverrides.keywords` — no changes needed in the 5 style components, they already read `overrides?.keywords ?? DEFAULT_KEYWORDS` since Phase 1). StylePage's Keyword Highlight card gained a comma-separated text input (local `keywordsText` mirrors raw typing so a trailing comma/space isn't collapsed mid-edit; parsed+trimmed array is written to context on every keystroke). Verified live via Playwright against the real dev server (note: default port 5173 was occupied by an unrelated project on this machine — caption-studio's vite dev server was actually on 5174, API server on 5175): default keyword glows pre-edit, typing a custom list swaps which token glows, value survives a full reload via localStorage. `npx tsc -b` and `npm run build` clean.
+**Session 1-2 (faceless-app):** Full caption pipeline (SRT/interpolation → captions.json, processCaptions split/merge/contiguous-frames, signature style, MasterComposition, WaveBackground/LineGrid/registry, hook scenes, subject scenes, legibility scrim). All done, verified.
 
-Open item to sanity-check next session (not a confirmed bug): a user-reported keyword-overlap visual bug ("PUT THOSE TOGETHER") couldn't be reproduced against the current fontSize-based emphasis fix in any variation tried — likely a stale HMR/cache screenshot. If it recurs, get a hard-refreshed repro noting live Player vs. exported render, and which font preset.
+**Session 3 (Caption Studio scaffold, PLAN.md Part E):** Vite+React+TS+Tailwind v4 app, 5 routes, persistent shell, DESIGN.md tokens, local transcription server (own Whisper.cpp `small.en`, self-contained — not shared with faceless-app), Style tab live-wired, Green Screen + SRT exports real, Overlay tab (watermark/progress bar) real. Plus polish passes: project naming/autosave/real resolution scaling, aspect-ratio-toggle bugfixes. All done, verified.
 
-Session 4 (PLAN.md Part F) full summary, all phases:
-- **Phase 1** (keyword/animation decoupling): `CaptionStyleVariant` narrowed to `'signature' | 'calmPhrase'` — keywordHighlight is no longer its own variant, its logic moved to a shared `applyKeywordEmphasis.ts` helper both animations call per-token. Glow reduced from flat 18px to intensity-scaled 4-16px/25-80% alpha (default 40%), `highlightIntensity` is a real 0-1 prop driven by a slider. StylePage split into Animation Style / Font Preset / Keyword Highlight (toggle+slider) cards. Verified live via Playwright.
-- **Phase 2** (font presets): `FONT_PRESETS` replaced with the 8-entry researched table (Viral Hook/Bebas Neue, Clean Standard/Roboto, Soft Modern/Montserrat, Minimal/Open Sans, Tech-Mono/JetBrains Mono, Editorial/Source Sans 3, Impact Punch/Archivo Black, Rounded Friendly/Poppins). Fonts loaded via `@remotion/google-fonts` (not an index.html link tag) since the server-side export bundle never sees index.html — same root cause as the earlier icon-font issue in LEARNINGS.md. Verified both live (Playwright) and via a real export-composition render confirming actual distinct typefaces, not a silent Arial fallback.
-- **Phase 3a** (Typewriter): char-by-char reveal per token between its own fromMs and the next token's fromMs, blinking cursor on the active word only. Verified live.
-- **Phase 3b** (Slide-up): per-token spring-driven opacity+translateY entrance, medium energy, distinct from Signature's pop and Typewriter's flat reveal. Verified live.
-- **Phase 3c** (Outline Draw-on): hollow-outline text that fills solid left-to-right as spoken. Required 3 iterations — two overlaid text nodes (stroke layer + fill layer) drift out of sync token-by-token regardless of matched stroke widths; fixed via a single element using `background-clip: text` with a gradient hard-stop for the reveal. Root cause + fix pattern logged in LEARNINGS.md.
-- **Post-ship fix** (all animations): a keyword-emphasized word visually overlapped its neighbor. Root cause: `transform: scale()` doesn't reflow — the browser kept the original box width while glyphs rendered larger. Fixed by using a real `fontSize` bump instead (inherited by fill-overlay spans so layers stay aligned). Confirmed via `getBoundingClientRect` before/after. Note: Signature/SlideUp/Typewriter share the same scale mechanism and could have latent versions of this issue for long keyword words — not fixed there (unreported), and their scale is animated per-frame so this fontSize fix isn't a drop-in replacement for those three.
-- **Phase 4** (partial — editable keyword list only): comma-separated keyword input in StylePage's Keyword Highlight card, backed by new `ProjectContext.keywords` state (persisted). Auto-suggest font per content category not attempted (deferred by user).
-- [x] Phase 1, [x] Phase 2, [x] Phase 3a, [x] Phase 3b, [x] Phase 3c, [~] Phase 4 (stretch — keyword list UI done, font auto-suggest not attempted)
+**Session 4 (Caption customization, PLAN.md Part F):** Keyword highlighting decoupled from animation choice (shared `applyKeywordEmphasis` helper), glow made a real tunable `highlightIntensity`, original 8-preset font table added via `@remotion/google-fonts` (verified real typefaces render in the export path, not silent Arial fallback), 3 new animations built (Typewriter, Slide-up, Outline Draw-on — the last took 3 iterations, two-overlaid-text-nodes drift bug fixed via single-element `background-clip: text` gradient technique, see LEARNINGS.md), editable keyword list UI done. Font-per-category auto-suggest deferred, folded into Session 6 instead. All done, verified live.
 
-Session 3 (Steps 1-6) plus polish passes (project naming/ID/autosave/resolution/mock-cleanup, aspect-ratio-toggle fix) all complete. Two non-functional UI elements remain by design (TopBar Help, ImportPage history icon — no content to wire yet). Still-deferred: Video/MP4-with-footage export, true horizontal/16:9 render pipeline (toggle currently resizes the preview container only, composition itself stays fixed 1080x1920), multi-aspect export.
-
-Pre-existing note: `npx tsc --noEmit` surfaces a `CalculateMetadataFunction<Props>` vs `Record<string,unknown>` type error (predates Session 3) — not fixed, flagged for later cleanup.
-
-## Session 1 — pipeline proof (faceless-app)
-- [x] 1. SRT/interpolation → captions.json, script-wins-wording cross-check.
-- [x] 2. CaptionRenderer + signature style + processCaptions (split/merge/contiguous frames) + 2-line cap.
-- [x] 3. MasterComposition, 3-scene loop manifest.
-- [x] 4. Sync verified incl. fast-spoken section.
-
-## Session 2 — template system (faceless-app)
-- [x] 5. WaveBackground + LineGrid + registry (5-6 entries)
-- [x] 6. Hook scene type + punch-in zoom wrapper
-- [x] 7. Keyword highlight + calm phrase mode + captionMode switching
-- [x] 8. SubjectScene (idle float + spring pop-in) + LegibilityScrim
-
-## Deferred (Day 2+, faceless-app)
-Extra backgrounds (FloatingRectangles, GradientBlob, PulseRings) · emotion-reactive palettes · sentence-timestamp helper script · batch rendering · multi-aspect export · caption-editing mini UI
-
-## Session 3 — Caption Studio UI (separate repo: caption-studio, PLAN.md Part E)
-- [x] 1. Scaffolded (Vite+React+TS, Tailwind v4, React Router 5 routes)
-- [x] 2. Persistent shell + 4 tool screens + Welcome page, DESIGN.md tokens
-- [x] 3. Import tab wired to local transcription server
-- [x] 4. Style tab wired live to CaptionRenderer
-- [x] 5. Export tab: Green Screen Video + SRT Only real; MP4 disabled
-- [x] 6. Overlay tab: watermark + progress bar real, baked into export
-
-## Session 4 — Caption Customization Upgrade (PLAN.md Part F)
-- [x] Phase 1: keyword/animation decoupling, real glow intensity
-- [x] Phase 2: 8-entry researched font preset table via @remotion/google-fonts
-- [x] Phase 3a: Typewriter
-- [x] Phase 3b: Slide-up
-- [x] Phase 3c: Outline Draw-on (3 iterations, see LEARNINGS.md)
-- [~] Phase 4 (stretch): editable keyword list UI done; auto-suggest font per content category not attempted (deferred)
-
-## Session 5 — Reel Craft ports + Transcript Editing (PLAN.md Parts G, H)
-- [x] G1. Port 4 frame components (Minimal Bezel, Gradient Border, Neon Glow, Cinematic Scope)
-- [x] G2. Frame selector UI wired into ProjectContext + PreviewPlayer + CaptionExportComposition
-- [x] G3. Port 3 overlay components (Film Dust, Halation, Grid)
-- [ ] G4. Verify frame+overlay+captions compositing in live preview AND real Green Screen export
-- [x] H1. TranscriptEditor.tsx — read-only token rendering first
-- [ ] H2. Click-to-edit tokens, wired to ProjectContext.captions
+**Session 5 (Reel Craft ports + transcript editing, PLAN.md Parts G/H) — IN PROGRESS:**
+- [x] G1. 4 frame components ported (Minimal Bezel, Gradient Border, Neon Glow, Cinematic Scope) — live-verified
+- [x] G2. Frame selector wired into ProjectContext/PreviewPlayer/CaptionExportComposition — live-verified
+- [x] G3. 3 texture overlays ported (Film Dust, Halation, Grid) — live-verified (Film Dust/Halation/Grid all confirmed live + in a real export)
+- [x] G4. Frame+overlay+captions compositing verified live AND via real export
+- [x] H1. TranscriptEditor.tsx read-only rendering — verified live (Playwright, 261-word transcript, scroll/wrap confirmed)
+- [x] H2. Click-to-edit tokens — `TranscriptEditor.tsx` tokens editable, `ProjectContext.updateCaptionText` writes back into `captions` + keeps the localStorage transcript cache in sync; `tsc`/`build` clean; now reachable live via H4, not yet re-verified live (see checklist above)
+- [x] H4. Entry points — `TranscriptEditorModal.tsx` auto-opens post-transcription + persistent Sidebar "Transcript" trigger from any tab; `tsc`/`build` clean, not yet live-verified (see checklist above)
 - [ ] H3. Empty-text deletion + processCaptions.ts filter-before-pipeline fix
-- [ ] H4. Entry points: auto-show post-transcription + persistent trigger from other tabs
-- [ ] H5. Verify: introduce a wrong word, fix via editor, confirm preview + real export reflect it
+- [ ] H5. Final verify: introduce wrong word, fix via editor, confirm preview + export reflect it
+
+**Also shipped this session, not a PLAN.md phase:**
+- Horizontal/16:9 orientation bug fixed and **live-verified** (Playwright + real export render at both orientations confirmed correct dimensions)
+- Dev-workflow transcript caching (localStorage, not IndexedDB — captions-only, no media blob) — `tsc` clean, not live-verified
+- PreviewPlayer remount-on-navigate fix — **live-verified** (playback survives Import/Style/Overlay/Export navigation, selection changes don't restart it, Import empty state works from both dropzone and panel button)
+- Nested routing restructure (Style/Overlay condensed + sub-routes, `CondensedCard`/`SubPanelView` reusable pattern) — **live-verified** (condensed cards, "More X" drill-in/back, selection persistence, Minimal Bezel shell color + Halation/Grid intensity pickers all confirmed)
+- Position control simplified to Top/Center/Bottom with safe-margin inset — **live-verified**, including real Green Screen export at both orientations
+- Responsive font size (height-based) + Cinematic Scope content-inset fix + z-order fix — **live-verified**, including real Green Screen export of Cinematic Scope + Bottom position
+
+## Known non-bugs / accepted gaps
+- TopBar Help button, ImportPage history icon — intentionally non-functional, no content to wire yet
+- Video/MP4-with-footage export — deferred, needs real footage compositing
+- `npx tsc --noEmit`'s pre-existing `CalculateMetadataFunction<Props>` type error — predates Session 3, not fixed, cosmetic
+- Reported keyword-overlap bug ("PUT THOSE TOGETHER") — could not reproduce against the fontSize-based emphasis fix in any variation tried; likely stale HMR/cache. Re-test with a hard refresh if it recurs.
+
+## Session 6 — Orientation-aware fonts + global legibility (PLAN.md Part I) — queued, not started
+- [ ] I1. Trim 2 redundant presets (Editorial, Rounded Friendly), add new researched presets (verify real Google Fonts first), add orientation/suggestedAnimation fields
+- [ ] I2. Global legibility layer: stroke (4-6% of font size) + drop shadow (80%/10% blur), applied in shared rendering path
+- [ ] I3. StylePage condensed Font card filters by layoutMode; /style/fonts full list filterable by orientation
+- [ ] I4. Verify at both orientations: condensed picks change correctly, new fonts legible via global stroke/shadow

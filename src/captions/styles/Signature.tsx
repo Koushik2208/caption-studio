@@ -1,19 +1,23 @@
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import type { FrameContentInset } from "../../frames/types";
 import type { CaptionPage } from "../processCaptions";
 import type { CaptionStyleOverrides } from "./types";
 import { applyKeywordEmphasis, DEFAULT_KEYWORDS, isKeywordToken } from "./applyKeywordEmphasis";
+import { getResponsiveFontSize } from "./fontSize";
+import { getPositionStyle } from "./position";
 
-const FONT_SIZE = 85;
 const HIGHLIGHT_COLOR = "#ffd23f";
 
 // Signature style: word pop (spring scale-in on the active word) + karaoke
 // fill (already-spoken words stay in the highlight color).
-export const Signature: React.FC<{ page: CaptionPage; overrides?: CaptionStyleOverrides }> = ({
-  page,
-  overrides,
-}) => {
+export const Signature: React.FC<{
+  page: CaptionPage;
+  overrides?: CaptionStyleOverrides;
+  contentInset?: FrameContentInset;
+}> = ({ page, overrides, contentInset }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, height } = useVideoConfig();
+  const fontSize = getResponsiveFontSize(height, overrides?.fontSizeMultiplier);
   const currentTimeMs = page.startMs + (frame / fps) * 1000;
 
   // Active token = LAST token with fromMs <= currentTimeMs (never a from/to range check).
@@ -29,15 +33,10 @@ export const Signature: React.FC<{ page: CaptionPage; overrides?: CaptionStyleOv
   const keywords = overrides?.keywords ?? DEFAULT_KEYWORDS;
 
   return (
-    <AbsoluteFill
-      style={{
-        justifyContent: overrides?.justifyContent ?? "center",
-        alignItems: overrides?.alignItems ?? "center",
-      }}
-    >
+    <AbsoluteFill style={getPositionStyle(overrides?.position, height, contentInset)}>
       <div
         style={{
-          fontSize: FONT_SIZE,
+          fontSize,
           fontWeight: overrides?.fontWeight ?? 700,
           fontStyle: overrides?.fontStyle ?? "normal",
           fontFamily: overrides?.fontFamily ?? "Arial, sans-serif",

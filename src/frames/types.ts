@@ -8,3 +8,16 @@ export type FrameSettings = {
   // Shell color for bezel-style frames (MinimalBezel) - other frames ignore it.
   bgColor: string;
 };
+
+// How much of the composition's edges an active frame's own chrome already
+// occupies (e.g. Cinematic Scope's letterbox bars) - see
+// src/frames/contentInset.ts. Caption positioning adds this on top of its
+// own safe-margin inset so Top/Bottom captions clear the frame, not just the
+// raw composition edge. Defaults to all-zero for frames that don't reduce
+// usable content area (Minimal Bezel, Gradient Border, Neon Glow).
+export type FrameContentInset = {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+};

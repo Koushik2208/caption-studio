@@ -1,15 +1,13 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { Caption } from '@remotion/captions';
 import { FONT_PRESETS, type FontPresetName } from '../captions/styles/presets';
-import type { CaptionStyleOverrides, CaptionStyleVariant } from '../captions/styles/types';
+import type { CaptionPosition, CaptionStyleOverrides, CaptionStyleVariant } from '../captions/styles/types';
 import { DEFAULT_KEYWORDS } from '../captions/styles/applyKeywordEmphasis';
 import type { OverlaySettings, ProgressBarPosition, WatermarkPosition } from '../overlay/types';
 import type { FrameSettings, FrameVariant } from '../frames/types';
 import type { OverlayIntensity, TextureOverlaySettings } from '../textures/types';
 
 export type TranscribeStatus = 'idle' | 'uploading' | 'error';
-export type VerticalAlign = 'flex-start' | 'center' | 'end';
-export type HorizontalAlign = 'start' | 'center' | 'end';
 export type SaveStatus = 'saved' | 'saving';
 
 // Project identity + Style/Overlay tab settings persist to localStorage (not
@@ -34,8 +32,8 @@ type PersistedState = {
   highlightIntensity: number;
   highlightColor: string;
   keywords: string[];
-  verticalAlign: VerticalAlign;
-  horizontalAlign: HorizontalAlign;
+  position: CaptionPosition;
+  fontSizeMultiplier: number;
   watermarkEnabled: boolean;
   watermarkOpacity: number;
   watermarkPosition: WatermarkPosition;
@@ -88,6 +86,10 @@ interface ProjectContextType {
   transcribeError: string | null;
   setSrtFile: (file: File | null) => void;
   transcribe: (mediaFile: File) => Promise<void>;
+  // TranscriptEditor writes fixed-up word text straight back here (PLAN.md
+  // Part H) - no separate edit-buffer state, ProjectContext.captions stays
+  // the single source of truth the whole preview/export pipeline reads.
+  updateCaptionText: (index: number, text: string) => void;
   reset: () => void;
   // Dev-workflow convenience: clears just the cached-transcript localStorage
   // entry (and the in-memory captions it restored), separate from clearing
@@ -117,10 +119,13 @@ interface ProjectContextType {
   setHighlightColor: (color: string) => void;
   keywords: string[];
   setKeywords: (keywords: string[]) => void;
-  verticalAlign: VerticalAlign;
-  setVerticalAlign: (align: VerticalAlign) => void;
-  horizontalAlign: HorizontalAlign;
-  setHorizontalAlign: (align: HorizontalAlign) => void;
+  position: CaptionPosition;
+  setPosition: (position: CaptionPosition) => void;
+  // Multiplies the computed responsive font size (getResponsiveFontSize) -
+  // default 1.0, user-adjustable slider for when the computed default still
+  // feels off for a particular video.
+  fontSizeMultiplier: number;
+  setFontSizeMultiplier: (multiplier: number) => void;
   styleVariant: CaptionStyleVariant;
   styleOverrides: CaptionStyleOverrides;
   // Overlay tab controls, lifted the same way as the style controls above -
@@ -188,8 +193,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [highlightIntensity, setHighlightIntensity] = useState(persisted?.highlightIntensity ?? 0.4);
   const [highlightColor, setHighlightColor] = useState(persisted?.highlightColor ?? '#0066ff');
   const [keywords, setKeywords] = useState<string[]>(persisted?.keywords ?? DEFAULT_KEYWORDS);
-  const [verticalAlign, setVerticalAlign] = useState<VerticalAlign>(persisted?.verticalAlign ?? 'center');
-  const [horizontalAlign, setHorizontalAlign] = useState<HorizontalAlign>(persisted?.horizontalAlign ?? 'center');
+  const [position, setPosition] = useState<CaptionPosition>(persisted?.position ?? 'center');
+  const [fontSizeMultiplier, setFontSizeMultiplier] = useState(persisted?.fontSizeMultiplier ?? 1);
 
   const preset = FONT_PRESETS.find((p) => p.name === presetName) ?? FONT_PRESETS[0];
   const styleVariant = animation;
@@ -199,13 +204,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       fontWeight: preset.fontWeight,
       fontStyle: preset.fontStyle,
       highlightColor,
-      justifyContent: verticalAlign,
-      alignItems: horizontalAlign,
+      position,
       keywordHighlightEnabled,
       highlightIntensity,
       keywords,
+      fontSizeMultiplier,
     }),
-    [preset, highlightColor, verticalAlign, horizontalAlign, keywordHighlightEnabled, highlightIntensity, keywords],
+    [preset, highlightColor, position, keywordHighlightEnabled, highlightIntensity, keywords, fontSizeMultiplier],
   );
 
   const [watermarkEnabled, setWatermarkEnabled] = useState(persisted?.watermarkEnabled ?? true);
@@ -263,8 +268,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       highlightIntensity,
       highlightColor,
       keywords,
-      verticalAlign,
-      horizontalAlign,
+      position,
+      fontSizeMultiplier,
       watermarkEnabled,
       watermarkOpacity,
       watermarkPosition,
@@ -290,8 +295,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     highlightIntensity,
     highlightColor,
     keywords,
-    verticalAlign,
-    horizontalAlign,
+    position,
+    fontSizeMultiplier,
     watermarkEnabled,
     watermarkOpacity,
     watermarkPosition,
@@ -362,6 +367,24 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     [srtFile],
   );
 
+  // Preserves each token's existing leading-space convention (every word but
+  // the first, plus non-punctuation tokens, carries a leading space - see
+  // server/index.ts's alignWordingWithScript) rather than re-deriving it, so
+  // an edited word still concatenates correctly in processCaptions/
+  // createTikTokStyleCaptions without needing punctuation-position logic here.
+  const updateCaptionText = useCallback((index: number, rawText: string) => {
+    setCaptions((prev) => {
+      if (!prev || !prev[index]) return prev;
+      const hadLeadingSpace = prev[index].text.startsWith(' ');
+      const trimmed = rawText.trim();
+      const nextText = hadLeadingSpace ? ` ${trimmed}` : trimmed;
+      const next = [...prev];
+      next[index] = { ...next[index], text: nextText };
+      localStorage.setItem(TRANSCRIPT_STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   const reset = useCallback(() => {
     setMediaFile(null);
     setMediaUrl((prev) => {
@@ -390,6 +413,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         transcribeError,
         setSrtFile,
         transcribe,
+        updateCaptionText,
         reset,
         clearCachedTranscript,
         projectId,
@@ -409,10 +433,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setHighlightColor,
         keywords,
         setKeywords,
-        verticalAlign,
-        setVerticalAlign,
-        horizontalAlign,
-        setHorizontalAlign,
+        position,
+        setPosition,
+        fontSizeMultiplier,
+        setFontSizeMultiplier,
         styleVariant,
         styleOverrides,
         watermarkEnabled,

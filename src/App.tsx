@@ -2,26 +2,41 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { LayoutProvider } from './context/LayoutContext';
 import { ProjectProvider } from './context/ProjectContext';
 import { AppLayout } from './components/layout/AppLayout';
+import { ToolLayout } from './components/layout/ToolLayout';
 import { WelcomePage } from './pages/WelcomePage';
 import { ImportPage } from './pages/ImportPage';
 import { StylePage } from './pages/StylePage';
+import { StyleFontsPage } from './pages/StyleFontsPage';
+import { StyleAnimationsPage } from './pages/StyleAnimationsPage';
 import { OverlayPage } from './pages/OverlayPage';
+import { OverlayFramesPage } from './pages/OverlayFramesPage';
+import { OverlayTextureOverlaysPage } from './pages/OverlayTextureOverlaysPage';
 import { ExportPage } from './pages/ExportPage';
 import { SettingsModal } from './components/common/SettingsModal';
+import { TranscriptEditorModal } from './transcript/TranscriptEditorModal';
 
 function App() {
   return (
     <LayoutProvider>
       <ProjectProvider>
         <Router>
-          <AppLayout>
-            <Routes>
-              <Route path="/" element={<WelcomePage />} />
-              <Route path="/import" element={<ImportPage />} />
-              <Route path="/style" element={<StylePage />} />
-              <Route path="/overlay" element={<OverlayPage />} />
-              <Route path="/export" element={<ExportPage />} />
-              {/* Fallback routes indicating under construction */}
+          <Routes>
+            <Route path="/" element={<WelcomePage />} />
+            <Route element={<AppLayout />}>
+              {/* ToolLayout owns the single PreviewPlayer instance so it stays
+                  mounted (and playback keeps running) while navigating between
+                  these tabs - only the tool panel below swaps per route. */}
+              <Route element={<ToolLayout />}>
+                <Route path="import" element={<ImportPage />} />
+                <Route path="style" element={<StylePage />} />
+                <Route path="style/fonts" element={<StyleFontsPage />} />
+                <Route path="style/animations" element={<StyleAnimationsPage />} />
+                <Route path="overlay" element={<OverlayPage />} />
+                <Route path="overlay/frames" element={<OverlayFramesPage />} />
+                <Route path="overlay/texture-overlays" element={<OverlayTextureOverlaysPage />} />
+                <Route path="export" element={<ExportPage />} />
+              </Route>
+              {/* Fallback route indicating under construction */}
               <Route
                 path="*"
                 element={
@@ -34,9 +49,10 @@ function App() {
                   </div>
                 }
               />
-            </Routes>
-          </AppLayout>
+            </Route>
+          </Routes>
           <SettingsModal />
+          <TranscriptEditorModal />
         </Router>
       </ProjectProvider>
     </LayoutProvider>

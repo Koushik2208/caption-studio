@@ -1,31 +1,15 @@
 import React, { useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { UploadArea } from '../components/import/UploadArea';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
-import { useLayout } from '../context/LayoutContext';
 import { useProject } from '../context/ProjectContext';
-import { PreviewPlayer } from '../preview/PreviewPlayer';
 import { formatProjectId } from '../utils/filename';
+import { useImportUpload } from './useImportUpload';
 
 export const ImportPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { layoutMode } = useLayout();
-  const { mediaUrl, captions, srtFile, setSrtFile, transcribe, transcribeStatus, transcribeError, projectId } =
-    useProject();
+  const { srtFile, setSrtFile, transcribeError, projectId } = useProject();
+  const { handleFileSelect, isTranscribing } = useImportUpload();
   const srtInputRef = useRef<HTMLInputElement>(null);
   const mainInputRef = useRef<HTMLInputElement>(null);
-  const isTranscribing = transcribeStatus === 'uploading';
-
-  const handleFileSelect = async (file: File) => {
-    if (isTranscribing) return;
-    try {
-      await transcribe(file);
-      navigate('/style');
-    } catch {
-      // transcribeError is already surfaced in the panel below
-    }
-  };
 
   const handleMainFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -49,32 +33,7 @@ export const ImportPage: React.FC = () => {
   };
 
   return (
-    <div className="flex h-full w-full overflow-hidden">
-      {/* Central Workspace Canvas */}
-      <main className="flex-1 p-canvas-margin flex items-center justify-center bg-surface-container overflow-hidden relative">
-        {mediaUrl || (captions && captions.length > 0) ? (
-          <div
-            className={`relative bg-black rounded-2xl overflow-hidden canvas-shadow border border-outline-variant/30 transition-all duration-300 ${layoutMode === 'horizontal'
-                ? 'aspect-video w-full max-w-[800px] h-auto'
-                : 'aspect-9/16 h-[calc(100vh-160px)] max-h-[720px]'
-              }`}
-          >
-            <PreviewPlayer />
-          </div>
-        ) : (
-          <UploadArea onFileSelect={handleFileSelect} />
-        )}
-        {isTranscribing && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-surface-container/80 backdrop-blur-sm">
-            <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
-            <p className="text-body-md font-bold text-on-surface">Transcribing audio...</p>
-            <p className="text-body-sm text-on-surface-variant">
-              Running local Whisper.cpp - this can take a minute for longer files.
-            </p>
-          </div>
-        )}
-      </main>
-
+    <>
       {/* Right Tool Panel */}
       <aside className="w-panel-width min-w-panel-width max-w-panel-width border-l border-outline-variant bg-surface-container-low flex flex-col h-full shrink-0 grow-0">
         {/* Panel Header */}
@@ -177,6 +136,6 @@ export const ImportPage: React.FC = () => {
           </div>
         </div>
       </aside>
-    </div>
+    </>
   );
 };

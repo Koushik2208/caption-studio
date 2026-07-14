@@ -1,9 +1,11 @@
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import type { FrameContentInset } from "../../frames/types";
 import type { CaptionPage } from "../processCaptions";
 import type { CaptionStyleOverrides } from "./types";
 import { applyKeywordEmphasis, DEFAULT_KEYWORDS, isKeywordToken } from "./applyKeywordEmphasis";
+import { getResponsiveFontSize } from "./fontSize";
+import { getPositionStyle } from "./position";
 
-const FONT_SIZE = 85;
 const HIGHLIGHT_COLOR = "#ffd23f";
 const SLIDE_DISTANCE_PX = 30;
 const ANIM_DURATION_FRAMES = 12;
@@ -14,12 +16,14 @@ const ANIM_DURATION_FRAMES = 12;
 // token is always rendered (like Signature's karaoke fill) so line wrapping
 // never reflows; tokens not yet reached just sit at progress 0 (invisible,
 // offset below their resting position) until their own fromMs arrives.
-export const SlideUp: React.FC<{ page: CaptionPage; overrides?: CaptionStyleOverrides }> = ({
-  page,
-  overrides,
-}) => {
+export const SlideUp: React.FC<{
+  page: CaptionPage;
+  overrides?: CaptionStyleOverrides;
+  contentInset?: FrameContentInset;
+}> = ({ page, overrides, contentInset }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, height } = useVideoConfig();
+  const fontSize = getResponsiveFontSize(height, overrides?.fontSizeMultiplier);
   const currentTimeMs = page.startMs + (frame / fps) * 1000;
 
   // Active token = LAST token with fromMs <= currentTimeMs (never a from/to range check).
@@ -35,15 +39,10 @@ export const SlideUp: React.FC<{ page: CaptionPage; overrides?: CaptionStyleOver
   const keywords = overrides?.keywords ?? DEFAULT_KEYWORDS;
 
   return (
-    <AbsoluteFill
-      style={{
-        justifyContent: overrides?.justifyContent ?? "center",
-        alignItems: overrides?.alignItems ?? "center",
-      }}
-    >
+    <AbsoluteFill style={getPositionStyle(overrides?.position, height, contentInset)}>
       <div
         style={{
-          fontSize: FONT_SIZE,
+          fontSize,
           fontWeight: overrides?.fontWeight ?? 700,
           fontStyle: overrides?.fontStyle ?? "normal",
           fontFamily: overrides?.fontFamily ?? "Arial, sans-serif",
