@@ -13,6 +13,11 @@ interface LayoutContextType {
   // TranscriptEditorModal) so it's reachable no matter which tab is active.
   isTranscriptEditorOpen: boolean;
   setIsTranscriptEditorOpen: (isOpen: boolean) => void;
+  // Entry point for the Code Block motion graphic's editor (Overlay tab's
+  // "Edit Code" button) - same one-flag-flips-a-root-level-modal pattern as
+  // isTranscriptEditorOpen above.
+  isCodeEditorOpen: boolean;
+  setIsCodeEditorOpen: (isOpen: boolean) => void;
 }
 
 const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
@@ -21,6 +26,7 @@ export const LayoutProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('vertical');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isTranscriptEditorOpen, setIsTranscriptEditorOpen] = useState(false);
+  const [isCodeEditorOpen, setIsCodeEditorOpen] = useState(false);
 
   return (
     <LayoutContext.Provider
@@ -31,6 +37,8 @@ export const LayoutProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setIsSettingsOpen,
         isTranscriptEditorOpen,
         setIsTranscriptEditorOpen,
+        isCodeEditorOpen,
+        setIsCodeEditorOpen,
       }}
     >
       {children}

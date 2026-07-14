@@ -23,7 +23,7 @@ export const OverlayFramesPage: React.FC = () => {
           ))}
         </div>
 
-        {frameVariant === 'minimalBezel' && (
+        {(frameVariant === 'minimalBezel' || frameVariant === 'squareBezel') && (
           <div className="flex flex-col gap-1.5 border-t border-outline-variant/30 pt-3 animate-in slide-in-from-top-1 duration-150">
             <span className="text-label-caps font-label-caps text-on-surface-variant uppercase text-[10px]">
               Shell Color

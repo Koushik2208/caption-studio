@@ -14,6 +14,7 @@ import { OverlayTextureOverlaysPage } from './pages/OverlayTextureOverlaysPage';
 import { ExportPage } from './pages/ExportPage';
 import { SettingsModal } from './components/common/SettingsModal';
 import { TranscriptEditorModal } from './transcript/TranscriptEditorModal';
+import { CodeEditorModal } from './motion/CodeEditorModal';
 
 function App() {
   return (
@@ -53,6 +54,7 @@ function App() {
           </Routes>
           <SettingsModal />
           <TranscriptEditorModal />
+          <CodeEditorModal />
         </Router>
       </ProjectProvider>
     </LayoutProvider>

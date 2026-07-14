@@ -10,6 +10,8 @@ import { FrameRenderer } from '../frames/FrameRenderer';
 import { getFrameContentInset } from '../frames/contentInset';
 import type { TextureOverlaySettings } from '../textures/types';
 import { TextureOverlayRenderer } from '../textures/TextureOverlayRenderer';
+import type { MotionGraphicsSettings } from '../motion/types';
+import { MotionGraphicsRenderer } from '../motion/MotionGraphicsRenderer';
 
 // DaVinci Resolve Ultra Key-compatible chroma green (see PLAN.md Part E).
 const CHROMA_GREEN = '#00B140';
@@ -21,6 +23,7 @@ export type CaptionExportProps = {
   overlaySettings?: OverlaySettings;
   frameSettings?: FrameSettings;
   textureSettings?: TextureOverlaySettings;
+  motionSettings?: MotionGraphicsSettings;
   // Read by Root.tsx's calculateMetadata, not by this component - kept on
   // the same props type so the server can pass one inputProps object through
   // both selectComposition and renderMedia.
@@ -41,13 +44,19 @@ export const CaptionExportComposition: React.FC<CaptionExportProps> = ({
   overlaySettings,
   frameSettings,
   textureSettings,
+  motionSettings,
 }) => {
-  const { height } = useVideoConfig();
-  const frameContentInset = getFrameContentInset(frameSettings, height);
+  const { width, height } = useVideoConfig();
+  const frameContentInset = getFrameContentInset(frameSettings, height, width);
   // See CaptionPreviewComposition - only elevate above frame chrome when
-  // that chrome actually occupies space (e.g. Cinematic Scope's letterbox
-  // bars); other frames keep their existing z-index:auto stacking.
-  const hasFrameInset = frameContentInset.top > 0 || frameContentInset.bottom > 0;
+  // that chrome actually occupies space on any edge (e.g. Cinematic Scope's
+  // letterbox bars, Film Strip's sprocket rails); other frames keep their
+  // existing z-index:auto stacking.
+  const hasFrameInset =
+    frameContentInset.top > 0 ||
+    frameContentInset.bottom > 0 ||
+    frameContentInset.left > 0 ||
+    frameContentInset.right > 0;
 
   return (
     <FrameRenderer frameSettings={frameSettings}>
@@ -66,6 +75,7 @@ export const CaptionExportComposition: React.FC<CaptionExportProps> = ({
           {overlaySettings?.progressBarEnabled && (
             <ProgressBarOverlay color={overlaySettings.progressBarColor} position={overlaySettings.progressBarPosition} />
           )}
+          <MotionGraphicsRenderer motionSettings={motionSettings} />
         </AbsoluteFill>
       </AbsoluteFill>
     </FrameRenderer>

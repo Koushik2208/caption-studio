@@ -10,4 +10,10 @@ export type TextureOverlaySettings = {
   halationIntensity: OverlayIntensity;
   gridEnabled: boolean;
   gridIntensity: OverlayIntensity;
+  crtScanlinesEnabled: boolean;
+  crtScanlinesIntensity: OverlayIntensity;
+  halftoneEnabled: boolean;
+  halftoneIntensity: OverlayIntensity;
+  lightLeakEnabled: boolean;
+  lightLeakIntensity: OverlayIntensity;
 };

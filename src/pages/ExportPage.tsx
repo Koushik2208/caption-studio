@@ -29,6 +29,7 @@ export const ExportPage: React.FC = () => {
     overlaySettings,
     frameSettings,
     textureSettings,
+    motionSettings,
     projectName,
     projectId,
   } = useProject();
@@ -104,6 +105,7 @@ export const ExportPage: React.FC = () => {
           overlaySettings,
           frameSettings,
           textureSettings,
+          motionSettings,
           durationInFrames,
           scale: RESOLUTION_SCALE[resolution],
           orientation: layoutMode,

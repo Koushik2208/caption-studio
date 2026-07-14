@@ -1,9 +1,12 @@
 import React from 'react';
 import { useVideoConfig } from 'remotion';
 import { CinematicScope } from './CinematicScope';
+import { FilmStrip } from './FilmStrip';
 import { GradientBorder } from './GradientBorder';
 import { MinimalBezel } from './MinimalBezel';
 import { NeonGlow } from './NeonGlow';
+import { SquareBezel } from './SquareBezel';
+import { VintageProjector } from './VintageProjector';
 import type { FrameSettings } from './types';
 
 type FrameRendererProps = {
@@ -43,6 +46,24 @@ export const FrameRenderer: React.FC<FrameRendererProps> = ({ frameSettings, chi
         <CinematicScope width={width} height={height}>
           {children}
         </CinematicScope>
+      );
+    case 'filmStrip':
+      return (
+        <FilmStrip width={width} height={height}>
+          {children}
+        </FilmStrip>
+      );
+    case 'squareBezel':
+      return (
+        <SquareBezel width={width} height={height} bgColor={frameSettings?.bgColor}>
+          {children}
+        </SquareBezel>
+      );
+    case 'vintageProjector':
+      return (
+        <VintageProjector width={width} height={height}>
+          {children}
+        </VintageProjector>
       );
     default:
       return <>{children}</>;

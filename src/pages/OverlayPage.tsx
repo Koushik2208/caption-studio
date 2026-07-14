@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { useProject } from '../context/ProjectContext';
+import { useLayout } from '../context/LayoutContext';
 import { Card } from '../components/common/Card';
 import { CondensedCard } from '../components/common/CondensedCard';
 import { Button } from '../components/common/Button';
 import { FRAME_OPTIONS, CONDENSED_FRAME_COUNT } from './overlayOptions';
+import { CODE_LANGUAGE_LABELS } from '../motion/types';
 
 export const OverlayPage: React.FC = () => {
+  const { setIsCodeEditorOpen } = useLayout();
   const {
     watermarkEnabled: isWatermarkEnabled,
     setWatermarkEnabled: setIsWatermarkEnabled,
@@ -23,6 +26,28 @@ export const OverlayPage: React.FC = () => {
     setFrameVariant,
     filmDustEnabled,
     setFilmDustEnabled,
+    numberCounterEnabled,
+    setNumberCounterEnabled,
+    numberCounterStart,
+    setNumberCounterStart,
+    numberCounterEnd,
+    setNumberCounterEnd,
+    numberCounterPrefix,
+    setNumberCounterPrefix,
+    numberCounterSuffix,
+    setNumberCounterSuffix,
+    tickerEnabled,
+    setTickerEnabled,
+    tickerText,
+    setTickerText,
+    tickerDirection,
+    setTickerDirection,
+    tickerPosition,
+    setTickerPosition,
+    codeBlockEnabled,
+    setCodeBlockEnabled,
+    codeBlockLanguage,
+    codeBlockPosition,
     saveNow,
   } = useProject();
 
@@ -204,7 +229,225 @@ export const OverlayPage: React.FC = () => {
             )}
           </Card>
 
-          {/* Card 3: Frame Tool (condensed) */}
+          {/* Card 3: Number Counter Tool */}
+          <Card className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-tertiary/10 flex items-center justify-center text-tertiary">
+                  <span className="material-symbols-outlined">numbers</span>
+                </div>
+                <div>
+                  <h4 className="text-body-md font-bold text-on-surface">Number Counter</h4>
+                  <p className="text-body-sm text-outline text-[12px]">Animate a number over the clip</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setNumberCounterEnabled(!numberCounterEnabled)}
+                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer outline-none ${numberCounterEnabled ? 'bg-primary-container' : 'bg-surface-variant'
+                  }`}
+                aria-label="Toggle number counter"
+              >
+                <div
+                  className={`absolute top-[2px] left-[2px] bg-white rounded-full h-5 w-5 transition-transform shadow-xs ${numberCounterEnabled ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                />
+              </button>
+            </div>
+
+            {numberCounterEnabled && (
+              <div className="flex flex-col gap-3 border-t border-outline-variant/30 pt-3 animate-in slide-in-from-top-1 duration-150">
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="flex flex-col gap-1">
+                    <span className="text-label-caps font-label-caps text-on-surface-variant uppercase text-[10px]">
+                      Start
+                    </span>
+                    <input
+                      type="number"
+                      value={numberCounterStart}
+                      onChange={(e) => setNumberCounterStart(Number(e.target.value))}
+                      className="w-full rounded-lg border border-outline-variant/60 bg-white px-2 py-1.5 text-body-sm text-on-surface outline-none focus:border-primary/60"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-label-caps font-label-caps text-on-surface-variant uppercase text-[10px]">
+                      End
+                    </span>
+                    <input
+                      type="number"
+                      value={numberCounterEnd}
+                      onChange={(e) => setNumberCounterEnd(Number(e.target.value))}
+                      className="w-full rounded-lg border border-outline-variant/60 bg-white px-2 py-1.5 text-body-sm text-on-surface outline-none focus:border-primary/60"
+                    />
+                  </label>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="flex flex-col gap-1">
+                    <span className="text-label-caps font-label-caps text-on-surface-variant uppercase text-[10px]">
+                      Prefix
+                    </span>
+                    <input
+                      type="text"
+                      value={numberCounterPrefix}
+                      onChange={(e) => setNumberCounterPrefix(e.target.value)}
+                      className="w-full rounded-lg border border-outline-variant/60 bg-white px-2 py-1.5 text-body-sm text-on-surface outline-none focus:border-primary/60"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-label-caps font-label-caps text-on-surface-variant uppercase text-[10px]">
+                      Suffix
+                    </span>
+                    <input
+                      type="text"
+                      value={numberCounterSuffix}
+                      onChange={(e) => setNumberCounterSuffix(e.target.value)}
+                      className="w-full rounded-lg border border-outline-variant/60 bg-white px-2 py-1.5 text-body-sm text-on-surface outline-none focus:border-primary/60"
+                    />
+                  </label>
+                </div>
+              </div>
+            )}
+          </Card>
+
+          {/* Card 4: Ticker Tool */}
+          <Card className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-tertiary/10 flex items-center justify-center text-tertiary">
+                  <span className="material-symbols-outlined">sync_alt</span>
+                </div>
+                <div>
+                  <h4 className="text-body-md font-bold text-on-surface">Ticker</h4>
+                  <p className="text-body-sm text-outline text-[12px]">Scrolling news-style text band</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setTickerEnabled(!tickerEnabled)}
+                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer outline-none ${tickerEnabled ? 'bg-primary-container' : 'bg-surface-variant'
+                  }`}
+                aria-label="Toggle ticker"
+              >
+                <div
+                  className={`absolute top-[2px] left-[2px] bg-white rounded-full h-5 w-5 transition-transform shadow-xs ${tickerEnabled ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                />
+              </button>
+            </div>
+
+            {tickerEnabled && (
+              <div className="flex flex-col gap-3 border-t border-outline-variant/30 pt-3 animate-in slide-in-from-top-1 duration-150">
+                <label className="flex flex-col gap-1">
+                  <span className="text-label-caps font-label-caps text-on-surface-variant uppercase text-[10px]">
+                    Ticker Text
+                  </span>
+                  <input
+                    type="text"
+                    value={tickerText}
+                    onChange={(e) => setTickerText(e.target.value)}
+                    className="w-full rounded-lg border border-outline-variant/60 bg-white px-2 py-1.5 text-body-sm text-on-surface outline-none focus:border-primary/60"
+                  />
+                </label>
+
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-label-caps font-label-caps text-on-surface-variant uppercase text-[10px]">
+                    Direction
+                  </span>
+                  <div className="grid grid-cols-2 gap-2 p-1 bg-surface-container rounded-lg border border-outline-variant/30">
+                    <button
+                      onClick={() => setTickerDirection('left')}
+                      className={`py-1.5 px-3 rounded text-label-caps font-label-caps text-[10px] uppercase font-bold transition-all duration-200 cursor-pointer ${tickerDirection === 'left'
+                          ? 'bg-primary-container text-on-primary-container shadow-xs'
+                          : 'text-on-surface-variant hover:text-on-surface'
+                        }`}
+                    >
+                      Left
+                    </button>
+                    <button
+                      onClick={() => setTickerDirection('right')}
+                      className={`py-1.5 px-3 rounded text-label-caps font-label-caps text-[10px] uppercase font-bold transition-all duration-200 cursor-pointer ${tickerDirection === 'right'
+                          ? 'bg-primary-container text-on-primary-container shadow-xs'
+                          : 'text-on-surface-variant hover:text-on-surface'
+                        }`}
+                    >
+                      Right
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-label-caps font-label-caps text-on-surface-variant uppercase text-[10px]">
+                    Vertical Placement
+                  </span>
+                  <div className="grid grid-cols-2 gap-2 p-1 bg-surface-container rounded-lg border border-outline-variant/30">
+                    <button
+                      onClick={() => setTickerPosition('bottom')}
+                      className={`py-1.5 px-3 rounded text-label-caps font-label-caps text-[10px] uppercase font-bold transition-all duration-200 cursor-pointer ${tickerPosition === 'bottom'
+                          ? 'bg-primary-container text-on-primary-container shadow-xs'
+                          : 'text-on-surface-variant hover:text-on-surface'
+                        }`}
+                    >
+                      Bottom
+                    </button>
+                    <button
+                      onClick={() => setTickerPosition('top')}
+                      className={`py-1.5 px-3 rounded text-label-caps font-label-caps text-[10px] uppercase font-bold transition-all duration-200 cursor-pointer ${tickerPosition === 'top'
+                          ? 'bg-primary-container text-on-primary-container shadow-xs'
+                          : 'text-on-surface-variant hover:text-on-surface'
+                        }`}
+                    >
+                      Top
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </Card>
+
+          {/* Card 5: Code Block Tool - code/language/position/lines-per-page
+              are edited together in the CodeEditorModal (opened via "Edit
+              Code" below) rather than inline here, matching reel-craft's own
+              CodeEditorModal design: a code textarea needs real room to
+              write/paste in, which the narrow tool panel can't give it. */}
+          <Card className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-tertiary/10 flex items-center justify-center text-tertiary">
+                  <span className="material-symbols-outlined">code</span>
+                </div>
+                <div>
+                  <h4 className="text-body-md font-bold text-on-surface">Code Block</h4>
+                  <p className="text-body-sm text-outline text-[12px]">Show a syntax-highlighted code panel</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setCodeBlockEnabled(!codeBlockEnabled)}
+                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer outline-none ${codeBlockEnabled ? 'bg-primary-container' : 'bg-surface-variant'
+                  }`}
+                aria-label="Toggle code block"
+              >
+                <div
+                  className={`absolute top-[2px] left-[2px] bg-white rounded-full h-5 w-5 transition-transform shadow-xs ${codeBlockEnabled ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                />
+              </button>
+            </div>
+
+            {codeBlockEnabled && (
+              <div className="flex items-center justify-between border-t border-outline-variant/30 pt-3 animate-in slide-in-from-top-1 duration-150">
+                <span className="text-body-sm text-on-surface-variant capitalize">
+                  {CODE_LANGUAGE_LABELS[codeBlockLanguage]} · {codeBlockPosition}
+                </span>
+                <button
+                  onClick={() => setIsCodeEditorOpen(true)}
+                  className="flex items-center gap-1 rounded-lg border border-outline-variant/60 px-3 py-1.5 text-body-sm font-semibold text-primary hover:border-primary transition-colors cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">edit</span>
+                  Edit Code
+                </button>
+              </div>
+            )}
+          </Card>
+
+          {/* Card 6: Frame Tool (condensed) */}
           <CondensedCard className="flex flex-col gap-4" moreTo="/overlay/frames" moreLabel="More frames">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-tertiary/10 flex items-center justify-center text-tertiary">
@@ -230,7 +473,7 @@ export const OverlayPage: React.FC = () => {
             </div>
           </CondensedCard>
 
-          {/* Card 4: Texture Overlays (condensed) */}
+          {/* Card 7: Texture Overlays (condensed) */}
           <CondensedCard className="flex flex-col gap-4" moreTo="/overlay/texture-overlays" moreLabel="More overlays">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-tertiary/10 flex items-center justify-center text-tertiary">

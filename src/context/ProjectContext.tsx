@@ -6,6 +6,7 @@ import { DEFAULT_KEYWORDS } from '../captions/styles/applyKeywordEmphasis';
 import type { OverlaySettings, ProgressBarPosition, WatermarkPosition } from '../overlay/types';
 import type { FrameSettings, FrameVariant } from '../frames/types';
 import type { OverlayIntensity, TextureOverlaySettings } from '../textures/types';
+import type { CodeBlockPosition, CodeLanguage, MotionGraphicsSettings, TickerDirection, TickerPosition } from '../motion/types';
 
 export type TranscribeStatus = 'idle' | 'uploading' | 'error';
 export type SaveStatus = 'saved' | 'saving';
@@ -47,6 +48,26 @@ type PersistedState = {
   halationIntensity: OverlayIntensity;
   gridEnabled: boolean;
   gridIntensity: OverlayIntensity;
+  crtScanlinesEnabled: boolean;
+  crtScanlinesIntensity: OverlayIntensity;
+  halftoneEnabled: boolean;
+  halftoneIntensity: OverlayIntensity;
+  lightLeakEnabled: boolean;
+  lightLeakIntensity: OverlayIntensity;
+  codeBlockEnabled: boolean;
+  codeBlockCode: string;
+  codeBlockLanguage: CodeLanguage;
+  codeBlockPosition: CodeBlockPosition;
+  codeBlockLinesPerPage: number;
+  numberCounterEnabled: boolean;
+  numberCounterStart: number;
+  numberCounterEnd: number;
+  numberCounterPrefix: string;
+  numberCounterSuffix: string;
+  tickerEnabled: boolean;
+  tickerText: string;
+  tickerDirection: TickerDirection;
+  tickerPosition: TickerPosition;
 };
 
 const generateId = (): string =>
@@ -166,7 +187,51 @@ interface ProjectContextType {
   setGridEnabled: (enabled: boolean) => void;
   gridIntensity: OverlayIntensity;
   setGridIntensity: (intensity: OverlayIntensity) => void;
+  crtScanlinesEnabled: boolean;
+  setCrtScanlinesEnabled: (enabled: boolean) => void;
+  crtScanlinesIntensity: OverlayIntensity;
+  setCrtScanlinesIntensity: (intensity: OverlayIntensity) => void;
+  halftoneEnabled: boolean;
+  setHalftoneEnabled: (enabled: boolean) => void;
+  halftoneIntensity: OverlayIntensity;
+  setHalftoneIntensity: (intensity: OverlayIntensity) => void;
+  lightLeakEnabled: boolean;
+  setLightLeakEnabled: (enabled: boolean) => void;
+  lightLeakIntensity: OverlayIntensity;
+  setLightLeakIntensity: (intensity: OverlayIntensity) => void;
   textureSettings: TextureOverlaySettings;
+  // Motion graphics tab controls, lifted the same way as textureSettings
+  // above - each graphic is independently toggleable and combines with the
+  // others (Ticker/NumberCounter/CodeBlock), matching reel-craft's design.
+  codeBlockEnabled: boolean;
+  setCodeBlockEnabled: (enabled: boolean) => void;
+  codeBlockCode: string;
+  setCodeBlockCode: (code: string) => void;
+  codeBlockLanguage: CodeLanguage;
+  setCodeBlockLanguage: (language: CodeLanguage) => void;
+  codeBlockPosition: CodeBlockPosition;
+  setCodeBlockPosition: (position: CodeBlockPosition) => void;
+  codeBlockLinesPerPage: number;
+  setCodeBlockLinesPerPage: (linesPerPage: number) => void;
+  numberCounterEnabled: boolean;
+  setNumberCounterEnabled: (enabled: boolean) => void;
+  numberCounterStart: number;
+  setNumberCounterStart: (value: number) => void;
+  numberCounterEnd: number;
+  setNumberCounterEnd: (value: number) => void;
+  numberCounterPrefix: string;
+  setNumberCounterPrefix: (value: string) => void;
+  numberCounterSuffix: string;
+  setNumberCounterSuffix: (value: string) => void;
+  tickerEnabled: boolean;
+  setTickerEnabled: (enabled: boolean) => void;
+  tickerText: string;
+  setTickerText: (text: string) => void;
+  tickerDirection: TickerDirection;
+  setTickerDirection: (direction: TickerDirection) => void;
+  tickerPosition: TickerPosition;
+  setTickerPosition: (position: TickerPosition) => void;
+  motionSettings: MotionGraphicsSettings;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -233,6 +298,40 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [gridEnabled, setGridEnabled] = useState(persisted?.gridEnabled ?? false);
   const [gridIntensity, setGridIntensity] = useState<OverlayIntensity>(persisted?.gridIntensity ?? 'medium');
 
+  const [crtScanlinesEnabled, setCrtScanlinesEnabled] = useState(persisted?.crtScanlinesEnabled ?? false);
+  const [crtScanlinesIntensity, setCrtScanlinesIntensity] = useState<OverlayIntensity>(
+    persisted?.crtScanlinesIntensity ?? 'medium',
+  );
+  const [halftoneEnabled, setHalftoneEnabled] = useState(persisted?.halftoneEnabled ?? false);
+  const [halftoneIntensity, setHalftoneIntensity] = useState<OverlayIntensity>(
+    persisted?.halftoneIntensity ?? 'medium',
+  );
+  const [lightLeakEnabled, setLightLeakEnabled] = useState(persisted?.lightLeakEnabled ?? false);
+  const [lightLeakIntensity, setLightLeakIntensity] = useState<OverlayIntensity>(
+    persisted?.lightLeakIntensity ?? 'medium',
+  );
+
+  const [codeBlockEnabled, setCodeBlockEnabled] = useState(persisted?.codeBlockEnabled ?? false);
+  const [codeBlockCode, setCodeBlockCode] = useState(
+    persisted?.codeBlockCode ?? 'def hello_world():\n    print("Hello, World!")',
+  );
+  const [codeBlockLanguage, setCodeBlockLanguage] = useState<CodeLanguage>(persisted?.codeBlockLanguage ?? 'python');
+  const [codeBlockPosition, setCodeBlockPosition] = useState<CodeBlockPosition>(
+    persisted?.codeBlockPosition ?? 'center',
+  );
+  const [codeBlockLinesPerPage, setCodeBlockLinesPerPage] = useState(persisted?.codeBlockLinesPerPage ?? 8);
+
+  const [numberCounterEnabled, setNumberCounterEnabled] = useState(persisted?.numberCounterEnabled ?? false);
+  const [numberCounterStart, setNumberCounterStart] = useState(persisted?.numberCounterStart ?? 0);
+  const [numberCounterEnd, setNumberCounterEnd] = useState(persisted?.numberCounterEnd ?? 100);
+  const [numberCounterPrefix, setNumberCounterPrefix] = useState(persisted?.numberCounterPrefix ?? '');
+  const [numberCounterSuffix, setNumberCounterSuffix] = useState(persisted?.numberCounterSuffix ?? '');
+
+  const [tickerEnabled, setTickerEnabled] = useState(persisted?.tickerEnabled ?? false);
+  const [tickerText, setTickerText] = useState(persisted?.tickerText ?? 'Breaking News');
+  const [tickerDirection, setTickerDirection] = useState<TickerDirection>(persisted?.tickerDirection ?? 'left');
+  const [tickerPosition, setTickerPosition] = useState<TickerPosition>(persisted?.tickerPosition ?? 'bottom');
+
   const overlaySettings: OverlaySettings = useMemo(
     () => ({
       watermarkEnabled,
@@ -251,8 +350,67 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   );
 
   const textureSettings: TextureOverlaySettings = useMemo(
-    () => ({ filmDustEnabled, halationEnabled, halationIntensity, gridEnabled, gridIntensity }),
-    [filmDustEnabled, halationEnabled, halationIntensity, gridEnabled, gridIntensity],
+    () => ({
+      filmDustEnabled,
+      halationEnabled,
+      halationIntensity,
+      gridEnabled,
+      gridIntensity,
+      crtScanlinesEnabled,
+      crtScanlinesIntensity,
+      halftoneEnabled,
+      halftoneIntensity,
+      lightLeakEnabled,
+      lightLeakIntensity,
+    }),
+    [
+      filmDustEnabled,
+      halationEnabled,
+      halationIntensity,
+      gridEnabled,
+      gridIntensity,
+      crtScanlinesEnabled,
+      crtScanlinesIntensity,
+      halftoneEnabled,
+      halftoneIntensity,
+      lightLeakEnabled,
+      lightLeakIntensity,
+    ],
+  );
+
+  const motionSettings: MotionGraphicsSettings = useMemo(
+    () => ({
+      codeBlockEnabled,
+      codeBlockCode,
+      codeBlockLanguage,
+      codeBlockPosition,
+      codeBlockLinesPerPage,
+      numberCounterEnabled,
+      numberCounterStart,
+      numberCounterEnd,
+      numberCounterPrefix,
+      numberCounterSuffix,
+      tickerEnabled,
+      tickerText,
+      tickerDirection,
+      tickerPosition,
+    }),
+    [
+      codeBlockEnabled,
+      codeBlockCode,
+      codeBlockLanguage,
+      codeBlockPosition,
+      codeBlockLinesPerPage,
+      numberCounterEnabled,
+      numberCounterStart,
+      numberCounterEnd,
+      numberCounterPrefix,
+      numberCounterSuffix,
+      tickerEnabled,
+      tickerText,
+      tickerDirection,
+      tickerPosition,
+    ],
   );
 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
@@ -283,6 +441,26 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       halationIntensity,
       gridEnabled,
       gridIntensity,
+      crtScanlinesEnabled,
+      crtScanlinesIntensity,
+      halftoneEnabled,
+      halftoneIntensity,
+      lightLeakEnabled,
+      lightLeakIntensity,
+      codeBlockEnabled,
+      codeBlockCode,
+      codeBlockLanguage,
+      codeBlockPosition,
+      codeBlockLinesPerPage,
+      numberCounterEnabled,
+      numberCounterStart,
+      numberCounterEnd,
+      numberCounterPrefix,
+      numberCounterSuffix,
+      tickerEnabled,
+      tickerText,
+      tickerDirection,
+      tickerPosition,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     setSaveStatus('saved');
@@ -310,6 +488,26 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     halationIntensity,
     gridEnabled,
     gridIntensity,
+    crtScanlinesEnabled,
+    crtScanlinesIntensity,
+    halftoneEnabled,
+    halftoneIntensity,
+    lightLeakEnabled,
+    lightLeakIntensity,
+    codeBlockEnabled,
+    codeBlockCode,
+    codeBlockLanguage,
+    codeBlockPosition,
+    codeBlockLinesPerPage,
+    numberCounterEnabled,
+    numberCounterStart,
+    numberCounterEnd,
+    numberCounterPrefix,
+    numberCounterSuffix,
+    tickerEnabled,
+    tickerText,
+    tickerDirection,
+    tickerPosition,
   ]);
 
   // Debounced autosave: "Saving..." is shown for real while a write is
@@ -467,7 +665,48 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setGridEnabled,
         gridIntensity,
         setGridIntensity,
+        crtScanlinesEnabled,
+        setCrtScanlinesEnabled,
+        crtScanlinesIntensity,
+        setCrtScanlinesIntensity,
+        halftoneEnabled,
+        setHalftoneEnabled,
+        halftoneIntensity,
+        setHalftoneIntensity,
+        lightLeakEnabled,
+        setLightLeakEnabled,
+        lightLeakIntensity,
+        setLightLeakIntensity,
         textureSettings,
+        codeBlockEnabled,
+        setCodeBlockEnabled,
+        codeBlockCode,
+        setCodeBlockCode,
+        codeBlockLanguage,
+        setCodeBlockLanguage,
+        codeBlockPosition,
+        setCodeBlockPosition,
+        codeBlockLinesPerPage,
+        setCodeBlockLinesPerPage,
+        numberCounterEnabled,
+        setNumberCounterEnabled,
+        numberCounterStart,
+        setNumberCounterStart,
+        numberCounterEnd,
+        setNumberCounterEnd,
+        numberCounterPrefix,
+        setNumberCounterPrefix,
+        numberCounterSuffix,
+        setNumberCounterSuffix,
+        tickerEnabled,
+        setTickerEnabled,
+        tickerText,
+        setTickerText,
+        tickerDirection,
+        setTickerDirection,
+        tickerPosition,
+        setTickerPosition,
+        motionSettings,
       }}
     >
       {children}

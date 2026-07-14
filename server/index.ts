@@ -14,6 +14,7 @@ import type { CaptionStyleOverrides, CaptionStyleVariant } from "../src/captions
 import type { OverlaySettings } from "../src/overlay/types.js";
 import type { FrameSettings } from "../src/frames/types.js";
 import type { TextureOverlaySettings } from "../src/textures/types.js";
+import type { MotionGraphicsSettings } from "../src/motion/types.js";
 
 // ffmpeg-static's CJS export shape doesn't line up with its own .d.ts under
 // "module": "nodenext", so import it via require() and assert the type instead.
@@ -208,6 +209,7 @@ type GreenScreenRequestBody = {
   overlaySettings?: OverlaySettings;
   frameSettings?: FrameSettings;
   textureSettings?: TextureOverlaySettings;
+  motionSettings?: MotionGraphicsSettings;
   durationInFrames: number;
   // ExportPage's Resolution dropdown, converted client-side to a renderMedia
   // scale factor (see src/export/resolutions.ts) - multiplies the composition's
@@ -233,6 +235,7 @@ const runGreenScreenRender = async (jobId: string, body: GreenScreenRequestBody)
       overlaySettings: body.overlaySettings,
       frameSettings: body.frameSettings,
       textureSettings: body.textureSettings,
+      motionSettings: body.motionSettings,
       durationInFrames: body.durationInFrames,
       orientation: body.orientation ?? "vertical",
     };

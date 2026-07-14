@@ -10,6 +10,8 @@ import { FrameRenderer } from '../frames/FrameRenderer';
 import { getFrameContentInset } from '../frames/contentInset';
 import type { TextureOverlaySettings } from '../textures/types';
 import { TextureOverlayRenderer } from '../textures/TextureOverlayRenderer';
+import type { MotionGraphicsSettings } from '../motion/types';
+import { MotionGraphicsRenderer } from '../motion/MotionGraphicsRenderer';
 
 export type CaptionPreviewProps = {
   captions: Caption[] | null;
@@ -20,6 +22,7 @@ export type CaptionPreviewProps = {
   overlaySettings?: OverlaySettings;
   frameSettings?: FrameSettings;
   textureSettings?: TextureOverlaySettings;
+  motionSettings?: MotionGraphicsSettings;
 };
 
 // Minimal vertical-only preview: uploaded media as the background, real
@@ -35,17 +38,23 @@ export const CaptionPreviewComposition: React.FC<CaptionPreviewProps> = ({
   overlaySettings,
   frameSettings,
   textureSettings,
+  motionSettings,
 }) => {
-  const { height } = useVideoConfig();
-  const frameContentInset = getFrameContentInset(frameSettings, height);
+  const { width, height } = useVideoConfig();
+  const frameContentInset = getFrameContentInset(frameSettings, height, width);
   // Frames whose chrome occupies real space (e.g. Cinematic Scope's
-  // letterbox bars) render their bars as a sibling painted after `children`
-  // in FrameRenderer, so without an explicit z-index this layer would paint
-  // underneath them. Elevate captions/overlays above that chrome only when
-  // there's an inset to clear - frames with zero inset (Minimal Bezel,
-  // Gradient Border, Neon Glow, none) keep their existing z-index:auto
-  // stacking, unchanged from before.
-  const hasFrameInset = frameContentInset.top > 0 || frameContentInset.bottom > 0;
+  // letterbox bars, Film Strip's sprocket rails) render their chrome as a
+  // sibling painted after `children` in FrameRenderer, so without an
+  // explicit z-index this layer would paint underneath them. Elevate
+  // captions/overlays above that chrome only when there's an inset to clear
+  // on any edge - frames with zero inset (Minimal Bezel, Square Bezel,
+  // Gradient Border, Neon Glow, Vintage Projector, none) keep their existing
+  // z-index:auto stacking, unchanged from before.
+  const hasFrameInset =
+    frameContentInset.top > 0 ||
+    frameContentInset.bottom > 0 ||
+    frameContentInset.left > 0 ||
+    frameContentInset.right > 0;
 
   return (
     <FrameRenderer frameSettings={frameSettings}>
@@ -70,6 +79,7 @@ export const CaptionPreviewComposition: React.FC<CaptionPreviewProps> = ({
           {overlaySettings?.progressBarEnabled && (
             <ProgressBarOverlay color={overlaySettings.progressBarColor} position={overlaySettings.progressBarPosition} />
           )}
+          <MotionGraphicsRenderer motionSettings={motionSettings} />
         </AbsoluteFill>
       </AbsoluteFill>
     </FrameRenderer>

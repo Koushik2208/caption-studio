@@ -33,6 +33,7 @@ export const PreviewPlayer: React.FC<PreviewPlayerProps> = ({ className }) => {
     overlaySettings,
     frameSettings,
     textureSettings,
+    motionSettings,
   } = useProject();
   const mediaDurationFrames = useMediaDurationFrames(mediaUrl, FPS);
   const mediaKind = mediaFile ? (mediaFile.type.startsWith('audio/') ? 'audio' : 'video') : null;
@@ -48,7 +49,7 @@ export const PreviewPlayer: React.FC<PreviewPlayerProps> = ({ className }) => {
     return (
       <Player
         component={CaptionExportComposition}
-        inputProps={{ captions, styleVariant, styleOverrides, overlaySettings, frameSettings, textureSettings }}
+        inputProps={{ captions, styleVariant, styleOverrides, overlaySettings, frameSettings, textureSettings, motionSettings }}
         durationInFrames={durationInFrames}
         compositionWidth={width}
         compositionHeight={height}
@@ -72,6 +73,7 @@ export const PreviewPlayer: React.FC<PreviewPlayerProps> = ({ className }) => {
         overlaySettings,
         frameSettings,
         textureSettings,
+        motionSettings,
       }}
       durationInFrames={mediaUrl ? mediaDurationFrames : FALLBACK_DURATION_FRAMES}
       compositionWidth={width}

@@ -9,6 +9,9 @@ export const FRAME_OPTIONS: { value: FrameVariant; label: string }[] = [
   { value: 'gradientBorder', label: 'Gradient Border' },
   { value: 'neonGlow', label: 'Neon Glow' },
   { value: 'cinematicScope', label: 'Cinematic Scope' },
+  { value: 'filmStrip', label: 'Film Strip' },
+  { value: 'squareBezel', label: 'Square Bezel' },
+  { value: 'vintageProjector', label: 'Vintage Projector' },
 ];
 
 export const FRAME_SHELL_COLORS = [

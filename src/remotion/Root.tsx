@@ -28,6 +28,7 @@ export const RemotionRoot: React.FC = () => {
           overlaySettings: undefined,
           frameSettings: undefined,
           textureSettings: undefined,
+          motionSettings: undefined,
           durationInFrames: FALLBACK_DURATION_IN_FRAMES,
           orientation: 'vertical',
         } satisfies CaptionExportProps
