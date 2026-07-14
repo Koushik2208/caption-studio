@@ -113,14 +113,20 @@ const toContiguousFramePages = (pages: RawPage[], fps: number): CaptionPage[] =>
     };
   });
 
-// Pipeline order: createTikTokStyleCaptions -> char-budget split ->
-// min-duration merge -> contiguous frame conversion.
+// Pipeline order: empty-text filter -> createTikTokStyleCaptions ->
+// char-budget split -> min-duration merge -> contiguous frame conversion.
 export const processCaptions = (
   captions: Caption[],
   fps: number,
 ): CaptionPage[] => {
+  // Tokens edited down to empty text (TranscriptEditor's deletion path)
+  // must be dropped before createTikTokStyleCaptions ever sees them - a
+  // blank token would otherwise render as an empty "word" and still eat a
+  // slot in the char-budget/min-duration merge math below.
+  const nonEmptyCaptions = captions.filter((caption) => caption.text.trim().length > 0);
+
   const { pages } = createTikTokStyleCaptions({
-    captions,
+    captions: nonEmptyCaptions,
     combineTokensWithinMilliseconds: COMBINE_TOKENS_WITHIN_MS,
   });
 

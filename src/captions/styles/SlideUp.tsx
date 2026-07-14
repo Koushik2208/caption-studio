@@ -4,6 +4,7 @@ import type { CaptionPage } from "../processCaptions";
 import type { CaptionStyleOverrides } from "./types";
 import { applyKeywordEmphasis, DEFAULT_KEYWORDS, isKeywordToken } from "./applyKeywordEmphasis";
 import { getResponsiveFontSize } from "./fontSize";
+import { combineTextShadow, getLegibilityShadow, getLegibilityStroke } from "./legibility";
 import { getPositionStyle } from "./position";
 
 const HIGHLIGHT_COLOR = "#ffd23f";
@@ -50,7 +51,7 @@ export const SlideUp: React.FC<{
           whiteSpace: "pre-wrap",
           maxWidth: "85%",
           lineHeight: 1.15,
-          WebkitTextStroke: "3px black",
+          WebkitTextStroke: getLegibilityStroke(fontSize),
           paintOrder: "stroke fill",
         }}
       >
@@ -83,7 +84,7 @@ export const SlideUp: React.FC<{
               style={{
                 display: "inline-block",
                 color: emphasis.color ?? (spoken ? highlightColor : "white"),
-                textShadow: emphasis.textShadow,
+                textShadow: combineTextShadow(getLegibilityShadow(fontSize), emphasis.textShadow),
                 opacity,
                 transform: `translateY(${translateY}px) scale(${emphasis.scale})`,
               }}

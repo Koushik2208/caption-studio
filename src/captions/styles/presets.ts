@@ -17,23 +17,54 @@ import { loadFont as loadRoboto } from '@remotion/google-fonts/Roboto';
 import { loadFont as loadMontserrat } from '@remotion/google-fonts/Montserrat';
 import { loadFont as loadOpenSans } from '@remotion/google-fonts/OpenSans';
 import { loadFont as loadJetBrainsMono } from '@remotion/google-fonts/JetBrainsMono';
-import { loadFont as loadSourceSans3 } from '@remotion/google-fonts/SourceSans3';
 import { loadFont as loadArchivoBlack } from '@remotion/google-fonts/ArchivoBlack';
-import { loadFont as loadPoppins } from '@remotion/google-fonts/Poppins';
+import { loadFont as loadAnton } from '@remotion/google-fonts/Anton';
+import { loadFont as loadCourierPrime } from '@remotion/google-fonts/CourierPrime';
+import { loadFont as loadBangers } from '@remotion/google-fonts/Bangers';
+import { loadFont as loadLeagueSpartan } from '@remotion/google-fonts/LeagueSpartan';
+import { loadFont as loadCaveat } from '@remotion/google-fonts/Caveat';
+import { loadFont as loadJost } from '@remotion/google-fonts/Jost';
+import { loadFont as loadCinzel } from '@remotion/google-fonts/Cinzel';
+import { loadFont as loadArvo } from '@remotion/google-fonts/Arvo';
+import { loadFont as loadQuicksand } from '@remotion/google-fonts/Quicksand';
+import { loadFont as loadAtkinsonHyperlegible } from '@remotion/google-fonts/AtkinsonHyperlegible';
+import { loadFont as loadRajdhani } from '@remotion/google-fonts/Rajdhani';
+import { loadFont as loadMarcellus } from '@remotion/google-fonts/Marcellus';
+import type { CaptionStyleVariant } from './types';
 
 const { fontFamily: bebasNeue } = loadBebasNeue('normal', { weights: ['400'], subsets: ['latin'] });
 const { fontFamily: roboto } = loadRoboto('normal', { weights: ['500'], subsets: ['latin'] });
 const { fontFamily: montserrat } = loadMontserrat('normal', { weights: ['600'], subsets: ['latin'] });
 const { fontFamily: openSans } = loadOpenSans('normal', { weights: ['400'], subsets: ['latin'] });
 const { fontFamily: jetBrainsMono } = loadJetBrainsMono('normal', { weights: ['700'], subsets: ['latin'] });
-const { fontFamily: sourceSans3 } = loadSourceSans3('normal', { weights: ['400'], subsets: ['latin'] });
 const { fontFamily: archivoBlack } = loadArchivoBlack('normal', { weights: ['400'], subsets: ['latin'] });
-const { fontFamily: poppins } = loadPoppins('normal', { weights: ['600'], subsets: ['latin'] });
+const { fontFamily: anton } = loadAnton('normal', { weights: ['400'], subsets: ['latin'] });
+const { fontFamily: courierPrime } = loadCourierPrime('normal', { weights: ['700'], subsets: ['latin'] });
+const { fontFamily: bangers } = loadBangers('normal', { weights: ['400'], subsets: ['latin'] });
+const { fontFamily: leagueSpartan } = loadLeagueSpartan('normal', { weights: ['700'], subsets: ['latin'] });
+const { fontFamily: caveat } = loadCaveat('normal', { weights: ['700'], subsets: ['latin'] });
+const { fontFamily: jost } = loadJost('normal', { weights: ['500'], subsets: ['latin'] });
+const { fontFamily: cinzel } = loadCinzel('normal', { weights: ['600'], subsets: ['latin'] });
+const { fontFamily: arvo } = loadArvo('normal', { weights: ['700'], subsets: ['latin'] });
+const { fontFamily: quicksand } = loadQuicksand('normal', { weights: ['600'], subsets: ['latin'] });
+const { fontFamily: atkinsonHyperlegible } = loadAtkinsonHyperlegible('normal', { weights: ['700'], subsets: ['latin'] });
+const { fontFamily: rajdhani } = loadRajdhani('normal', { weights: ['600'], subsets: ['latin'] });
+const { fontFamily: marcellus } = loadMarcellus('normal', { weights: ['400'], subsets: ['latin'] });
 
-// Research-backed 8-preset table (PLAN.md Part F), replacing the previous 4
-// informal ones. Helvetica/Helvetica Neue skipped despite appearing in
-// research - not freely web-licensed; Inter/Roboto already cover the same
-// visual space without licensing risk.
+// Which orientation a preset is researched/tuned for. Vertical short-form
+// rewards personality/energy; horizontal long-form rewards restraint and
+// legibility over long view times. 'both' presets work reasonably at either.
+export type FontPresetOrientation = 'vertical' | 'horizontal' | 'both';
+
+// PLAN.md Part I: expanded from the original research-backed 8-preset table
+// (Part F). Editorial (Source Sans 3) and Rounded Friendly (Poppins) were cut
+// as redundant with Minimal/Soft Modern. 12 new presets added, each verified
+// as a real @remotion/google-fonts entry (checked against the installed
+// package's font list, not assumed from name recognition) - no substitutions
+// were needed, every researched name matched a real font exactly.
+// `suggestedAnimation` is a default-on-select hint from the research
+// pairings, not a forced constraint - animation and font stay decoupled
+// per Part F.
 export const FONT_PRESETS = [
   {
     name: 'Viral Hook',
@@ -41,6 +72,8 @@ export const FONT_PRESETS = [
     fontWeight: 400,
     fontStyle: 'normal' as const,
     labelClass: 'uppercase tracking-wide',
+    orientation: 'vertical' as FontPresetOrientation,
+    suggestedAnimation: 'signature' as CaptionStyleVariant,
   },
   {
     name: 'Clean Standard',
@@ -48,6 +81,8 @@ export const FONT_PRESETS = [
     fontWeight: 500,
     fontStyle: 'normal' as const,
     labelClass: 'font-medium',
+    orientation: 'both' as FontPresetOrientation,
+    suggestedAnimation: 'calmPhrase' as CaptionStyleVariant,
   },
   {
     name: 'Soft Modern',
@@ -55,6 +90,8 @@ export const FONT_PRESETS = [
     fontWeight: 600,
     fontStyle: 'normal' as const,
     labelClass: 'font-semibold',
+    orientation: 'both' as FontPresetOrientation,
+    suggestedAnimation: 'slideUp' as CaptionStyleVariant,
   },
   {
     name: 'Minimal',
@@ -62,6 +99,8 @@ export const FONT_PRESETS = [
     fontWeight: 400,
     fontStyle: 'normal' as const,
     labelClass: 'font-normal',
+    orientation: 'both' as FontPresetOrientation,
+    suggestedAnimation: 'calmPhrase' as CaptionStyleVariant,
   },
   {
     name: 'Tech/Mono',
@@ -69,13 +108,8 @@ export const FONT_PRESETS = [
     fontWeight: 700,
     fontStyle: 'normal' as const,
     labelClass: 'font-bold font-mono',
-  },
-  {
-    name: 'Editorial',
-    fontFamily: `"${sourceSans3}", sans-serif`,
-    fontWeight: 400,
-    fontStyle: 'normal' as const,
-    labelClass: 'font-normal',
+    orientation: 'both' as FontPresetOrientation,
+    suggestedAnimation: 'typewriter' as CaptionStyleVariant,
   },
   {
     name: 'Impact Punch',
@@ -83,14 +117,136 @@ export const FONT_PRESETS = [
     fontWeight: 400,
     fontStyle: 'normal' as const,
     labelClass: 'uppercase',
+    orientation: 'vertical' as FontPresetOrientation,
+    suggestedAnimation: 'signature' as CaptionStyleVariant,
   },
   {
-    name: 'Rounded Friendly',
-    fontFamily: `"${poppins}", sans-serif`,
+    name: 'Meme Energy',
+    fontFamily: `"${anton}", "Arial Black", sans-serif`,
+    fontWeight: 400,
+    fontStyle: 'normal' as const,
+    labelClass: 'uppercase tracking-wide',
+    orientation: 'vertical' as FontPresetOrientation,
+    suggestedAnimation: 'signature' as CaptionStyleVariant,
+  },
+  {
+    name: 'Screenplay',
+    fontFamily: `"${courierPrime}", "Courier New", monospace`,
+    fontWeight: 700,
+    fontStyle: 'normal' as const,
+    labelClass: 'font-bold font-mono',
+    orientation: 'vertical' as FontPresetOrientation,
+    suggestedAnimation: 'typewriter' as CaptionStyleVariant,
+  },
+  {
+    name: 'Playful Comic',
+    fontFamily: `"${bangers}", cursive`,
+    fontWeight: 400,
+    fontStyle: 'normal' as const,
+    labelClass: 'uppercase tracking-wide',
+    orientation: 'vertical' as FontPresetOrientation,
+    suggestedAnimation: 'slideUp' as CaptionStyleVariant,
+  },
+  {
+    name: 'Business Bold',
+    fontFamily: `"${leagueSpartan}", sans-serif`,
+    fontWeight: 700,
+    fontStyle: 'normal' as const,
+    labelClass: 'font-bold',
+    orientation: 'vertical' as FontPresetOrientation,
+    suggestedAnimation: 'slideUp' as CaptionStyleVariant,
+  },
+  {
+    name: 'Handwritten',
+    fontFamily: `"${caveat}", cursive`,
+    fontWeight: 700,
+    fontStyle: 'normal' as const,
+    labelClass: 'font-bold',
+    orientation: 'vertical' as FontPresetOrientation,
+    suggestedAnimation: 'calmPhrase' as CaptionStyleVariant,
+  },
+  {
+    name: 'Cinematic',
+    fontFamily: `"${jost}", sans-serif`,
+    fontWeight: 500,
+    fontStyle: 'normal' as const,
+    labelClass: 'font-medium tracking-wide',
+    orientation: 'horizontal' as FontPresetOrientation,
+    suggestedAnimation: 'outlineDraw' as CaptionStyleVariant,
+  },
+  {
+    name: 'Elegant Serif',
+    fontFamily: `"${cinzel}", serif`,
     fontWeight: 600,
     fontStyle: 'normal' as const,
     labelClass: 'font-semibold',
+    orientation: 'horizontal' as FontPresetOrientation,
+    suggestedAnimation: 'outlineDraw' as CaptionStyleVariant,
+  },
+  {
+    name: 'Essay Slab',
+    fontFamily: `"${arvo}", serif`,
+    fontWeight: 700,
+    fontStyle: 'normal' as const,
+    labelClass: 'font-bold',
+    orientation: 'horizontal' as FontPresetOrientation,
+    suggestedAnimation: 'calmPhrase' as CaptionStyleVariant,
+  },
+  {
+    name: 'Calm Organic',
+    fontFamily: `"${quicksand}", sans-serif`,
+    fontWeight: 600,
+    fontStyle: 'normal' as const,
+    labelClass: 'font-semibold',
+    orientation: 'horizontal' as FontPresetOrientation,
+    suggestedAnimation: 'calmPhrase' as CaptionStyleVariant,
+  },
+  {
+    name: 'Accessible',
+    fontFamily: `"${atkinsonHyperlegible}", sans-serif`,
+    fontWeight: 700,
+    fontStyle: 'normal' as const,
+    labelClass: 'font-bold',
+    orientation: 'horizontal' as FontPresetOrientation,
+    suggestedAnimation: 'calmPhrase' as CaptionStyleVariant,
+  },
+  {
+    name: 'Sci-Fi Tech',
+    fontFamily: `"${rajdhani}", sans-serif`,
+    fontWeight: 600,
+    fontStyle: 'normal' as const,
+    labelClass: 'font-semibold uppercase tracking-wide',
+    orientation: 'horizontal' as FontPresetOrientation,
+    suggestedAnimation: 'typewriter' as CaptionStyleVariant,
+  },
+  {
+    name: 'Luxury Display',
+    fontFamily: `"${marcellus}", serif`,
+    fontWeight: 400,
+    fontStyle: 'normal' as const,
+    labelClass: 'tracking-wide',
+    orientation: 'horizontal' as FontPresetOrientation,
+    suggestedAnimation: 'outlineDraw' as CaptionStyleVariant,
   },
 ] as const;
 
 export type FontPresetName = (typeof FONT_PRESETS)[number]['name'];
+
+// PLAN.md Part I3: StylePage's condensed Font card shows a few presets
+// "filtered/prioritized by current layoutMode" - presets tuned for the
+// active orientation lead (in their existing table order), followed by the
+// orientation-agnostic 'both' presets, so slicing the first
+// CONDENSED_FONT_COUNT off this reordering surfaces the fonts the Part I
+// research actually recommends for that orientation first, instead of
+// whichever 'both' presets happen to sit earliest in the full table.
+// Doesn't drop the non-matching-orientation presets entirely (unlike a
+// plain filter) - they're just deprioritized - so a slice always has enough
+// entries to fill the condensed card.
+export const getPrioritizedFontPresets = (
+  activeOrientation: Exclude<FontPresetOrientation, 'both'>,
+): (typeof FONT_PRESETS)[number][] => {
+  const matching = FONT_PRESETS.filter((p) => p.orientation === activeOrientation);
+  const both = FONT_PRESETS.filter((p) => p.orientation === 'both');
+  const rest = FONT_PRESETS.filter((p) => p.orientation !== activeOrientation && p.orientation !== 'both');
+  return [...matching, ...both, ...rest];
+};

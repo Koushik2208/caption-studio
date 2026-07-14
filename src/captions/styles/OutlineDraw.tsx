@@ -4,6 +4,7 @@ import type { CaptionPage } from "../processCaptions";
 import type { CaptionStyleOverrides } from "./types";
 import { applyKeywordEmphasis, DEFAULT_KEYWORDS, isKeywordToken } from "./applyKeywordEmphasis";
 import { getResponsiveFontSize } from "./fontSize";
+import { combineTextShadow, getLegibilityShadow } from "./legibility";
 import { getPositionStyle } from "./position";
 
 const HIGHLIGHT_COLOR = "#ffd23f";
@@ -115,7 +116,7 @@ export const OutlineDraw: React.FC<{
                 // scaled-up word would visually spill into its neighbor's
                 // box instead of the browser reserving extra space for it.
                 fontSize: fontSize * emphasis.scale,
-                textShadow: emphasis.textShadow,
+                textShadow: combineTextShadow(getLegibilityShadow(fontSize), emphasis.textShadow),
               }}
             >
               {token.text}

@@ -4,7 +4,8 @@ import { Card } from '../components/common/Card';
 import { CondensedCard } from '../components/common/CondensedCard';
 import { Button } from '../components/common/Button';
 import { useProject } from '../context/ProjectContext';
-import { FONT_PRESETS } from '../captions/styles/presets';
+import { useLayout } from '../context/LayoutContext';
+import { getPrioritizedFontPresets } from '../captions/styles/presets';
 import type { CaptionPosition } from '../captions/styles/types';
 import { ANIMATION_STYLES, CONDENSED_ANIMATION_COUNT, CONDENSED_FONT_COUNT } from './styleOptions';
 
@@ -34,6 +35,8 @@ export const StylePage: React.FC = () => {
     fontSizeMultiplier,
     setFontSizeMultiplier,
   } = useProject();
+  const { layoutMode } = useLayout();
+  const condensedFontPresets = getPrioritizedFontPresets(layoutMode);
 
   // Local raw text mirrors the comma-separated input so mid-typing states
   // (trailing comma, extra spaces) don't get collapsed by the parsed array
@@ -82,7 +85,7 @@ export const StylePage: React.FC = () => {
           {/* Card 2: Font (condensed) */}
           <CondensedCard title="FONT" moreTo="/style/fonts" moreLabel="More fonts">
             <div className="grid grid-cols-2 gap-2">
-              {FONT_PRESETS.slice(0, CONDENSED_FONT_COUNT).map((p) => (
+              {condensedFontPresets.slice(0, CONDENSED_FONT_COUNT).map((p) => (
                 <button
                   key={p.name}
                   onClick={() => setPresetName(p.name)}

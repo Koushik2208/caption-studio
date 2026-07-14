@@ -4,6 +4,7 @@ import type { CaptionPage } from "../processCaptions";
 import type { CaptionStyleOverrides } from "./types";
 import { applyKeywordEmphasis, DEFAULT_KEYWORDS, isKeywordToken } from "./applyKeywordEmphasis";
 import { getResponsiveFontSize } from "./fontSize";
+import { combineTextShadow, getLegibilityShadow, getLegibilityStroke } from "./legibility";
 import { getPositionStyle } from "./position";
 
 const FADE_MS = 200;
@@ -45,7 +46,7 @@ export const CalmPhrase: React.FC<{
           whiteSpace: "pre-wrap",
           maxWidth: "85%",
           lineHeight: 1.15,
-          WebkitTextStroke: "3px black",
+          WebkitTextStroke: getLegibilityStroke(fontSize),
           paintOrder: "stroke fill",
           opacity,
         }}
@@ -60,7 +61,7 @@ export const CalmPhrase: React.FC<{
               style={{
                 display: "inline-block",
                 color: emphasis.color ?? baseColor,
-                textShadow: emphasis.textShadow,
+                textShadow: combineTextShadow(getLegibilityShadow(fontSize), emphasis.textShadow),
                 transform: `scale(${emphasis.scale})`,
               }}
             >
