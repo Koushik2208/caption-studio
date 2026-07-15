@@ -16,4 +16,17 @@ export type TextureOverlaySettings = {
   halftoneIntensity: OverlayIntensity;
   lightLeakEnabled: boolean;
   lightLeakIntensity: OverlayIntensity;
+  chromaticAberrationEnabled: boolean;
+  chromaticAberrationIntensity: OverlayIntensity;
+  // Fine continuous per-frame noise (feTurbulence seeded by frame number) -
+  // distinct from Film Dust's discrete moving specks.
+  filmGrainEnabled: boolean;
+  filmGrainIntensity: OverlayIntensity;
+  // Wraps the video/background layer (like Chromatic Aberration) rather than
+  // painting an additive layer - see src/textures/AudioPulse.tsx.
+  audioPulseEnabled: boolean;
+  audioPulseIntensity: OverlayIntensity;
+  // Also wraps the video/background layer - see src/textures/KeywordPunch.tsx.
+  keywordPunchEnabled: boolean;
+  keywordPunchIntensity: OverlayIntensity;
 };

@@ -15,6 +15,10 @@ export type FrameSettings = {
   variant: FrameVariant;
   // Shell color for bezel-style frames (MinimalBezel, SquareBezel) - other frames ignore it.
   bgColor: string;
+  // Multiplies Minimal Bezel's computed responsive corner radius (see
+  // src/frames/bezelRadius.ts) - other frames ignore it. Default 1.0, same
+  // multiplier-on-a-computed-default pattern as fontSizeMultiplier.
+  bezelRadiusMultiplier: number;
 };
 
 // How much of the composition's edges an active frame's own chrome already

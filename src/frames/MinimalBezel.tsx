@@ -1,11 +1,13 @@
 import React from 'react';
 import { AbsoluteFill, useCurrentFrame } from 'remotion';
+import { getResponsiveBezelRadius } from './bezelRadius';
 
 export type MinimalBezelProps = {
   children: React.ReactNode;
   width: number;
   height: number;
   bgColor?: string;
+  bezelRadiusMultiplier?: number;
 };
 
 // Premium phone shell: pure black outer, large-radius content window
@@ -15,6 +17,7 @@ export const MinimalBezel: React.FC<MinimalBezelProps> = ({
   width,
   height,
   bgColor = '#000000',
+  bezelRadiusMultiplier = 1,
 }) => {
   const frame = useCurrentFrame();
 
@@ -22,7 +25,7 @@ export const MinimalBezel: React.FC<MinimalBezelProps> = ({
   const contentHeight = height * 0.82;
   const contentLeft = (width - contentWidth) / 2;
   const contentTop = height * 0.09;
-  const contentRadius = contentWidth * 0.18;
+  const contentRadius = getResponsiveBezelRadius(contentWidth, bezelRadiusMultiplier);
 
   const glowOpacity = Math.sin(frame / 40) * 0.03 + 0.06;
 

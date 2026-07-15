@@ -23,6 +23,10 @@ const SAVE_DEBOUNCE_MS = 600;
 // restore on reload - skips re-uploading + re-running Whisper on every
 // refresh while iterating on Style/Overlay/Export. Media never persists.
 const TRANSCRIPT_STORAGE_KEY = 'caption-studio:cached-transcript';
+// Per-frame RMS amplitude computed alongside the transcript (server/index.ts's
+// computeAudioAmplitude) - cached the same way and for the same reason, so a
+// page reload restores Audio-Reactive Pulse without re-uploading/re-transcribing.
+const AUDIO_AMPLITUDE_STORAGE_KEY = 'caption-studio:cached-audio-amplitude';
 
 type PersistedState = {
   id: string;
@@ -43,6 +47,7 @@ type PersistedState = {
   progressBarPosition: ProgressBarPosition;
   frameVariant: FrameVariant;
   frameBgColor: string;
+  bezelRadiusMultiplier: number;
   filmDustEnabled: boolean;
   halationEnabled: boolean;
   halationIntensity: OverlayIntensity;
@@ -54,6 +59,14 @@ type PersistedState = {
   halftoneIntensity: OverlayIntensity;
   lightLeakEnabled: boolean;
   lightLeakIntensity: OverlayIntensity;
+  chromaticAberrationEnabled: boolean;
+  chromaticAberrationIntensity: OverlayIntensity;
+  filmGrainEnabled: boolean;
+  filmGrainIntensity: OverlayIntensity;
+  audioPulseEnabled: boolean;
+  audioPulseIntensity: OverlayIntensity;
+  keywordPunchEnabled: boolean;
+  keywordPunchIntensity: OverlayIntensity;
   codeBlockEnabled: boolean;
   codeBlockCode: string;
   codeBlockLanguage: CodeLanguage;
@@ -98,11 +111,27 @@ const readCachedTranscript = (): Caption[] | null => {
 
 const cachedTranscript = readCachedTranscript();
 
+const readCachedAudioAmplitude = (): number[] | null => {
+  try {
+    const raw = localStorage.getItem(AUDIO_AMPLITUDE_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as number[]) : null;
+  } catch {
+    return null;
+  }
+};
+
+const cachedAudioAmplitude = readCachedAudioAmplitude();
+
 interface ProjectContextType {
   mediaFile: File | null;
   mediaUrl: string | null;
   srtFile: File | null;
   captions: Caption[] | null;
+  // Per-frame RMS amplitude (0-1, peak-normalized) computed server-side
+  // during transcription - drives Audio-Reactive Pulse. Null until a
+  // transcription completes (or a cached one restores it); read-only from
+  // the UI's perspective, no setter exposed.
+  audioAmplitude: number[] | null;
   transcribeStatus: TranscribeStatus;
   transcribeError: string | null;
   setSrtFile: (file: File | null) => void;
@@ -173,6 +202,8 @@ interface ProjectContextType {
   setFrameVariant: (variant: FrameVariant) => void;
   frameBgColor: string;
   setFrameBgColor: (color: string) => void;
+  bezelRadiusMultiplier: number;
+  setBezelRadiusMultiplier: (multiplier: number) => void;
   frameSettings: FrameSettings;
   // Texture overlay tab controls, lifted the same way as frameSettings above
   // - each texture is independently toggleable (unlike Frame's single-select
@@ -199,6 +230,22 @@ interface ProjectContextType {
   setLightLeakEnabled: (enabled: boolean) => void;
   lightLeakIntensity: OverlayIntensity;
   setLightLeakIntensity: (intensity: OverlayIntensity) => void;
+  chromaticAberrationEnabled: boolean;
+  setChromaticAberrationEnabled: (enabled: boolean) => void;
+  chromaticAberrationIntensity: OverlayIntensity;
+  setChromaticAberrationIntensity: (intensity: OverlayIntensity) => void;
+  filmGrainEnabled: boolean;
+  setFilmGrainEnabled: (enabled: boolean) => void;
+  filmGrainIntensity: OverlayIntensity;
+  setFilmGrainIntensity: (intensity: OverlayIntensity) => void;
+  audioPulseEnabled: boolean;
+  setAudioPulseEnabled: (enabled: boolean) => void;
+  audioPulseIntensity: OverlayIntensity;
+  setAudioPulseIntensity: (intensity: OverlayIntensity) => void;
+  keywordPunchEnabled: boolean;
+  setKeywordPunchEnabled: (enabled: boolean) => void;
+  keywordPunchIntensity: OverlayIntensity;
+  setKeywordPunchIntensity: (intensity: OverlayIntensity) => void;
   textureSettings: TextureOverlaySettings;
   // Motion graphics tab controls, lifted the same way as textureSettings
   // above - each graphic is independently toggleable and combines with the
@@ -241,6 +288,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [srtFile, setSrtFile] = useState<File | null>(null);
   const [captions, setCaptions] = useState<Caption[] | null>(cachedTranscript);
+  const [audioAmplitude, setAudioAmplitude] = useState<number[] | null>(cachedAudioAmplitude);
   const [transcribeStatus, setTranscribeStatus] = useState<TranscribeStatus>('idle');
   const [transcribeError, setTranscribeError] = useState<string | null>(null);
 
@@ -289,6 +337,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [frameVariant, setFrameVariant] = useState<FrameVariant>(persisted?.frameVariant ?? 'none');
   const [frameBgColor, setFrameBgColor] = useState(persisted?.frameBgColor ?? '#000000');
+  const [bezelRadiusMultiplier, setBezelRadiusMultiplier] = useState(
+    persisted?.bezelRadiusMultiplier ?? 1,
+  );
 
   const [filmDustEnabled, setFilmDustEnabled] = useState(persisted?.filmDustEnabled ?? false);
   const [halationEnabled, setHalationEnabled] = useState(persisted?.halationEnabled ?? false);
@@ -309,6 +360,24 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [lightLeakEnabled, setLightLeakEnabled] = useState(persisted?.lightLeakEnabled ?? false);
   const [lightLeakIntensity, setLightLeakIntensity] = useState<OverlayIntensity>(
     persisted?.lightLeakIntensity ?? 'medium',
+  );
+  const [chromaticAberrationEnabled, setChromaticAberrationEnabled] = useState(
+    persisted?.chromaticAberrationEnabled ?? false,
+  );
+  const [chromaticAberrationIntensity, setChromaticAberrationIntensity] = useState<OverlayIntensity>(
+    persisted?.chromaticAberrationIntensity ?? 'medium',
+  );
+  const [filmGrainEnabled, setFilmGrainEnabled] = useState(persisted?.filmGrainEnabled ?? false);
+  const [filmGrainIntensity, setFilmGrainIntensity] = useState<OverlayIntensity>(
+    persisted?.filmGrainIntensity ?? 'medium',
+  );
+  const [audioPulseEnabled, setAudioPulseEnabled] = useState(persisted?.audioPulseEnabled ?? false);
+  const [audioPulseIntensity, setAudioPulseIntensity] = useState<OverlayIntensity>(
+    persisted?.audioPulseIntensity ?? 'medium',
+  );
+  const [keywordPunchEnabled, setKeywordPunchEnabled] = useState(persisted?.keywordPunchEnabled ?? false);
+  const [keywordPunchIntensity, setKeywordPunchIntensity] = useState<OverlayIntensity>(
+    persisted?.keywordPunchIntensity ?? 'medium',
   );
 
   const [codeBlockEnabled, setCodeBlockEnabled] = useState(persisted?.codeBlockEnabled ?? false);
@@ -345,8 +414,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   );
 
   const frameSettings: FrameSettings = useMemo(
-    () => ({ variant: frameVariant, bgColor: frameBgColor }),
-    [frameVariant, frameBgColor],
+    () => ({ variant: frameVariant, bgColor: frameBgColor, bezelRadiusMultiplier }),
+    [frameVariant, frameBgColor, bezelRadiusMultiplier],
   );
 
   const textureSettings: TextureOverlaySettings = useMemo(
@@ -362,6 +431,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       halftoneIntensity,
       lightLeakEnabled,
       lightLeakIntensity,
+      chromaticAberrationEnabled,
+      chromaticAberrationIntensity,
+      filmGrainEnabled,
+      filmGrainIntensity,
+      audioPulseEnabled,
+      audioPulseIntensity,
+      keywordPunchEnabled,
+      keywordPunchIntensity,
     }),
     [
       filmDustEnabled,
@@ -375,6 +452,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       halftoneIntensity,
       lightLeakEnabled,
       lightLeakIntensity,
+      chromaticAberrationEnabled,
+      chromaticAberrationIntensity,
+      filmGrainEnabled,
+      filmGrainIntensity,
+      audioPulseEnabled,
+      audioPulseIntensity,
+      keywordPunchEnabled,
+      keywordPunchIntensity,
     ],
   );
 
@@ -436,6 +521,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       progressBarPosition,
       frameVariant,
       frameBgColor,
+      bezelRadiusMultiplier,
       filmDustEnabled,
       halationEnabled,
       halationIntensity,
@@ -447,6 +533,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       halftoneIntensity,
       lightLeakEnabled,
       lightLeakIntensity,
+      chromaticAberrationEnabled,
+      chromaticAberrationIntensity,
+      filmGrainEnabled,
+      filmGrainIntensity,
+      audioPulseEnabled,
+      audioPulseIntensity,
+      keywordPunchEnabled,
+      keywordPunchIntensity,
       codeBlockEnabled,
       codeBlockCode,
       codeBlockLanguage,
@@ -483,6 +577,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     progressBarPosition,
     frameVariant,
     frameBgColor,
+    bezelRadiusMultiplier,
     filmDustEnabled,
     halationEnabled,
     halationIntensity,
@@ -494,6 +589,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     halftoneIntensity,
     lightLeakEnabled,
     lightLeakIntensity,
+    chromaticAberrationEnabled,
+    chromaticAberrationIntensity,
+    filmGrainEnabled,
+    filmGrainIntensity,
+    audioPulseEnabled,
+    audioPulseIntensity,
+    keywordPunchEnabled,
+    keywordPunchIntensity,
     codeBlockEnabled,
     codeBlockCode,
     codeBlockLanguage,
@@ -552,9 +655,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           throw new Error(body?.error ?? `Transcription failed (${response.status})`);
         }
 
-        const data: { captions: Caption[] } = await response.json();
+        const data: { captions: Caption[]; audioAmplitude?: number[] } = await response.json();
         setCaptions(data.captions);
         localStorage.setItem(TRANSCRIPT_STORAGE_KEY, JSON.stringify(data.captions));
+        setAudioAmplitude(data.audioAmplitude ?? null);
+        if (data.audioAmplitude) {
+          localStorage.setItem(AUDIO_AMPLITUDE_STORAGE_KEY, JSON.stringify(data.audioAmplitude));
+        } else {
+          localStorage.removeItem(AUDIO_AMPLITUDE_STORAGE_KEY);
+        }
         setTranscribeStatus('idle');
       } catch (error) {
         setTranscribeStatus('error');
@@ -591,13 +700,16 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
     setSrtFile(null);
     setCaptions(null);
+    setAudioAmplitude(null);
     setTranscribeStatus('idle');
     setTranscribeError(null);
   }, []);
 
   const clearCachedTranscript = useCallback(() => {
     localStorage.removeItem(TRANSCRIPT_STORAGE_KEY);
+    localStorage.removeItem(AUDIO_AMPLITUDE_STORAGE_KEY);
     setCaptions(null);
+    setAudioAmplitude(null);
   }, []);
 
   return (
@@ -607,6 +719,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         mediaUrl,
         srtFile,
         captions,
+        audioAmplitude,
         transcribeStatus,
         transcribeError,
         setSrtFile,
@@ -654,6 +767,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setFrameVariant,
         frameBgColor,
         setFrameBgColor,
+        bezelRadiusMultiplier,
+        setBezelRadiusMultiplier,
         frameSettings,
         filmDustEnabled,
         setFilmDustEnabled,
@@ -677,6 +792,22 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setLightLeakEnabled,
         lightLeakIntensity,
         setLightLeakIntensity,
+        chromaticAberrationEnabled,
+        setChromaticAberrationEnabled,
+        chromaticAberrationIntensity,
+        setChromaticAberrationIntensity,
+        filmGrainEnabled,
+        setFilmGrainEnabled,
+        filmGrainIntensity,
+        setFilmGrainIntensity,
+        audioPulseEnabled,
+        setAudioPulseEnabled,
+        audioPulseIntensity,
+        setAudioPulseIntensity,
+        keywordPunchEnabled,
+        setKeywordPunchEnabled,
+        keywordPunchIntensity,
+        setKeywordPunchIntensity,
         textureSettings,
         codeBlockEnabled,
         setCodeBlockEnabled,

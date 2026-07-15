@@ -1,5 +1,6 @@
 import { CrtScanlines } from './CrtScanlines';
 import { FilmDust } from './FilmDust';
+import { FilmGrain } from './FilmGrain';
 import { Grid } from './Grid';
 import { Halation } from './Halation';
 import { Halftone } from './Halftone';
@@ -23,6 +24,7 @@ export const TextureOverlayRenderer: React.FC<TextureOverlayRendererProps> = ({ 
     <>
       {textureSettings.gridEnabled && <Grid intensity={textureSettings.gridIntensity} />}
       {textureSettings.halftoneEnabled && <Halftone intensity={textureSettings.halftoneIntensity} />}
+      {textureSettings.filmGrainEnabled && <FilmGrain intensity={textureSettings.filmGrainIntensity} />}
       {textureSettings.filmDustEnabled && <FilmDust />}
       {textureSettings.lightLeakEnabled && <LightLeak intensity={textureSettings.lightLeakIntensity} />}
       {textureSettings.crtScanlinesEnabled && <CrtScanlines intensity={textureSettings.crtScanlinesIntensity} />}

@@ -5,7 +5,14 @@ import { useProject } from '../context/ProjectContext';
 import { FRAME_OPTIONS, FRAME_SHELL_COLORS } from './overlayOptions';
 
 export const OverlayFramesPage: React.FC = () => {
-  const { frameVariant, setFrameVariant, frameBgColor, setFrameBgColor } = useProject();
+  const {
+    frameVariant,
+    setFrameVariant,
+    frameBgColor,
+    setFrameBgColor,
+    bezelRadiusMultiplier,
+    setBezelRadiusMultiplier,
+  } = useProject();
 
   return (
     <SubPanelView title="Frame" backTo="/overlay" backLabel="Back to Overlay">
@@ -40,6 +47,25 @@ export const OverlayFramesPage: React.FC = () => {
                 />
               ))}
             </div>
+          </div>
+        )}
+
+        {frameVariant === 'minimalBezel' && (
+          <div className="flex flex-col gap-1.5 border-t border-outline-variant/30 pt-3 animate-in slide-in-from-top-1 duration-150">
+            <label className="flex flex-col gap-1">
+              <span className="text-label-caps font-label-caps text-on-surface-variant uppercase text-[10px]">
+                Corner Radius ({Math.round(bezelRadiusMultiplier * 100)}%)
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={1.5}
+                step={0.05}
+                value={bezelRadiusMultiplier}
+                onChange={(e) => setBezelRadiusMultiplier(Number(e.target.value))}
+                className="w-full cursor-pointer accent-primary"
+              />
+            </label>
           </div>
         )}
       </Card>

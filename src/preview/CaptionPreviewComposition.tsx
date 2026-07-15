@@ -10,6 +10,7 @@ import { FrameRenderer } from '../frames/FrameRenderer';
 import { getFrameContentInset } from '../frames/contentInset';
 import type { TextureOverlaySettings } from '../textures/types';
 import { TextureOverlayRenderer } from '../textures/TextureOverlayRenderer';
+import { BackgroundEffectsRenderer } from '../textures/BackgroundEffectsRenderer';
 import type { MotionGraphicsSettings } from '../motion/types';
 import { MotionGraphicsRenderer } from '../motion/MotionGraphicsRenderer';
 
@@ -23,6 +24,9 @@ export type CaptionPreviewProps = {
   frameSettings?: FrameSettings;
   textureSettings?: TextureOverlaySettings;
   motionSettings?: MotionGraphicsSettings;
+  // Per-frame RMS amplitude driving Audio-Reactive Pulse - see
+  // src/textures/AudioPulse.tsx and ProjectContext's audioAmplitude state.
+  audioAmplitude?: number[] | null;
 };
 
 // Minimal vertical-only preview: uploaded media as the background, real
@@ -39,6 +43,7 @@ export const CaptionPreviewComposition: React.FC<CaptionPreviewProps> = ({
   frameSettings,
   textureSettings,
   motionSettings,
+  audioAmplitude,
 }) => {
   const { width, height } = useVideoConfig();
   const frameContentInset = getFrameContentInset(frameSettings, height, width);
@@ -60,7 +65,14 @@ export const CaptionPreviewComposition: React.FC<CaptionPreviewProps> = ({
     <FrameRenderer frameSettings={frameSettings}>
       <AbsoluteFill style={{ backgroundColor: 'black' }}>
         {mediaUrl && mediaKind === 'video' && (
-          <Video src={mediaUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <BackgroundEffectsRenderer
+            textureSettings={textureSettings}
+            audioAmplitude={audioAmplitude}
+            captions={captions}
+            styleOverrides={styleOverrides}
+          >
+            <Video src={mediaUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </BackgroundEffectsRenderer>
         )}
         {mediaUrl && mediaKind === 'audio' && <Audio src={mediaUrl} />}
         <TextureOverlayRenderer textureSettings={textureSettings} />

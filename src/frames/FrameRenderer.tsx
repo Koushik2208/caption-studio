@@ -25,7 +25,12 @@ export const FrameRenderer: React.FC<FrameRendererProps> = ({ frameSettings, chi
   switch (variant) {
     case 'minimalBezel':
       return (
-        <MinimalBezel width={width} height={height} bgColor={frameSettings?.bgColor}>
+        <MinimalBezel
+          width={width}
+          height={height}
+          bgColor={frameSettings?.bgColor}
+          bezelRadiusMultiplier={frameSettings?.bezelRadiusMultiplier}
+        >
           {children}
         </MinimalBezel>
       );

@@ -23,6 +23,7 @@ export const ExportPage: React.FC = () => {
   const { layoutMode } = useLayout();
   const {
     captions,
+    mediaFile,
     mediaUrl,
     styleVariant,
     styleOverrides,
@@ -30,11 +31,13 @@ export const ExportPage: React.FC = () => {
     frameSettings,
     textureSettings,
     motionSettings,
+    audioAmplitude,
     projectName,
     projectId,
   } = useProject();
   const durationInFrames = useMediaDurationFrames(mediaUrl, FPS);
   const safeFilename = toSafeFilename(projectName);
+  const mp4Available = !!mediaFile && mediaFile.type.startsWith('video/');
 
   const [selectedFormat, setSelectedFormat] = useState<'mp4' | 'chroma' | 'srt'>('chroma');
   const [resolution, setResolution] = useState<ResolutionOption>(RESOLUTION_OPTIONS[0]);
@@ -53,13 +56,25 @@ export const ExportPage: React.FC = () => {
     };
   }, []);
 
+  // mediaFile only lives in memory (lost on reload, unlike the localStorage-
+  // cached transcript) and MP4 export needs its real bytes, so if it drops
+  // out from under a selected 'mp4' format, fall back rather than leaving
+  // the export button permanently disabled with no way out of this page.
+  useEffect(() => {
+    if (!mp4Available && selectedFormat === 'mp4') {
+      setSelectedFormat('chroma');
+    }
+  }, [mp4Available, selectedFormat]);
+
   const formats = [
     {
       id: 'mp4',
       name: 'Video (MP4)',
-      description: 'Requires real footage compositing - coming soon',
+      description: mp4Available
+        ? 'Captions burned onto your uploaded video'
+        : 'Re-upload your video to enable (audio-only sources use Chroma Key)',
       icon: 'videocam',
-      disabled: true,
+      disabled: !mp4Available,
     },
     {
       id: 'chroma',
@@ -86,6 +101,51 @@ export const ExportPage: React.FC = () => {
     setLastRender(new Date().toLocaleTimeString());
   };
 
+  // Shared by exportGreenScreen/exportVideo: both start a server render job
+  // and then poll+download identically, only the endpoint prefix (and how
+  // the start request itself is built - JSON vs multipart) differs.
+  const trackRenderJob = async (startResponse: Response, endpointBase: string) => {
+    if (!startResponse.ok) {
+      const body = await startResponse.json().catch(() => null);
+      throw new Error(body?.error ?? `Export failed (${startResponse.status})`);
+    }
+
+    const { jobId }: { jobId: string } = await startResponse.json();
+
+    await new Promise<void>((resolve, reject) => {
+      pollHandle.current = setInterval(async () => {
+        try {
+          const statusResponse = await fetch(`${endpointBase}/${jobId}`);
+          const status: { status: 'rendering' | 'done' | 'error'; progress: number; error?: string } =
+            await statusResponse.json();
+
+          setExportProgress(Math.round(status.progress * 100));
+
+          if (status.status === 'error') {
+            if (pollHandle.current) clearInterval(pollHandle.current);
+            reject(new Error(status.error ?? 'Render failed'));
+            return;
+          }
+
+          if (status.status === 'done') {
+            if (pollHandle.current) clearInterval(pollHandle.current);
+            const fileResponse = await fetch(`${endpointBase}/${jobId}/download`);
+            const blob = await fileResponse.blob();
+            triggerBlobDownload(blob, `${safeFilename}.mp4`);
+            resolve();
+          }
+        } catch (error) {
+          if (pollHandle.current) clearInterval(pollHandle.current);
+          reject(error instanceof Error ? error : new Error('Render failed'));
+        }
+      }, POLL_INTERVAL_MS);
+    });
+
+    setExportProgress(100);
+    setExportComplete(true);
+    setLastRender(new Date().toLocaleTimeString());
+  };
+
   const exportGreenScreen = async () => {
     if (!captions || captions.length === 0) return;
 
@@ -106,51 +166,55 @@ export const ExportPage: React.FC = () => {
           frameSettings,
           textureSettings,
           motionSettings,
+          audioAmplitude,
           durationInFrames,
           scale: RESOLUTION_SCALE[resolution],
           orientation: layoutMode,
         }),
       });
 
-      if (!startResponse.ok) {
-        const body = await startResponse.json().catch(() => null);
-        throw new Error(body?.error ?? `Export failed (${startResponse.status})`);
-      }
+      await trackRenderJob(startResponse, '/api/export-green-screen');
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : 'Export failed');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
-      const { jobId }: { jobId: string } = await startResponse.json();
+  const exportVideo = async () => {
+    if (!captions || captions.length === 0 || !mediaFile || !mp4Available) return;
 
-      await new Promise<void>((resolve, reject) => {
-        pollHandle.current = setInterval(async () => {
-          try {
-            const statusResponse = await fetch(`/api/export-green-screen/${jobId}`);
-            const status: { status: 'rendering' | 'done' | 'error'; progress: number; error?: string } =
-              await statusResponse.json();
+    setIsExporting(true);
+    setExportProgress(0);
+    setExportComplete(false);
+    setExportError(null);
 
-            setExportProgress(Math.round(status.progress * 100));
+    try {
+      const formData = new FormData();
+      formData.append('media', mediaFile);
+      formData.append(
+        'payload',
+        JSON.stringify({
+          captions,
+          styleVariant,
+          styleOverrides,
+          overlaySettings,
+          frameSettings,
+          textureSettings,
+          motionSettings,
+          audioAmplitude,
+          durationInFrames,
+          scale: RESOLUTION_SCALE[resolution],
+          orientation: layoutMode,
+        }),
+      );
 
-            if (status.status === 'error') {
-              if (pollHandle.current) clearInterval(pollHandle.current);
-              reject(new Error(status.error ?? 'Render failed'));
-              return;
-            }
-
-            if (status.status === 'done') {
-              if (pollHandle.current) clearInterval(pollHandle.current);
-              const fileResponse = await fetch(`/api/export-green-screen/${jobId}/download`);
-              const blob = await fileResponse.blob();
-              triggerBlobDownload(blob, `${safeFilename}.mp4`);
-              resolve();
-            }
-          } catch (error) {
-            if (pollHandle.current) clearInterval(pollHandle.current);
-            reject(error instanceof Error ? error : new Error('Render failed'));
-          }
-        }, POLL_INTERVAL_MS);
+      const startResponse = await fetch('/api/export-video', {
+        method: 'POST',
+        body: formData,
       });
 
-      setExportProgress(100);
-      setExportComplete(true);
-      setLastRender(new Date().toLocaleTimeString());
+      await trackRenderJob(startResponse, '/api/export-video');
     } catch (error) {
       setExportError(error instanceof Error ? error.message : 'Export failed');
     } finally {
@@ -173,6 +237,11 @@ export const ExportPage: React.FC = () => {
 
     if (selectedFormat === 'chroma') {
       void exportGreenScreen();
+      return;
+    }
+
+    if (selectedFormat === 'mp4') {
+      void exportVideo();
     }
   };
 
@@ -270,7 +339,7 @@ export const ExportPage: React.FC = () => {
             <div className="mt-4 flex flex-col gap-2">
               <button
                 onClick={handleExportTrigger}
-                disabled={isExporting || !hasCaptions || selectedFormat === 'mp4'}
+                disabled={isExporting || !hasCaptions || (selectedFormat === 'mp4' && !mp4Available)}
                 className={`w-full py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:pointer-events-none text-body-sm ${exportComplete
                     ? 'bg-green-600 hover:bg-green-700 text-white'
                     : 'bg-primary text-white hover:bg-primary-container'
@@ -313,7 +382,7 @@ export const ExportPage: React.FC = () => {
             </div>
           </div>
 
-          {(isExporting || (exportComplete && selectedFormat === 'chroma')) && (
+          {(isExporting || (exportComplete && (selectedFormat === 'chroma' || selectedFormat === 'mp4'))) && (
             <div className="animate-in fade-in duration-200 mt-4">
               <div className="bg-white border border-primary/20 rounded-xl p-4 export-progress-pulse">
                 <div className="flex justify-between items-center mb-2">

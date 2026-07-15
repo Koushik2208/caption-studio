@@ -1,5 +1,6 @@
 import { Composition } from 'remotion';
 import { CaptionExportComposition, type CaptionExportProps } from '../preview/CaptionExportComposition';
+import { CaptionExportVideoComposition, type CaptionExportVideoProps } from '../preview/CaptionExportVideoComposition';
 
 // Base resolution per CLAUDE.md: 1080x1920 vertical @ 30fps. These are just
 // the fallback/thumbnail dimensions - calculateMetadata below computes the
@@ -13,31 +14,62 @@ const FALLBACK_DURATION_IN_FRAMES = 150;
 
 export const RemotionRoot: React.FC = () => {
   return (
-    <Composition
-      id="CaptionExport"
-      component={CaptionExportComposition}
-      durationInFrames={FALLBACK_DURATION_IN_FRAMES}
-      fps={FPS}
-      width={WIDTH}
-      height={HEIGHT}
-      defaultProps={
-        {
-          captions: [],
-          styleVariant: undefined,
-          styleOverrides: undefined,
-          overlaySettings: undefined,
-          frameSettings: undefined,
-          textureSettings: undefined,
-          motionSettings: undefined,
-          durationInFrames: FALLBACK_DURATION_IN_FRAMES,
-          orientation: 'vertical',
-        } satisfies CaptionExportProps
-      }
-      calculateMetadata={async ({ props }) => ({
-        durationInFrames: props.durationInFrames ?? FALLBACK_DURATION_IN_FRAMES,
-        width: props.orientation === 'horizontal' ? 1920 : 1080,
-        height: props.orientation === 'horizontal' ? 1080 : 1920,
-      })}
-    />
+    <>
+      <Composition
+        id="CaptionExport"
+        component={CaptionExportComposition}
+        durationInFrames={FALLBACK_DURATION_IN_FRAMES}
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={
+          {
+            captions: [],
+            styleVariant: undefined,
+            styleOverrides: undefined,
+            overlaySettings: undefined,
+            frameSettings: undefined,
+            textureSettings: undefined,
+            motionSettings: undefined,
+            audioAmplitude: undefined,
+            durationInFrames: FALLBACK_DURATION_IN_FRAMES,
+            orientation: 'vertical',
+          } satisfies CaptionExportProps
+        }
+        calculateMetadata={async ({ props }) => ({
+          durationInFrames: props.durationInFrames ?? FALLBACK_DURATION_IN_FRAMES,
+          width: props.orientation === 'horizontal' ? 1920 : 1080,
+          height: props.orientation === 'horizontal' ? 1080 : 1920,
+        })}
+      />
+      <Composition
+        id="CaptionExportVideo"
+        component={CaptionExportVideoComposition}
+        durationInFrames={FALLBACK_DURATION_IN_FRAMES}
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={
+          {
+            captions: [],
+            mediaUrl: '',
+            styleVariant: undefined,
+            styleOverrides: undefined,
+            overlaySettings: undefined,
+            frameSettings: undefined,
+            textureSettings: undefined,
+            motionSettings: undefined,
+            audioAmplitude: undefined,
+            durationInFrames: FALLBACK_DURATION_IN_FRAMES,
+            orientation: 'vertical',
+          } satisfies CaptionExportVideoProps
+        }
+        calculateMetadata={async ({ props }) => ({
+          durationInFrames: props.durationInFrames ?? FALLBACK_DURATION_IN_FRAMES,
+          width: props.orientation === 'horizontal' ? 1920 : 1080,
+          height: props.orientation === 'horizontal' ? 1080 : 1920,
+        })}
+      />
+    </>
   );
 };

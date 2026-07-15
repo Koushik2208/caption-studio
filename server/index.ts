@@ -23,6 +23,10 @@ const ffmpegPath = require("ffmpeg-static") as string;
 
 const PORT = Number(process.env.TRANSCRIBE_SERVER_PORT ?? 5175);
 
+// Matches the fixed 30fps composition rate (CLAUDE.md) - the amplitude array
+// is indexed 1:1 with output video frames, not audio sample count.
+const OUTPUT_FPS = 30;
+
 // tools/whisper/ layout is produced by scripts/setupWhisper.mjs - override via
 // env vars if whisper.cpp/the model live somewhere else on a given machine.
 const WHISPER_BIN_DIR = process.env.WHISPER_CLI ?? "tools/whisper/bin";
@@ -40,9 +44,30 @@ const REMOTION_ENTRY = path.resolve("src/remotion/index.ts");
 
 const upload = multer({ dest: UPLOAD_DIR });
 
+// Separate from `upload` above: preserves the original file extension (vs.
+// multer's default extension-less temp name) since OffthreadVideo's
+// ffmpeg-backed frame extraction is more reliable with one, and gives it its
+// own disk-backed storage config since video uploads can be much larger than
+// the transcribe endpoint's audio-only ones.
+const videoUpload = multer({
+  storage: multer.diskStorage({
+    destination: UPLOAD_DIR,
+    filename: (_req, file, cb) => cb(null, `${randomUUID()}${path.extname(file.originalname)}`),
+  }),
+});
+
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "20mb" }));
+
+// Remotion's renderer hard-rejects local filesystem paths for OffthreadVideo/
+// Video/Audio src (it only downloads http(s):// URLs, even server-side - see
+// LEARNINGS.md), so an uploaded export video has to be reachable over HTTP
+// during the render, not just present on disk. Scoped to exactly UPLOAD_DIR
+// (nothing else in the project tree) and only for GETs under this one path
+// prefix - express.static also refuses `..` path-traversal attempts out of
+// its root by default.
+app.use("/tmp-media", express.static(path.resolve(UPLOAD_DIR)));
 
 const runFfmpeg = (inputPath: string, outputPath: string): Promise<void> =>
   new Promise((resolve, reject) => {
@@ -73,6 +98,55 @@ const runFfmpeg = (inputPath: string, outputPath: string): Promise<void> =>
       reject(new Error(`ffmpeg exited with code ${code}: ${stderr}`));
     });
   });
+
+// Minimal RIFF/WAVE parser - runFfmpeg's output is uncompressed 16-bit PCM
+// mono (ffmpeg's default encoder for a .wav extension), so no external
+// audio-decoding dependency is needed to read raw samples back out. Computes
+// per-output-frame RMS amplitude, peak-normalized to 0-1 so Audio-Reactive
+// Pulse (src/textures/AudioPulse.tsx) reads consistently regardless of the
+// source recording's absolute loudness.
+const computeAudioAmplitude = (wavPath: string, fps: number): number[] => {
+  const buffer = fs.readFileSync(wavPath);
+
+  let offset = 12; // skip "RIFF" + chunkSize(4) + "WAVE"
+  let sampleRate = 16000;
+  let dataStart = -1;
+  let dataLength = 0;
+  while (offset + 8 <= buffer.length) {
+    const chunkId = buffer.toString("ascii", offset, offset + 4);
+    const chunkSize = buffer.readUInt32LE(offset + 4);
+    const chunkDataStart = offset + 8;
+    if (chunkId === "fmt ") {
+      sampleRate = buffer.readUInt32LE(chunkDataStart + 4);
+    } else if (chunkId === "data") {
+      dataStart = chunkDataStart;
+      dataLength = Math.min(chunkSize, buffer.length - chunkDataStart);
+    }
+    offset = chunkDataStart + chunkSize + (chunkSize % 2);
+  }
+  if (dataStart === -1 || dataLength <= 0) return [];
+
+  const sampleCount = Math.floor(dataLength / 2); // 16-bit samples
+  const samplesPerFrame = sampleRate / fps;
+  const frameCount = Math.max(1, Math.ceil(sampleCount / samplesPerFrame));
+
+  const rmsPerFrame = new Array<number>(frameCount).fill(0);
+  for (let frameIndex = 0; frameIndex < frameCount; frameIndex++) {
+    const startSample = Math.floor(frameIndex * samplesPerFrame);
+    const endSample = Math.min(sampleCount, Math.floor((frameIndex + 1) * samplesPerFrame));
+    let sumSquares = 0;
+    let count = 0;
+    for (let s = startSample; s < endSample; s++) {
+      const sample = buffer.readInt16LE(dataStart + s * 2) / 32768;
+      sumSquares += sample * sample;
+      count++;
+    }
+    rmsPerFrame[frameIndex] = count > 0 ? Math.sqrt(sumSquares / count) : 0;
+  }
+
+  const peak = Math.max(...rmsPerFrame, 1e-6);
+  return rmsPerFrame.map((value) => Math.min(1, value / peak));
+};
 
 const PUNCTUATION_ONLY = /^[.,!?;:]+$/;
 
@@ -170,7 +244,9 @@ app.post(
         ? alignWordingWithScript(captions, fs.readFileSync(srtFile.path, "utf-8"))
         : captions;
 
-      res.json({ captions: finalCaptions });
+      const audioAmplitude = computeAudioAmplitude(wavPath, OUTPUT_FPS);
+
+      res.json({ captions: finalCaptions, audioAmplitude });
     } catch (error) {
       console.error(error);
       res.status(500).json({
@@ -210,6 +286,7 @@ type GreenScreenRequestBody = {
   frameSettings?: FrameSettings;
   textureSettings?: TextureOverlaySettings;
   motionSettings?: MotionGraphicsSettings;
+  audioAmplitude?: number[];
   durationInFrames: number;
   // ExportPage's Resolution dropdown, converted client-side to a renderMedia
   // scale factor (see src/export/resolutions.ts) - multiplies the composition's
@@ -236,6 +313,7 @@ const runGreenScreenRender = async (jobId: string, body: GreenScreenRequestBody)
       frameSettings: body.frameSettings,
       textureSettings: body.textureSettings,
       motionSettings: body.motionSettings,
+      audioAmplitude: body.audioAmplitude,
       durationInFrames: body.durationInFrames,
       orientation: body.orientation ?? "vertical",
     };
@@ -290,23 +368,127 @@ app.post("/api/export-green-screen", (req, res) => {
   res.status(202).json({ jobId });
 });
 
-app.get("/api/export-green-screen/:jobId", (req, res) => {
-  const job = exportJobs.get(req.params.jobId);
-  if (!job) {
-    res.status(404).json({ error: "Unknown job" });
+// Same shape as GreenScreenRequestBody - separate alias since the two
+// formats' request bodies are conceptually distinct even though they
+// currently happen to match field-for-field.
+type VideoRequestBody = GreenScreenRequestBody;
+
+const runVideoRender = async (jobId: string, mediaPath: string, body: VideoRequestBody) => {
+  const job = exportJobs.get(jobId);
+  if (!job) return;
+
+  try {
+    const serveUrl = await getServeUrl();
+    // OffthreadVideo needs an http(s) URL, not the local path - see the
+    // /tmp-media static route registered above.
+    const mediaUrl = `http://localhost:${PORT}/tmp-media/${path.basename(mediaPath)}`;
+    const inputProps = {
+      captions: body.captions,
+      mediaUrl,
+      styleVariant: body.styleVariant,
+      styleOverrides: body.styleOverrides,
+      overlaySettings: body.overlaySettings,
+      frameSettings: body.frameSettings,
+      textureSettings: body.textureSettings,
+      motionSettings: body.motionSettings,
+      audioAmplitude: body.audioAmplitude,
+      durationInFrames: body.durationInFrames,
+      orientation: body.orientation ?? "vertical",
+    };
+
+    const composition = await selectComposition({
+      serveUrl,
+      id: "CaptionExportVideo",
+      inputProps,
+    });
+
+    const outputPath = path.resolve(EXPORT_DIR, `${jobId}.mp4`);
+
+    await renderMedia({
+      composition,
+      serveUrl,
+      codec: "h264",
+      outputLocation: outputPath,
+      inputProps,
+      scale: body.scale && body.scale > 0 ? body.scale : 1,
+      onProgress: ({ progress }) => {
+        job.progress = progress;
+      },
+    });
+
+    job.status = "done";
+    job.progress = 1;
+    job.outputPath = outputPath;
+  } catch (error) {
+    console.error(error);
+    job.status = "error";
+    job.error = error instanceof Error ? error.message : "Render failed";
+  } finally {
+    // Only the uploaded source - the rendered output is kept for download.
+    cleanup(mediaPath);
+  }
+};
+
+app.post("/api/export-video", videoUpload.single("media"), (req, res) => {
+  const mediaFile = req.file;
+  if (!mediaFile) {
+    res.status(400).json({ error: "Missing required 'media' file" });
     return;
   }
-  res.json({ status: job.status, progress: job.progress, error: job.error });
+
+  let body: Partial<VideoRequestBody>;
+  try {
+    body = JSON.parse(req.body.payload ?? "{}");
+  } catch {
+    cleanup(mediaFile.path);
+    res.status(400).json({ error: "Invalid 'payload' JSON" });
+    return;
+  }
+
+  if (!Array.isArray(body.captions) || body.captions.length === 0) {
+    cleanup(mediaFile.path);
+    res.status(400).json({ error: "Missing required 'captions' array" });
+    return;
+  }
+  if (typeof body.durationInFrames !== "number" || body.durationInFrames <= 0) {
+    cleanup(mediaFile.path);
+    res.status(400).json({ error: "Missing required 'durationInFrames'" });
+    return;
+  }
+
+  const jobId = randomUUID();
+  exportJobs.set(jobId, { status: "rendering", progress: 0 });
+
+  void runVideoRender(jobId, path.resolve(mediaFile.path), body as VideoRequestBody);
+
+  res.status(202).json({ jobId });
 });
 
-app.get("/api/export-green-screen/:jobId/download", (req, res) => {
-  const job = exportJobs.get(req.params.jobId);
-  if (!job || job.status !== "done" || !job.outputPath) {
-    res.status(409).json({ error: "Render not ready" });
-    return;
-  }
-  res.download(job.outputPath, "caption-export.mp4");
-});
+// Status/download polling is identical across export formats - both write
+// into the same `exportJobs` map, keyed by the same jobId scheme, so the
+// per-format prefix is just for route clarity on the client.
+const registerJobRoutes = (prefix: string) => {
+  app.get(`${prefix}/:jobId`, (req, res) => {
+    const job = exportJobs.get(req.params.jobId);
+    if (!job) {
+      res.status(404).json({ error: "Unknown job" });
+      return;
+    }
+    res.json({ status: job.status, progress: job.progress, error: job.error });
+  });
+
+  app.get(`${prefix}/:jobId/download`, (req, res) => {
+    const job = exportJobs.get(req.params.jobId);
+    if (!job || job.status !== "done" || !job.outputPath) {
+      res.status(409).json({ error: "Render not ready" });
+      return;
+    }
+    res.download(job.outputPath, "caption-export.mp4");
+  });
+};
+
+registerJobRoutes("/api/export-green-screen");
+registerJobRoutes("/api/export-video");
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true });

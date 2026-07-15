@@ -28,6 +28,22 @@ export const OverlayTextureOverlaysPage: React.FC = () => {
     setLightLeakEnabled,
     lightLeakIntensity,
     setLightLeakIntensity,
+    chromaticAberrationEnabled,
+    setChromaticAberrationEnabled,
+    chromaticAberrationIntensity,
+    setChromaticAberrationIntensity,
+    filmGrainEnabled,
+    setFilmGrainEnabled,
+    filmGrainIntensity,
+    setFilmGrainIntensity,
+    audioPulseEnabled,
+    setAudioPulseEnabled,
+    audioPulseIntensity,
+    setAudioPulseIntensity,
+    keywordPunchEnabled,
+    setKeywordPunchEnabled,
+    keywordPunchIntensity,
+    setKeywordPunchIntensity,
   } = useProject();
 
   return (
@@ -216,6 +232,149 @@ export const OverlayTextureOverlaysPage: React.FC = () => {
                 </button>
               ))}
             </div>
+          )}
+        </div>
+
+        {/* Chromatic Aberration */}
+        <div className="flex flex-col gap-3 border-t border-outline-variant/30 pt-3">
+          <div className="flex items-center justify-between">
+            <span className="text-body-sm font-semibold text-on-surface">Chromatic Aberration</span>
+            <button
+              onClick={() => setChromaticAberrationEnabled(!chromaticAberrationEnabled)}
+              className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer outline-none ${chromaticAberrationEnabled ? 'bg-primary-container' : 'bg-surface-variant'
+                }`}
+              aria-label="Toggle chromatic aberration"
+            >
+              <div
+                className={`absolute top-[2px] left-[2px] bg-white rounded-full h-5 w-5 transition-transform shadow-xs ${chromaticAberrationEnabled ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+              />
+            </button>
+          </div>
+          {chromaticAberrationEnabled && (
+            <div className="grid grid-cols-3 gap-2 p-1 bg-surface-container rounded-lg border border-outline-variant/30 animate-in slide-in-from-top-1 duration-150">
+              {INTENSITY_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setChromaticAberrationIntensity(option.value)}
+                  className={`py-1.5 px-2 rounded text-label-caps font-label-caps text-[10px] uppercase font-bold transition-all duration-200 cursor-pointer ${chromaticAberrationIntensity === option.value
+                      ? 'bg-primary-container text-on-primary-container shadow-xs'
+                      : 'text-on-surface-variant hover:text-on-surface'
+                    }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Film Grain */}
+        <div className="flex flex-col gap-3 border-t border-outline-variant/30 pt-3">
+          <div className="flex items-center justify-between">
+            <span className="text-body-sm font-semibold text-on-surface">Film Grain</span>
+            <button
+              onClick={() => setFilmGrainEnabled(!filmGrainEnabled)}
+              className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer outline-none ${filmGrainEnabled ? 'bg-primary-container' : 'bg-surface-variant'
+                }`}
+              aria-label="Toggle film grain"
+            >
+              <div
+                className={`absolute top-[2px] left-[2px] bg-white rounded-full h-5 w-5 transition-transform shadow-xs ${filmGrainEnabled ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+              />
+            </button>
+          </div>
+          {filmGrainEnabled && (
+            <div className="grid grid-cols-3 gap-2 p-1 bg-surface-container rounded-lg border border-outline-variant/30 animate-in slide-in-from-top-1 duration-150">
+              {INTENSITY_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setFilmGrainIntensity(option.value)}
+                  className={`py-1.5 px-2 rounded text-label-caps font-label-caps text-[10px] uppercase font-bold transition-all duration-200 cursor-pointer ${filmGrainIntensity === option.value
+                      ? 'bg-primary-container text-on-primary-container shadow-xs'
+                      : 'text-on-surface-variant hover:text-on-surface'
+                    }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Audio-Reactive Pulse - subtle scale/brightness pulse on the
+            background/video layer keyed to the source audio's amplitude */}
+        <div className="flex flex-col gap-3 border-t border-outline-variant/30 pt-3">
+          <div className="flex items-center justify-between">
+            <span className="text-body-sm font-semibold text-on-surface">Audio-Reactive Pulse</span>
+            <button
+              onClick={() => setAudioPulseEnabled(!audioPulseEnabled)}
+              className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer outline-none ${audioPulseEnabled ? 'bg-primary-container' : 'bg-surface-variant'
+                }`}
+              aria-label="Toggle audio-reactive pulse"
+            >
+              <div
+                className={`absolute top-[2px] left-[2px] bg-white rounded-full h-5 w-5 transition-transform shadow-xs ${audioPulseEnabled ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+              />
+            </button>
+          </div>
+          {audioPulseEnabled && (
+            <div className="grid grid-cols-3 gap-2 p-1 bg-surface-container rounded-lg border border-outline-variant/30 animate-in slide-in-from-top-1 duration-150">
+              {INTENSITY_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setAudioPulseIntensity(option.value)}
+                  className={`py-1.5 px-2 rounded text-label-caps font-label-caps text-[10px] uppercase font-bold transition-all duration-200 cursor-pointer ${audioPulseIntensity === option.value
+                      ? 'bg-primary-container text-on-primary-container shadow-xs'
+                      : 'text-on-surface-variant hover:text-on-surface'
+                    }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Keyword-Synced Punch - short zoom-blur/brightness flash on the
+            background/video layer timed to each keyword-highlighted token */}
+        <div className="flex flex-col gap-3 border-t border-outline-variant/30 pt-3">
+          <div className="flex items-center justify-between">
+            <span className="text-body-sm font-semibold text-on-surface">Keyword-Synced Punch</span>
+            <button
+              onClick={() => setKeywordPunchEnabled(!keywordPunchEnabled)}
+              className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer outline-none ${keywordPunchEnabled ? 'bg-primary-container' : 'bg-surface-variant'
+                }`}
+              aria-label="Toggle keyword-synced punch"
+            >
+              <div
+                className={`absolute top-[2px] left-[2px] bg-white rounded-full h-5 w-5 transition-transform shadow-xs ${keywordPunchEnabled ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+              />
+            </button>
+          </div>
+          {keywordPunchEnabled && (
+            <>
+              <p className="text-[11px] text-outline leading-tight">
+                Requires Keyword Highlight to be enabled on the Style tab - it reuses the same keyword list.
+              </p>
+              <div className="grid grid-cols-3 gap-2 p-1 bg-surface-container rounded-lg border border-outline-variant/30 animate-in slide-in-from-top-1 duration-150">
+                {INTENSITY_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setKeywordPunchIntensity(option.value)}
+                    className={`py-1.5 px-2 rounded text-label-caps font-label-caps text-[10px] uppercase font-bold transition-all duration-200 cursor-pointer ${keywordPunchIntensity === option.value
+                        ? 'bg-primary-container text-on-primary-container shadow-xs'
+                        : 'text-on-surface-variant hover:text-on-surface'
+                      }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </Card>

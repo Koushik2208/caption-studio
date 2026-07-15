@@ -1,4 +1,4 @@
-import { AbsoluteFill, useVideoConfig } from 'remotion';
+import { AbsoluteFill, OffthreadVideo, useVideoConfig } from 'remotion';
 import type { Caption } from '@remotion/captions';
 import { CaptionRenderer } from '../captions/CaptionRenderer';
 import type { CaptionStyleOverrides, CaptionStyleVariant } from '../captions/styles/types';
@@ -14,11 +14,13 @@ import { BackgroundEffectsRenderer } from '../textures/BackgroundEffectsRenderer
 import type { MotionGraphicsSettings } from '../motion/types';
 import { MotionGraphicsRenderer } from '../motion/MotionGraphicsRenderer';
 
-// DaVinci Resolve Ultra Key-compatible chroma green (see PLAN.md Part E).
-const CHROMA_GREEN = '#00B140';
-
-export type CaptionExportProps = {
+export type CaptionExportVideoProps = {
   captions: Caption[];
+  // Absolute local filesystem path to the uploaded source video - server.ts
+  // saves the upload to disk and passes its path straight through, since
+  // OffthreadVideo extracts frames via its own ffmpeg-backed pipeline rather
+  // than a browser <video> element, so it doesn't need an HTTP-servable URL.
+  mediaUrl: string;
   styleVariant?: CaptionStyleVariant;
   styleOverrides?: CaptionStyleOverrides;
   overlaySettings?: OverlaySettings;
@@ -26,21 +28,18 @@ export type CaptionExportProps = {
   textureSettings?: TextureOverlaySettings;
   motionSettings?: MotionGraphicsSettings;
   audioAmplitude?: number[] | null;
-  // Read by Root.tsx's calculateMetadata, not by this component - kept on
-  // the same props type so the server can pass one inputProps object through
-  // both selectComposition and renderMedia.
+  // Read by Root.tsx's calculateMetadata, not by this component.
   durationInFrames?: number;
-  // Also read only by calculateMetadata, to size the composition itself
-  // (1080x1920 vs 1920x1080) rather than always rendering vertical.
   orientation?: 'vertical' | 'horizontal';
 };
 
-// Minimal export-only composition: captions over a solid chroma-key
-// background, no scenes/media/audio. Mirrors CaptionPreviewComposition's use
-// of CaptionRenderer/overlays so Style and Overlay tab choices render
-// byte-identical on export to what the live preview showed.
-export const CaptionExportComposition: React.FC<CaptionExportProps> = ({
+// Real-footage export composition: same layer stack as
+// CaptionPreviewComposition (video + captions + frame/texture/motion
+// overlays), swapping <Video> for <OffthreadVideo> since this renders
+// server-side via renderMedia() instead of in the browser <Player>.
+export const CaptionExportVideoComposition: React.FC<CaptionExportVideoProps> = ({
   captions,
+  mediaUrl,
   styleVariant,
   styleOverrides,
   overlaySettings,
@@ -52,9 +51,7 @@ export const CaptionExportComposition: React.FC<CaptionExportProps> = ({
   const { width, height } = useVideoConfig();
   const frameContentInset = getFrameContentInset(frameSettings, height, width);
   // See CaptionPreviewComposition - only elevate above frame chrome when
-  // that chrome actually occupies space on any edge (e.g. Cinematic Scope's
-  // letterbox bars, Film Strip's sprocket rails); other frames keep their
-  // existing z-index:auto stacking.
+  // that chrome actually occupies space on any edge.
   const hasFrameInset =
     frameContentInset.top > 0 ||
     frameContentInset.bottom > 0 ||
@@ -63,14 +60,14 @@ export const CaptionExportComposition: React.FC<CaptionExportProps> = ({
 
   return (
     <FrameRenderer frameSettings={frameSettings}>
-      <AbsoluteFill>
+      <AbsoluteFill style={{ backgroundColor: 'black' }}>
         <BackgroundEffectsRenderer
           textureSettings={textureSettings}
           audioAmplitude={audioAmplitude}
           captions={captions}
           styleOverrides={styleOverrides}
         >
-          <AbsoluteFill style={{ backgroundColor: CHROMA_GREEN }} />
+          <OffthreadVideo src={mediaUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </BackgroundEffectsRenderer>
         <TextureOverlayRenderer textureSettings={textureSettings} />
         <AbsoluteFill style={hasFrameInset ? { zIndex: 1 } : undefined}>

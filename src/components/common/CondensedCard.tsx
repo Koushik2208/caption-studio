@@ -21,10 +21,10 @@ export const CondensedCard: React.FC<CondensedCardProps> = ({ title, moreTo, mor
     {children}
     <Link
       to={moreTo}
-      className="mt-3 flex items-center justify-center gap-1 text-label-caps font-label-caps text-primary hover:underline"
+      className="group mt-3 flex items-center justify-center gap-1 text-label-caps font-label-caps text-primary"
     >
-      {moreLabel}
-      <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+      <span className="group-hover:underline">{moreLabel}</span>
+      <span className="material-symbols-outlined text-[13px]! leading-none">arrow_forward</span>
     </Link>
   </Card>
 );
