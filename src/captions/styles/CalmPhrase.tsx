@@ -30,7 +30,7 @@ export const CalmPhrase: React.FC<{
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
   );
 
-  const baseColor = overrides?.highlightColor ?? "white";
+  const baseColor = overrides?.textColor ?? "white";
   const keywordHighlightEnabled = overrides?.keywordHighlightEnabled ?? false;
   const keywords = overrides?.keywords ?? DEFAULT_KEYWORDS;
 
@@ -46,7 +46,7 @@ export const CalmPhrase: React.FC<{
           whiteSpace: "pre-wrap",
           maxWidth: "85%",
           lineHeight: 1.15,
-          WebkitTextStroke: getLegibilityStroke(fontSize),
+          WebkitTextStroke: getLegibilityStroke(fontSize, overrides),
           paintOrder: "stroke fill",
           opacity,
         }}
@@ -60,8 +60,13 @@ export const CalmPhrase: React.FC<{
               key={`${token.fromMs}-${i}`}
               style={{
                 display: "inline-block",
+                fontFamily: overrides?.fontFamily,
+                fontWeight: overrides?.fontWeight ?? 700,
+                fontStyle: overrides?.fontStyle ?? "normal",
+                WebkitTextStroke: getLegibilityStroke(fontSize, overrides),
+                paintOrder: "stroke fill",
                 color: emphasis.color ?? baseColor,
-                textShadow: combineTextShadow(getLegibilityShadow(fontSize), emphasis.textShadow),
+                textShadow: combineTextShadow(getLegibilityShadow(fontSize, overrides?.shadowEnabled !== false), emphasis.textShadow),
                 transform: `scale(${emphasis.scale})`,
               }}
             >

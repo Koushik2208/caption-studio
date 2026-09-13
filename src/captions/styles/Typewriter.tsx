@@ -7,7 +7,6 @@ import { getResponsiveFontSize } from "./fontSize";
 import { combineTextShadow, getLegibilityShadow, getLegibilityStroke } from "./legibility";
 import { getPositionStyle } from "./position";
 
-const HIGHLIGHT_COLOR = "#ffd23f";
 const CURSOR_BLINK_FRAMES = 10;
 
 // Typewriter style: characters reveal left to right as each word is spoken,
@@ -34,7 +33,6 @@ export const Typewriter: React.FC<{
     }
   }
 
-  const highlightColor = overrides?.highlightColor ?? HIGHLIGHT_COLOR;
   const keywordHighlightEnabled = overrides?.keywordHighlightEnabled ?? false;
   const keywords = overrides?.keywords ?? DEFAULT_KEYWORDS;
   const isTyping = frame % (CURSOR_BLINK_FRAMES * 2) < CURSOR_BLINK_FRAMES;
@@ -51,7 +49,7 @@ export const Typewriter: React.FC<{
           whiteSpace: "pre-wrap",
           maxWidth: "85%",
           lineHeight: 1.15,
-          WebkitTextStroke: getLegibilityStroke(fontSize),
+          WebkitTextStroke: getLegibilityStroke(fontSize, overrides),
           paintOrder: "stroke fill",
         }}
       >
@@ -80,14 +78,19 @@ export const Typewriter: React.FC<{
               key={`${token.fromMs}-${i}`}
               style={{
                 display: "inline-block",
-                color: emphasis.color ?? highlightColor,
-                textShadow: combineTextShadow(getLegibilityShadow(fontSize), emphasis.textShadow),
+                fontFamily: overrides?.fontFamily,
+                fontWeight: overrides?.fontWeight ?? 700,
+                fontStyle: overrides?.fontStyle ?? "normal",
+                WebkitTextStroke: getLegibilityStroke(fontSize, overrides),
+                paintOrder: "stroke fill",
+                color: emphasis.color ?? (overrides?.textColor ?? "white"),
+                textShadow: combineTextShadow(getLegibilityShadow(fontSize, overrides?.shadowEnabled !== false), emphasis.textShadow),
                 transform: `scale(${emphasis.scale})`,
               }}
             >
               {token.text.slice(0, charsToShow)}
               {stillTyping && (
-                <span style={{ opacity: isTyping ? 1 : 0, color: "white" }}>{"▌"}</span>
+                <span style={{ opacity: isTyping ? 1 : 0, color: overrides?.textColor ?? "white" }}>{"▌"}</span>
               )}
             </span>
           );

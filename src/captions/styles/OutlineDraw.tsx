@@ -93,9 +93,17 @@ export const OutlineDraw: React.FC<{
               key={`${token.fromMs}-${i}`}
               style={{
                 display: "inline-block",
+                fontFamily: overrides?.fontFamily,
+                fontWeight: overrides?.fontWeight ?? 700,
+                fontStyle: overrides?.fontStyle ?? "normal",
                 color: "transparent",
                 WebkitTextFillColor: "transparent",
-                WebkitTextStroke: `2px ${OUTLINE_COLOR}`,
+                WebkitTextStroke:
+                  overrides?.strokeEnabled === false
+                    ? "none"
+                    : overrides?.strokeWidth !== undefined || overrides?.strokeColor
+                      ? `${overrides?.strokeWidth ?? 2}px ${overrides?.strokeColor ?? (overrides?.textColor ?? OUTLINE_COLOR)}`
+                      : `2px ${overrides?.textColor ?? OUTLINE_COLOR}`,
                 // backgroundImage (longhand), never the `background` shorthand:
                 // this value changes every frame as fillProgress sweeps, and
                 // re-assigning the `background` shorthand silently resets
@@ -116,7 +124,7 @@ export const OutlineDraw: React.FC<{
                 // scaled-up word would visually spill into its neighbor's
                 // box instead of the browser reserving extra space for it.
                 fontSize: fontSize * emphasis.scale,
-                textShadow: combineTextShadow(getLegibilityShadow(fontSize), emphasis.textShadow),
+                textShadow: combineTextShadow(getLegibilityShadow(fontSize, overrides?.shadowEnabled !== false), emphasis.textShadow),
               }}
             >
               {token.text}

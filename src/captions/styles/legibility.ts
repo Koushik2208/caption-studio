@@ -12,14 +12,26 @@ const STROKE_RATIO = 0.05; // 4-6% of font size
 const SHADOW_BLUR_RATIO = 0.1; // 10% of font size
 const SHADOW_OPACITY = 0.8;
 
-export const getLegibilityStroke = (fontSize: number): string =>
-  `${(fontSize * STROKE_RATIO).toFixed(2)}px black`;
+export const getLegibilityStroke = (
+  fontSize: number,
+  overrides?: { strokeEnabled?: boolean; strokeColor?: string; strokeWidth?: number },
+): string => {
+  if (overrides?.strokeEnabled === false || overrides?.strokeWidth === 0) return 'none';
+  const color = overrides?.strokeColor ?? 'black';
+  const width =
+    overrides?.strokeWidth !== undefined
+      ? `${overrides.strokeWidth}px`
+      : `${(fontSize * STROKE_RATIO).toFixed(2)}px`;
+  return `${width} ${color}`;
+};
 
 // No offset (pure all-around blur): the shadow needs to hold up regardless
 // of which direction the background is lighter/busier in, so it can't lean
 // on a directional drop like a typical UI shadow would.
-export const getLegibilityShadow = (fontSize: number): string =>
-  `0 0 ${(fontSize * SHADOW_BLUR_RATIO).toFixed(2)}px rgba(0, 0, 0, ${SHADOW_OPACITY})`;
+export const getLegibilityShadow = (fontSize: number, shadowEnabled: boolean = true): string => {
+  if (!shadowEnabled) return 'none';
+  return `0 0 ${(fontSize * SHADOW_BLUR_RATIO).toFixed(2)}px rgba(0, 0, 0, ${SHADOW_OPACITY})`;
+};
 
 // Per-token textShadow needs both the always-on legibility shadow and
 // whichever keyword-emphasis glow applyKeywordEmphasis produced (or "none")

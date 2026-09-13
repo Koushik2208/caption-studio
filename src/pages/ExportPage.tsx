@@ -256,7 +256,7 @@ export const ExportPage: React.FC = () => {
   return (
     <>
       {/* Right Panel: Export Tool Panel */}
-      <aside className="w-panel-width min-w-panel-width max-w-panel-width bg-[#FAFAFA] border-l border-[#E5E5E5] z-40 p-gutter flex flex-col h-full shrink-0 grow-0">
+      <aside className="w-full bg-surface-bright p-gutter flex flex-col h-full shrink-0 grow-0 overflow-hidden">
         <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-stack-gap">
           <div className="mb-2">
             <h3 className="text-label-caps font-label-caps text-outline uppercase tracking-widest text-[10px]">

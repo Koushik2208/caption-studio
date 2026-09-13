@@ -19,23 +19,12 @@ import type { CaptionStyleOverrides, CaptionStyleVariant } from "./styles/types"
 export type CaptionMode = "energetic" | "calm";
 
 type CaptionRendererProps = {
-  // When provided, these are rendered directly and captionsSrc is never
-  // fetched - used by callers with captions already in memory (e.g. Caption
-  // Studio's live preview, where captions arrive from app state, not a file).
   captions?: Caption[];
   captionsSrc?: string;
-  hideBeforeMs?: number; // skip pages already covered by a HookScene's own big-text captions
-  getCaptionMode?: (startMs: number) => CaptionMode; // per-scene captionMode lookup (PLAN.md B5)
-  // When provided, forces every page to render as this style component
-  // instead of using getCaptionMode - this is Caption Studio's Style tab
-  // picking one of the three variants in src/captions/styles/ directly,
-  // rather than the faceless-app per-scene energetic/calm switching.
+  hideBeforeMs?: number;
+  getCaptionMode?: (startMs: number) => CaptionMode;
   styleVariant?: CaptionStyleVariant;
   styleOverrides?: CaptionStyleOverrides;
-  // How much space the active frame's own chrome already occupies (e.g.
-  // Cinematic Scope's letterbox bars) - passed through to every style
-  // component's getPositionStyle call. Undefined/zero for 'none' or frames
-  // that don't reduce usable content area.
   frameContentInset?: FrameContentInset;
 };
 
@@ -72,6 +61,22 @@ export const CaptionRenderer: React.FC<CaptionRendererProps> = ({
   useEffect(() => {
     fetchCaptions();
   }, [fetchCaptions]);
+
+  // Synchronize font rendering in both browser player and headless export
+  useEffect(() => {
+    if (typeof document === "undefined" || !document.fonts) {
+      return;
+    }
+    const fontHandle = delayRender("Waiting for caption font assets");
+    document.fonts.ready
+      .then(() => {
+        continueRender(fontHandle);
+      })
+      .catch((err) => {
+        console.warn("Font loading wait warning:", err);
+        continueRender(fontHandle);
+      });
+  }, [styleOverrides?.fontFamily, styleOverrides?.fontWeight, delayRender, continueRender]);
 
   const captions = providedCaptions ?? fetchedCaptions;
   if (!captions) {

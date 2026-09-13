@@ -51,13 +51,11 @@ export const SlideUp: React.FC<{
           whiteSpace: "pre-wrap",
           maxWidth: "85%",
           lineHeight: 1.15,
-          WebkitTextStroke: getLegibilityStroke(fontSize),
+          WebkitTextStroke: getLegibilityStroke(fontSize, overrides),
           paintOrder: "stroke fill",
         }}
       >
         {page.tokens.map((token, i) => {
-          const spoken = activeIndex >= 0 && i <= activeIndex;
-
           const tokenStartFrame = Math.round(
             ((token.fromMs - page.startMs) / 1000) * fps,
           );
@@ -78,13 +76,20 @@ export const SlideUp: React.FC<{
             overrides?.keywordColor,
           );
 
+          const isActive = i === activeIndex;
+
           return (
             <span
               key={`${token.fromMs}-${i}`}
               style={{
                 display: "inline-block",
-                color: emphasis.color ?? (spoken ? highlightColor : "white"),
-                textShadow: combineTextShadow(getLegibilityShadow(fontSize), emphasis.textShadow),
+                fontFamily: overrides?.fontFamily,
+                fontWeight: overrides?.fontWeight ?? 700,
+                fontStyle: overrides?.fontStyle ?? "normal",
+                WebkitTextStroke: getLegibilityStroke(fontSize, overrides),
+                paintOrder: "stroke fill",
+                color: emphasis.color ?? (isActive ? highlightColor : (overrides?.textColor ?? "white")),
+                textShadow: combineTextShadow(getLegibilityShadow(fontSize, overrides?.shadowEnabled !== false), emphasis.textShadow),
                 opacity,
                 transform: `translateY(${translateY}px) scale(${emphasis.scale})`,
               }}

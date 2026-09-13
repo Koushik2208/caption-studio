@@ -18,7 +18,6 @@ export const Sidebar: React.FC = () => {
             tab is currently active instead of navigating away from it. */}
         <SidebarItem icon="subtitles" label="Transcript" onClick={() => setIsTranscriptEditorOpen(true)} />
         <SidebarItem icon="palette" label="Style" to="/style" />
-        <SidebarItem icon="layers" label="Overlay" to="/overlay" />
         <SidebarItem icon="ios_share" label="Export" to="/export" />
       </nav>
       <div className="mt-auto flex flex-col gap-2 w-full">

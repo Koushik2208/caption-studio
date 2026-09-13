@@ -33,22 +33,22 @@ import { loadFont as loadMarcellus } from '@remotion/google-fonts/Marcellus';
 import type { CaptionStyleVariant } from './types';
 
 const { fontFamily: bebasNeue } = loadBebasNeue('normal', { weights: ['400'], subsets: ['latin'] });
-const { fontFamily: roboto } = loadRoboto('normal', { weights: ['500'], subsets: ['latin'] });
-const { fontFamily: montserrat } = loadMontserrat('normal', { weights: ['600'], subsets: ['latin'] });
-const { fontFamily: openSans } = loadOpenSans('normal', { weights: ['400'], subsets: ['latin'] });
-const { fontFamily: jetBrainsMono } = loadJetBrainsMono('normal', { weights: ['700'], subsets: ['latin'] });
+const { fontFamily: roboto } = loadRoboto('normal', { weights: ['400', '500', '700', '900'], subsets: ['latin'] });
+const { fontFamily: montserrat } = loadMontserrat('normal', { weights: ['400', '500', '600', '700', '800', '900'], subsets: ['latin'] });
+const { fontFamily: openSans } = loadOpenSans('normal', { weights: ['400', '500', '600', '700', '800'], subsets: ['latin'] });
+const { fontFamily: jetBrainsMono } = loadJetBrainsMono('normal', { weights: ['400', '500', '600', '700', '800'], subsets: ['latin'] });
 const { fontFamily: archivoBlack } = loadArchivoBlack('normal', { weights: ['400'], subsets: ['latin'] });
 const { fontFamily: anton } = loadAnton('normal', { weights: ['400'], subsets: ['latin'] });
-const { fontFamily: courierPrime } = loadCourierPrime('normal', { weights: ['700'], subsets: ['latin'] });
+const { fontFamily: courierPrime } = loadCourierPrime('normal', { weights: ['400', '700'], subsets: ['latin'] });
 const { fontFamily: bangers } = loadBangers('normal', { weights: ['400'], subsets: ['latin'] });
-const { fontFamily: leagueSpartan } = loadLeagueSpartan('normal', { weights: ['700'], subsets: ['latin'] });
-const { fontFamily: caveat } = loadCaveat('normal', { weights: ['700'], subsets: ['latin'] });
-const { fontFamily: jost } = loadJost('normal', { weights: ['500'], subsets: ['latin'] });
-const { fontFamily: cinzel } = loadCinzel('normal', { weights: ['600'], subsets: ['latin'] });
-const { fontFamily: arvo } = loadArvo('normal', { weights: ['700'], subsets: ['latin'] });
-const { fontFamily: quicksand } = loadQuicksand('normal', { weights: ['600'], subsets: ['latin'] });
-const { fontFamily: atkinsonHyperlegible } = loadAtkinsonHyperlegible('normal', { weights: ['700'], subsets: ['latin'] });
-const { fontFamily: rajdhani } = loadRajdhani('normal', { weights: ['600'], subsets: ['latin'] });
+const { fontFamily: leagueSpartan } = loadLeagueSpartan('normal', { weights: ['400', '500', '600', '700', '800', '900'], subsets: ['latin'] });
+const { fontFamily: caveat } = loadCaveat('normal', { weights: ['400', '500', '600', '700'], subsets: ['latin'] });
+const { fontFamily: jost } = loadJost('normal', { weights: ['400', '500', '600', '700', '800', '900'], subsets: ['latin'] });
+const { fontFamily: cinzel } = loadCinzel('normal', { weights: ['400', '500', '600', '700', '800', '900'], subsets: ['latin'] });
+const { fontFamily: arvo } = loadArvo('normal', { weights: ['400', '700'], subsets: ['latin'] });
+const { fontFamily: quicksand } = loadQuicksand('normal', { weights: ['400', '500', '600', '700'], subsets: ['latin'] });
+const { fontFamily: atkinsonHyperlegible } = loadAtkinsonHyperlegible('normal', { weights: ['400', '700'], subsets: ['latin'] });
+const { fontFamily: rajdhani } = loadRajdhani('normal', { weights: ['400', '500', '600', '700'], subsets: ['latin'] });
 const { fontFamily: marcellus } = loadMarcellus('normal', { weights: ['400'], subsets: ['latin'] });
 
 // Which orientation a preset is researched/tuned for. Vertical short-form
@@ -68,8 +68,9 @@ export type FontPresetOrientation = 'vertical' | 'horizontal' | 'both';
 export const FONT_PRESETS = [
   {
     name: 'Viral Hook',
-    fontFamily: `"${bebasNeue}", "Arial Black", sans-serif`,
+    fontFamily: `'${bebasNeue}', 'Arial Black', sans-serif`,
     fontWeight: 400,
+    availableWeights: [400],
     fontStyle: 'normal' as const,
     labelClass: 'uppercase tracking-wide',
     orientation: 'vertical' as FontPresetOrientation,
@@ -77,8 +78,9 @@ export const FONT_PRESETS = [
   },
   {
     name: 'Clean Standard',
-    fontFamily: `"${roboto}", sans-serif`,
+    fontFamily: `'${roboto}', sans-serif`,
     fontWeight: 500,
+    availableWeights: [400, 500, 700, 900],
     fontStyle: 'normal' as const,
     labelClass: 'font-medium',
     orientation: 'both' as FontPresetOrientation,
@@ -86,8 +88,9 @@ export const FONT_PRESETS = [
   },
   {
     name: 'Soft Modern',
-    fontFamily: `"${montserrat}", sans-serif`,
+    fontFamily: `'${montserrat}', sans-serif`,
     fontWeight: 600,
+    availableWeights: [400, 500, 600, 700, 800, 900],
     fontStyle: 'normal' as const,
     labelClass: 'font-semibold',
     orientation: 'both' as FontPresetOrientation,
@@ -95,8 +98,9 @@ export const FONT_PRESETS = [
   },
   {
     name: 'Minimal',
-    fontFamily: `"${openSans}", sans-serif`,
+    fontFamily: `'${openSans}', sans-serif`,
     fontWeight: 400,
+    availableWeights: [400, 500, 600, 700, 800],
     fontStyle: 'normal' as const,
     labelClass: 'font-normal',
     orientation: 'both' as FontPresetOrientation,
@@ -104,8 +108,9 @@ export const FONT_PRESETS = [
   },
   {
     name: 'Tech/Mono',
-    fontFamily: `"${jetBrainsMono}", monospace`,
+    fontFamily: `'${jetBrainsMono}', monospace`,
     fontWeight: 700,
+    availableWeights: [400, 500, 600, 700, 800],
     fontStyle: 'normal' as const,
     labelClass: 'font-bold font-mono',
     orientation: 'both' as FontPresetOrientation,
@@ -113,8 +118,9 @@ export const FONT_PRESETS = [
   },
   {
     name: 'Impact Punch',
-    fontFamily: `"${archivoBlack}", "Arial Black", sans-serif`,
+    fontFamily: `'${archivoBlack}', 'Arial Black', sans-serif`,
     fontWeight: 400,
+    availableWeights: [400],
     fontStyle: 'normal' as const,
     labelClass: 'uppercase',
     orientation: 'vertical' as FontPresetOrientation,
@@ -122,8 +128,9 @@ export const FONT_PRESETS = [
   },
   {
     name: 'Meme Energy',
-    fontFamily: `"${anton}", "Arial Black", sans-serif`,
+    fontFamily: `'${anton}', 'Arial Black', sans-serif`,
     fontWeight: 400,
+    availableWeights: [400],
     fontStyle: 'normal' as const,
     labelClass: 'uppercase tracking-wide',
     orientation: 'vertical' as FontPresetOrientation,
@@ -131,8 +138,9 @@ export const FONT_PRESETS = [
   },
   {
     name: 'Screenplay',
-    fontFamily: `"${courierPrime}", "Courier New", monospace`,
+    fontFamily: `'${courierPrime}', 'Courier New', monospace`,
     fontWeight: 700,
+    availableWeights: [400, 700],
     fontStyle: 'normal' as const,
     labelClass: 'font-bold font-mono',
     orientation: 'vertical' as FontPresetOrientation,
@@ -140,8 +148,9 @@ export const FONT_PRESETS = [
   },
   {
     name: 'Playful Comic',
-    fontFamily: `"${bangers}", cursive`,
+    fontFamily: `'${bangers}', cursive`,
     fontWeight: 400,
+    availableWeights: [400],
     fontStyle: 'normal' as const,
     labelClass: 'uppercase tracking-wide',
     orientation: 'vertical' as FontPresetOrientation,
@@ -149,8 +158,9 @@ export const FONT_PRESETS = [
   },
   {
     name: 'Business Bold',
-    fontFamily: `"${leagueSpartan}", sans-serif`,
+    fontFamily: `'${leagueSpartan}', sans-serif`,
     fontWeight: 700,
+    availableWeights: [400, 500, 600, 700, 800, 900],
     fontStyle: 'normal' as const,
     labelClass: 'font-bold',
     orientation: 'vertical' as FontPresetOrientation,
@@ -158,8 +168,9 @@ export const FONT_PRESETS = [
   },
   {
     name: 'Handwritten',
-    fontFamily: `"${caveat}", cursive`,
+    fontFamily: `'${caveat}', cursive`,
     fontWeight: 700,
+    availableWeights: [400, 500, 600, 700],
     fontStyle: 'normal' as const,
     labelClass: 'font-bold',
     orientation: 'vertical' as FontPresetOrientation,
@@ -167,8 +178,9 @@ export const FONT_PRESETS = [
   },
   {
     name: 'Cinematic',
-    fontFamily: `"${jost}", sans-serif`,
+    fontFamily: `'${jost}', sans-serif`,
     fontWeight: 500,
+    availableWeights: [400, 500, 600, 700, 800, 900],
     fontStyle: 'normal' as const,
     labelClass: 'font-medium tracking-wide',
     orientation: 'horizontal' as FontPresetOrientation,
@@ -176,8 +188,9 @@ export const FONT_PRESETS = [
   },
   {
     name: 'Elegant Serif',
-    fontFamily: `"${cinzel}", serif`,
+    fontFamily: `'${cinzel}', serif`,
     fontWeight: 600,
+    availableWeights: [400, 500, 600, 700, 800, 900],
     fontStyle: 'normal' as const,
     labelClass: 'font-semibold',
     orientation: 'horizontal' as FontPresetOrientation,
@@ -185,8 +198,9 @@ export const FONT_PRESETS = [
   },
   {
     name: 'Essay Slab',
-    fontFamily: `"${arvo}", serif`,
+    fontFamily: `'${arvo}', serif`,
     fontWeight: 700,
+    availableWeights: [400, 700],
     fontStyle: 'normal' as const,
     labelClass: 'font-bold',
     orientation: 'horizontal' as FontPresetOrientation,
@@ -194,8 +208,9 @@ export const FONT_PRESETS = [
   },
   {
     name: 'Calm Organic',
-    fontFamily: `"${quicksand}", sans-serif`,
+    fontFamily: `'${quicksand}', sans-serif`,
     fontWeight: 600,
+    availableWeights: [400, 500, 600, 700],
     fontStyle: 'normal' as const,
     labelClass: 'font-semibold',
     orientation: 'horizontal' as FontPresetOrientation,
@@ -203,8 +218,9 @@ export const FONT_PRESETS = [
   },
   {
     name: 'Accessible',
-    fontFamily: `"${atkinsonHyperlegible}", sans-serif`,
+    fontFamily: `'${atkinsonHyperlegible}', sans-serif`,
     fontWeight: 700,
+    availableWeights: [400, 700],
     fontStyle: 'normal' as const,
     labelClass: 'font-bold',
     orientation: 'horizontal' as FontPresetOrientation,
@@ -212,8 +228,9 @@ export const FONT_PRESETS = [
   },
   {
     name: 'Sci-Fi Tech',
-    fontFamily: `"${rajdhani}", sans-serif`,
+    fontFamily: `'${rajdhani}', sans-serif`,
     fontWeight: 600,
+    availableWeights: [400, 500, 600, 700],
     fontStyle: 'normal' as const,
     labelClass: 'font-semibold uppercase tracking-wide',
     orientation: 'horizontal' as FontPresetOrientation,
@@ -221,8 +238,9 @@ export const FONT_PRESETS = [
   },
   {
     name: 'Luxury Display',
-    fontFamily: `"${marcellus}", serif`,
+    fontFamily: `'${marcellus}', serif`,
     fontWeight: 400,
+    availableWeights: [400],
     fontStyle: 'normal' as const,
     labelClass: 'tracking-wide',
     orientation: 'horizontal' as FontPresetOrientation,

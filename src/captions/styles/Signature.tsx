@@ -9,8 +9,7 @@ import { getPositionStyle } from "./position";
 
 const HIGHLIGHT_COLOR = "#ffd23f";
 
-// Signature style: word pop (spring scale-in on the active word) + karaoke
-// fill (already-spoken words stay in the highlight color).
+// Signature style: word pop (spring scale-in on the active word) + karaoke pop fill
 export const Signature: React.FC<{
   page: CaptionPage;
   overrides?: CaptionStyleOverrides;
@@ -30,6 +29,7 @@ export const Signature: React.FC<{
   }
 
   const highlightColor = overrides?.highlightColor ?? HIGHLIGHT_COLOR;
+  const baseTextColor = overrides?.textColor ?? "white";
   const keywordHighlightEnabled = overrides?.keywordHighlightEnabled ?? false;
   const keywords = overrides?.keywords ?? DEFAULT_KEYWORDS;
 
@@ -41,16 +41,16 @@ export const Signature: React.FC<{
           fontWeight: overrides?.fontWeight ?? 700,
           fontStyle: overrides?.fontStyle ?? "normal",
           fontFamily: overrides?.fontFamily ?? "Arial, sans-serif",
+          color: baseTextColor,
           textAlign: "center",
           whiteSpace: "pre-wrap",
           maxWidth: "85%",
           lineHeight: 1.15,
-          WebkitTextStroke: getLegibilityStroke(fontSize),
+          WebkitTextStroke: getLegibilityStroke(fontSize, overrides),
           paintOrder: "stroke fill",
         }}
       >
         {page.tokens.map((token, i) => {
-          const spoken = activeIndex >= 0 && i <= activeIndex;
           const isActive = i === activeIndex;
 
           const activeStartFrame = Math.round(
@@ -74,13 +74,21 @@ export const Signature: React.FC<{
             overrides?.keywordColor,
           );
 
+          // Apply active pop color on current word, user-chosen textColor on other words
+          const tokenColor = emphasis.color ?? (isActive ? highlightColor : baseTextColor);
+
           return (
             <span
               key={`${token.fromMs}-${i}`}
               style={{
                 display: "inline-block",
-                color: emphasis.color ?? (spoken ? highlightColor : "white"),
-                textShadow: combineTextShadow(getLegibilityShadow(fontSize), emphasis.textShadow),
+                fontFamily: overrides?.fontFamily,
+                fontWeight: overrides?.fontWeight ?? 700,
+                fontStyle: overrides?.fontStyle ?? "normal",
+                WebkitTextStroke: getLegibilityStroke(fontSize, overrides),
+                paintOrder: "stroke fill",
+                color: tokenColor,
+                textShadow: combineTextShadow(getLegibilityShadow(fontSize, overrides?.shadowEnabled !== false), emphasis.textShadow),
                 transform: `scale(${emphasis.scale})`,
               }}
             >

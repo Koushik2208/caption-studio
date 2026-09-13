@@ -80,7 +80,10 @@ export const ToolLayout: React.FC = () => {
         )}
       </main>
 
-      <Outlet />
+      {/* Fixed-Width Right Panel: Locked width across all tabs to prevent center preview shift */}
+      <div className="w-[460px] min-w-[460px] max-w-[460px] h-full shrink-0 grow-0 border-l border-outline-variant bg-surface-bright flex flex-col overflow-hidden">
+        <Outlet />
+      </div>
     </div>
   );
 };

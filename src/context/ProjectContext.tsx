@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import type { Caption } from '@remotion/captions';
+import { parseSrt, type Caption } from '@remotion/captions';
 import { FONT_PRESETS, type FontPresetName } from '../captions/styles/presets';
 import type { CaptionPosition, CaptionStyleOverrides, CaptionStyleVariant } from '../captions/styles/types';
 import { DEFAULT_KEYWORDS } from '../captions/styles/applyKeywordEmphasis';
@@ -39,6 +39,12 @@ type PersistedState = {
   keywords: string[];
   position: CaptionPosition;
   fontSizeMultiplier: number;
+  textColor?: string;
+  fontWeight?: number | null;
+  strokeEnabled?: boolean;
+  strokeColor?: string;
+  strokeWidth?: number;
+  shadowEnabled?: boolean;
   watermarkEnabled: boolean;
   watermarkOpacity: number;
   watermarkPosition: WatermarkPosition;
@@ -134,8 +140,10 @@ interface ProjectContextType {
   audioAmplitude: number[] | null;
   transcribeStatus: TranscribeStatus;
   transcribeError: string | null;
+  setMedia: (file: File) => void;
   setSrtFile: (file: File | null) => void;
-  transcribe: (mediaFile: File) => Promise<void>;
+  importSrt: (file: File) => Promise<void>;
+  transcribe: (mediaFile?: File) => Promise<void>;
   // TranscriptEditor writes fixed-up word text straight back here (PLAN.md
   // Part H) - no separate edit-buffer state, ProjectContext.captions stays
   // the single source of truth the whole preview/export pipeline reads.
@@ -171,11 +179,20 @@ interface ProjectContextType {
   setKeywords: (keywords: string[]) => void;
   position: CaptionPosition;
   setPosition: (position: CaptionPosition) => void;
-  // Multiplies the computed responsive font size (getResponsiveFontSize) -
-  // default 1.0, user-adjustable slider for when the computed default still
-  // feels off for a particular video.
   fontSizeMultiplier: number;
   setFontSizeMultiplier: (multiplier: number) => void;
+  textColor: string;
+  setTextColor: (color: string) => void;
+  fontWeight: number;
+  setFontWeight: (weight: number | null) => void;
+  strokeEnabled: boolean;
+  setStrokeEnabled: (enabled: boolean) => void;
+  strokeColor: string;
+  setStrokeColor: (color: string) => void;
+  strokeWidth: number;
+  setStrokeWidth: (width: number) => void;
+  shadowEnabled: boolean;
+  setShadowEnabled: (enabled: boolean) => void;
   styleVariant: CaptionStyleVariant;
   styleOverrides: CaptionStyleOverrides;
   // Overlay tab controls, lifted the same way as the style controls above -
@@ -295,7 +312,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [projectId] = useState(() => persisted?.id ?? generateId());
   const [projectName, setProjectName] = useState(persisted?.name ?? 'Untitled Project');
 
-  const [presetName, setPresetName] = useState<FontPresetName>(persisted?.presetName ?? 'Viral Hook');
+  const [presetName, setPresetNameState] = useState<FontPresetName>(persisted?.presetName ?? 'Viral Hook');
+  const setPresetName = useCallback((name: FontPresetName) => {
+    setPresetNameState(name);
+    setCustomFontWeight(null);
+  }, []);
   // Defaults preserve the pre-refactor look (BOLD preset used to force
   // signature animation + always-on keyword glow) while making both
   // independently changeable from here on.
@@ -309,13 +330,33 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [position, setPosition] = useState<CaptionPosition>(persisted?.position ?? 'center');
   const [fontSizeMultiplier, setFontSizeMultiplier] = useState(persisted?.fontSizeMultiplier ?? 1);
 
+  const [textColor, setTextColor] = useState<string>(persisted?.textColor ?? '#ffffff');
+  const [customFontWeight, setCustomFontWeight] = useState<number | null>(persisted?.fontWeight ?? null);
+  const [strokeEnabled, setStrokeEnabled] = useState<boolean>(persisted?.strokeEnabled ?? false);
+  const [strokeColor, setStrokeColor] = useState<string>(persisted?.strokeColor ?? '#000000');
+  const [strokeWidth, setStrokeWidth] = useState<number>(persisted?.strokeWidth ?? 2);
+  const [shadowEnabled, setShadowEnabled] = useState<boolean>(persisted?.shadowEnabled ?? true);
+
   const preset = FONT_PRESETS.find((p) => p.name === presetName) ?? FONT_PRESETS[0];
+
+  const effectiveFontWeight = useMemo(() => {
+    if (customFontWeight !== null && (preset.availableWeights as readonly number[]).includes(customFontWeight)) {
+      return customFontWeight;
+    }
+    return preset.fontWeight;
+  }, [customFontWeight, preset]);
+
   const styleVariant = animation;
   const styleOverrides: CaptionStyleOverrides = useMemo(
     () => ({
       fontFamily: preset.fontFamily,
-      fontWeight: preset.fontWeight,
+      fontWeight: effectiveFontWeight,
       fontStyle: preset.fontStyle,
+      textColor,
+      strokeEnabled,
+      strokeColor,
+      strokeWidth,
+      shadowEnabled,
       highlightColor,
       position,
       keywordHighlightEnabled,
@@ -323,7 +364,21 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       keywords,
       fontSizeMultiplier,
     }),
-    [preset, highlightColor, position, keywordHighlightEnabled, highlightIntensity, keywords, fontSizeMultiplier],
+    [
+      preset,
+      effectiveFontWeight,
+      textColor,
+      strokeEnabled,
+      strokeColor,
+      strokeWidth,
+      shadowEnabled,
+      highlightColor,
+      position,
+      keywordHighlightEnabled,
+      highlightIntensity,
+      keywords,
+      fontSizeMultiplier,
+    ],
   );
 
   const [watermarkEnabled, setWatermarkEnabled] = useState(persisted?.watermarkEnabled ?? true);
@@ -513,6 +568,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       keywords,
       position,
       fontSizeMultiplier,
+      textColor,
+      fontWeight: customFontWeight,
+      strokeEnabled,
+      strokeColor,
+      strokeWidth,
+      shadowEnabled,
       watermarkEnabled,
       watermarkOpacity,
       watermarkPosition,
@@ -569,6 +630,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     keywords,
     position,
     fontSizeMultiplier,
+    textColor,
+    customFontWeight,
+    strokeEnabled,
+    strokeColor,
+    strokeWidth,
+    shadowEnabled,
     watermarkEnabled,
     watermarkOpacity,
     watermarkPosition,
@@ -628,18 +695,46 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     writeToStorage();
   }, [writeToStorage]);
 
+  const setMedia = useCallback((file: File) => {
+    setMediaFile(file);
+    setMediaUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
+  }, []);
+
+  const importSrt = useCallback(async (file: File) => {
+    try {
+      const text = await file.text();
+      const { captions: parsedCaptions } = parseSrt({ input: text });
+      setSrtFile(file);
+      setCaptions(parsedCaptions);
+      localStorage.setItem(TRANSCRIPT_STORAGE_KEY, JSON.stringify(parsedCaptions));
+    } catch (error) {
+      console.error('Failed to parse SRT:', error);
+      throw error instanceof Error ? error : new Error('Failed to parse SRT file');
+    }
+  }, []);
+
   const transcribe = useCallback(
-    async (file: File) => {
+    async (file?: File) => {
+      const targetFile = file ?? mediaFile;
+      if (!targetFile) {
+        throw new Error('No media file selected for transcription');
+      }
+
       setTranscribeStatus('uploading');
       setTranscribeError(null);
-      setMediaFile(file);
-      setMediaUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return URL.createObjectURL(file);
-      });
+      if (file) {
+        setMediaFile(file);
+        setMediaUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return URL.createObjectURL(file);
+        });
+      }
 
       const formData = new FormData();
-      formData.append('audio', file);
+      formData.append('audio', targetFile);
       if (srtFile) {
         formData.append('srt', srtFile);
       }
@@ -671,7 +766,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         throw error;
       }
     },
-    [srtFile],
+    [mediaFile, srtFile],
   );
 
   // Preserves each token's existing leading-space convention (every word but
@@ -722,7 +817,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         audioAmplitude,
         transcribeStatus,
         transcribeError,
+        setMedia,
         setSrtFile,
+        importSrt,
         transcribe,
         updateCaptionText,
         reset,
@@ -748,6 +845,18 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setPosition,
         fontSizeMultiplier,
         setFontSizeMultiplier,
+        textColor,
+        setTextColor,
+        fontWeight: effectiveFontWeight,
+        setFontWeight: setCustomFontWeight,
+        strokeEnabled,
+        setStrokeEnabled,
+        strokeColor,
+        setStrokeColor,
+        strokeWidth,
+        setStrokeWidth,
+        shadowEnabled,
+        setShadowEnabled,
         styleVariant,
         styleOverrides,
         watermarkEnabled,

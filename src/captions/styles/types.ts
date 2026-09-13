@@ -19,8 +19,13 @@ export type CaptionStyleOverrides = {
   fontFamily?: string;
   fontWeight?: number | string;
   fontStyle?: "normal" | "italic";
+  textColor?: string;
   highlightColor?: string;
   position?: CaptionPosition;
+  strokeEnabled?: boolean;
+  strokeColor?: string;
+  strokeWidth?: number;
+  shadowEnabled?: boolean;
   // Keyword emphasis - independent of `styleVariant`, applied on top of
   // whichever base animation is active.
   keywordHighlightEnabled?: boolean;

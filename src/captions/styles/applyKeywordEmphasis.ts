@@ -2,15 +2,10 @@
 // (PLAN.md Part F). Previously duplicated inside a standalone
 // `keywordHighlight` variant component; now a single helper any animation
 // calls per-token instead of reimplementing matching/glow itself.
-const DEFAULT_KEYWORD_COLOR = "#ff3366";
-const DEFAULT_HIGHLIGHT_INTENSITY = 0.4; // 0-1; a deliberately restrained default (was an opaque, fixed glow before)
-const KEYWORD_SCALE_BOOST = 1.15;
+const DEFAULT_KEYWORD_COLOR = "#0066ff";
+const DEFAULT_HIGHLIGHT_INTENSITY = 0.5;
+const KEYWORD_SCALE_BOOST = 1.12;
 
-// Default/fallback keyword list for this script (PLAN.md B1 #2 - "maintain a
-// small keyword list" rather than parsing **bold** marks, since captions.json
-// comes from Whisper/plain text with no markdown). User-editable via the
-// Style tab's Keyword Highlight card (PLAN.md Part F Phase 4) - overrides.keywords
-// takes precedence when set.
 export const DEFAULT_KEYWORDS = [
   "3000",
   "egyptian",
@@ -52,19 +47,20 @@ export const applyKeywordEmphasis = (
   baseScale: number,
   isKeyword: boolean,
   intensity: number = DEFAULT_HIGHLIGHT_INTENSITY,
-  color: string = DEFAULT_KEYWORD_COLOR,
+  color?: string,
 ): KeywordEmphasisStyle => {
   if (!isKeyword) {
     return { textShadow: "none", scale: baseScale };
   }
 
+  const glowColor = color ?? DEFAULT_KEYWORD_COLOR;
   const clampedIntensity = Math.max(0, Math.min(1, intensity));
-  const blurPx = 4 + clampedIntensity * 12; // 4-16px, down from a flat 18px
-  const glowAlpha = 0.25 + clampedIntensity * 0.55; // 0.25-0.8, down from opaque
+  const blurPx = 4 + clampedIntensity * 12;
+  const glowAlpha = 0.25 + clampedIntensity * 0.55;
 
   return {
-    color,
-    textShadow: `0 0 ${blurPx}px ${hexToRgba(color, glowAlpha)}`,
+    color, // only overrides text color if explicitly passed; otherwise lets custom textColor show through
+    textShadow: `0 0 ${blurPx}px ${hexToRgba(glowColor, glowAlpha)}`,
     scale: baseScale * KEYWORD_SCALE_BOOST,
   };
 };

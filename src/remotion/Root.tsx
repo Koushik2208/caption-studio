@@ -1,4 +1,5 @@
 import { Composition } from 'remotion';
+import '../captions/styles/presets';
 import { CaptionExportComposition, type CaptionExportProps } from '../preview/CaptionExportComposition';
 import { CaptionExportVideoComposition, type CaptionExportVideoProps } from '../preview/CaptionExportVideoComposition';
 

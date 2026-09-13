@@ -7,24 +7,44 @@ import { useProject } from '../context/ProjectContext';
 // triggered it.
 export const useImportUpload = () => {
   const navigate = useNavigate();
-  const { transcribe, transcribeStatus } = useProject();
+  const { setMedia, importSrt, transcribe, transcribeStatus, mediaFile } = useProject();
   const { setIsTranscriptEditorOpen } = useLayout();
   const isTranscribing = transcribeStatus === 'uploading';
 
-  const handleFileSelect = async (file: File) => {
-    if (isTranscribing) return;
+  const handleFileSelect = (file: File) => {
+    setMedia(file);
+  };
+
+  const handleSrtUpload = async (file: File) => {
     try {
-      await transcribe(file);
+      await importSrt(file);
       navigate('/style');
-      // Auto-open right after a fresh transcription (PLAN.md Part H, H4) so
-      // Whisper mistakes get caught before the user starts styling - not
-      // triggered by the cached-transcript restore path, only a real
-      // transcribe() call.
+      setIsTranscriptEditorOpen(true);
+    } catch {
+      // error is logged or handled in context
+    }
+  };
+
+  const handleTranscribe = async () => {
+    if (!mediaFile || isTranscribing) return;
+    try {
+      await transcribe(mediaFile);
+      navigate('/style');
       setIsTranscriptEditorOpen(true);
     } catch {
       // transcribeError is already surfaced in the panel below
     }
   };
 
-  return { handleFileSelect, isTranscribing };
+  const handleContinueWithoutCaptions = () => {
+    navigate('/style');
+  };
+
+  return {
+    handleFileSelect,
+    handleSrtUpload,
+    handleTranscribe,
+    handleContinueWithoutCaptions,
+    isTranscribing,
+  };
 };
