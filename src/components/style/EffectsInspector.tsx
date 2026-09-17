@@ -3,6 +3,8 @@ import { useProject } from '../../context/ProjectContext';
 import type { OverlayIntensity } from '../../textures/types';
 
 const STROKE_SWATCHES = ['#000000', '#ffffff', '#1a1c1d', '#e8262b'];
+const GLOW_SWATCHES = ['#0066ff', '#00f0ff', '#a855f7', '#ec4899', '#eab308', '#22c55e', '#ffffff'];
+const GRADIENT_SWATCHES = ['#ffffff', '#10b981', '#0066ff', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6'];
 
 const INTENSITIES: { value: OverlayIntensity; label: string }[] = [
   { value: 'low', label: 'Subtle' },
@@ -20,6 +22,24 @@ export const EffectsInspector: React.FC = () => {
     setStrokeWidth,
     shadowEnabled,
     setShadowEnabled,
+    glowEnabled,
+    setGlowEnabled,
+    glowColor,
+    setGlowColor,
+    glowIntensity,
+    setGlowIntensity,
+    glowBlur,
+    setGlowBlur,
+    glowOpacity,
+    setGlowOpacity,
+    gradientEnabled,
+    setGradientEnabled,
+    gradientStart,
+    setGradientStart,
+    gradientEnd,
+    setGradientEnd,
+    gradientAngle,
+    setGradientAngle,
     filmDustEnabled,
     setFilmDustEnabled,
     filmGrainEnabled,
@@ -217,6 +237,238 @@ export const EffectsInspector: React.FC = () => {
               }`}
             />
           </button>
+        </div>
+
+        {/* Caption Glow */}
+        <div className="flex flex-col gap-2.5 p-3 rounded-xl border border-outline-variant/50 bg-surface-container-lowest">
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold text-on-surface">Caption Glow</span>
+              <span className="text-[11px] text-outline">Soft luminous atmospheric text radiance</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setGlowEnabled(!glowEnabled)}
+              className={`relative w-9 h-5 rounded-full transition-colors duration-150 cursor-pointer shrink-0 ${
+                glowEnabled ? 'bg-primary' : 'bg-outline-variant'
+              }`}
+              aria-pressed={glowEnabled}
+              aria-label="Toggle caption glow"
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-xs transition-transform duration-150 ${
+                  glowEnabled ? 'translate-x-4' : ''
+                }`}
+              />
+            </button>
+          </div>
+
+          {glowEnabled && (
+            <div className="flex flex-col gap-3 pt-2 border-t border-outline-variant/30 mt-1">
+              {/* Color */}
+              <div className="flex items-center gap-2">
+                <label className="relative w-6 h-6 rounded overflow-hidden border border-outline-variant cursor-pointer shrink-0">
+                  <input
+                    type="color"
+                    value={glowColor}
+                    onChange={(e) => setGlowColor(e.target.value)}
+                    className="absolute -top-2 -left-2 w-10 h-10 cursor-pointer border-0 p-0"
+                  />
+                </label>
+                <input
+                  type="text"
+                  value={glowColor}
+                  onChange={(e) => setGlowColor(e.target.value)}
+                  className="w-20 px-2 py-1 text-xs font-mono uppercase border border-outline-variant/80 rounded bg-surface"
+                />
+                <div className="flex items-center gap-1 ml-auto">
+                  {GLOW_SWATCHES.map((hex) => (
+                    <button
+                      key={hex}
+                      type="button"
+                      onClick={() => setGlowColor(hex)}
+                      className={`w-5 h-5 rounded border border-outline-variant cursor-pointer ${
+                        glowColor.toLowerCase() === hex.toLowerCase() ? 'ring-2 ring-primary ring-offset-1' : ''
+                      }`}
+                      style={{ backgroundColor: hex }}
+                      title={hex}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Intensity Slider */}
+              <div className="flex flex-col gap-1">
+                <div className="flex justify-between text-[11px] text-on-surface">
+                  <span>Intensity</span>
+                  <span className="font-mono text-outline">{Math.round(glowIntensity * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min={0.1}
+                  max={1}
+                  step={0.05}
+                  value={glowIntensity}
+                  onChange={(e) => setGlowIntensity(Number(e.target.value))}
+                  className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
+                />
+              </div>
+
+              {/* Blur Slider */}
+              <div className="flex flex-col gap-1">
+                <div className="flex justify-between text-[11px] text-on-surface">
+                  <span>Blur</span>
+                  <span className="font-mono text-outline">{glowBlur}px</span>
+                </div>
+                <input
+                  type="range"
+                  min={2}
+                  max={30}
+                  step={1}
+                  value={glowBlur}
+                  onChange={(e) => setGlowBlur(Number(e.target.value))}
+                  className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
+                />
+              </div>
+
+              {/* Opacity Slider */}
+              <div className="flex flex-col gap-1">
+                <div className="flex justify-between text-[11px] text-on-surface">
+                  <span>Opacity</span>
+                  <span className="font-mono text-outline">{Math.round(glowOpacity * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min={0.1}
+                  max={1}
+                  step={0.05}
+                  value={glowOpacity}
+                  onChange={(e) => setGlowOpacity(Number(e.target.value))}
+                  className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Text Gradient */}
+        <div className="flex flex-col gap-2.5 p-3 rounded-xl border border-outline-variant/50 bg-surface-container-lowest">
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold text-on-surface">Text Gradient</span>
+              <span className="text-[11px] text-outline">Linear two-tone color gradient fill</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setGradientEnabled(!gradientEnabled)}
+              className={`relative w-9 h-5 rounded-full transition-colors duration-150 cursor-pointer shrink-0 ${
+                gradientEnabled ? 'bg-primary' : 'bg-outline-variant'
+              }`}
+              aria-pressed={gradientEnabled}
+              aria-label="Toggle text gradient"
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-xs transition-transform duration-150 ${
+                  gradientEnabled ? 'translate-x-4' : ''
+                }`}
+              />
+            </button>
+          </div>
+
+          {gradientEnabled && (
+            <div className="flex flex-col gap-3 pt-2 border-t border-outline-variant/30 mt-1">
+              {/* Start Color */}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-medium text-on-surface">Start Color</span>
+                  <div className="flex items-center gap-1.5">
+                    <label className="relative w-6 h-6 rounded overflow-hidden border border-outline-variant cursor-pointer shrink-0">
+                      <input
+                        type="color"
+                        value={gradientStart}
+                        onChange={(e) => setGradientStart(e.target.value)}
+                        className="absolute -top-2 -left-2 w-10 h-10 cursor-pointer border-0 p-0"
+                      />
+                    </label>
+                    <input
+                      type="text"
+                      value={gradientStart}
+                      onChange={(e) => setGradientStart(e.target.value)}
+                      className="w-20 px-2 py-1 text-xs font-mono uppercase border border-outline-variant/80 rounded bg-surface"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {GRADIENT_SWATCHES.map((hex) => (
+                    <button
+                      key={hex}
+                      type="button"
+                      onClick={() => setGradientStart(hex)}
+                      className={`w-5 h-5 rounded border border-outline-variant cursor-pointer transition-transform hover:scale-105 ${
+                        gradientStart.toLowerCase() === hex.toLowerCase() ? 'ring-2 ring-primary ring-offset-1' : ''
+                      }`}
+                      style={{ backgroundColor: hex }}
+                      title={hex}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* End Color */}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-medium text-on-surface">End Color</span>
+                  <div className="flex items-center gap-1.5">
+                    <label className="relative w-6 h-6 rounded overflow-hidden border border-outline-variant cursor-pointer shrink-0">
+                      <input
+                        type="color"
+                        value={gradientEnd}
+                        onChange={(e) => setGradientEnd(e.target.value)}
+                        className="absolute -top-2 -left-2 w-10 h-10 cursor-pointer border-0 p-0"
+                      />
+                    </label>
+                    <input
+                      type="text"
+                      value={gradientEnd}
+                      onChange={(e) => setGradientEnd(e.target.value)}
+                      className="w-20 px-2 py-1 text-xs font-mono uppercase border border-outline-variant/80 rounded bg-surface"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {GRADIENT_SWATCHES.map((hex) => (
+                    <button
+                      key={hex}
+                      type="button"
+                      onClick={() => setGradientEnd(hex)}
+                      className={`w-5 h-5 rounded border border-outline-variant cursor-pointer transition-transform hover:scale-105 ${
+                        gradientEnd.toLowerCase() === hex.toLowerCase() ? 'ring-2 ring-primary ring-offset-1' : ''
+                      }`}
+                      style={{ backgroundColor: hex }}
+                      title={hex}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Angle Slider */}
+              <div className="flex flex-col gap-1">
+                <div className="flex justify-between text-[11px] text-on-surface">
+                  <span>Angle</span>
+                  <span className="font-mono text-outline">{gradientAngle}°</span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={360}
+                  step={5}
+                  value={gradientAngle}
+                  onChange={(e) => setGradientAngle(Number(e.target.value))}
+                  className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
+                />
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

@@ -36,6 +36,12 @@ export const ExportPage: React.FC = () => {
     projectId,
   } = useProject();
   const durationInFrames = useMediaDurationFrames(mediaUrl, FPS);
+  const captionDurationFrames =
+    captions && captions.length > 0
+      ? Math.max(1, Math.ceil((captions[captions.length - 1].endMs / 1000) * FPS))
+      : 150;
+  const effectiveDurationFrames =
+    mediaUrl && durationInFrames > 0 ? Math.max(durationInFrames, captionDurationFrames) : captionDurationFrames;
   const safeFilename = toSafeFilename(projectName);
   const mp4Available = !!mediaFile && mediaFile.type.startsWith('video/');
 
@@ -167,7 +173,7 @@ export const ExportPage: React.FC = () => {
           textureSettings,
           motionSettings,
           audioAmplitude,
-          durationInFrames,
+          durationInFrames: effectiveDurationFrames,
           scale: RESOLUTION_SCALE[resolution],
           orientation: layoutMode,
         }),
@@ -203,7 +209,7 @@ export const ExportPage: React.FC = () => {
           textureSettings,
           motionSettings,
           audioAmplitude,
-          durationInFrames,
+          durationInFrames: effectiveDurationFrames,
           scale: RESOLUTION_SCALE[resolution],
           orientation: layoutMode,
         }),

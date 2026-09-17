@@ -1,10 +1,11 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { parseSrt, type Caption } from '@remotion/captions';
+import { ensureWordLevelCaptions } from '../captions/processCaptions';
 import { FONT_PRESETS, type FontPresetName } from '../captions/styles/presets';
-import type { CaptionPosition, CaptionStyleOverrides, CaptionStyleVariant } from '../captions/styles/types';
+import type { CaptionPosition, CaptionStyleOverrides, CaptionStyleVariant, CaptionTextTransform, WordTypographyOverride } from '../captions/styles/types';
 import { DEFAULT_KEYWORDS } from '../captions/styles/applyKeywordEmphasis';
 import type { OverlaySettings, ProgressBarPosition, WatermarkPosition } from '../overlay/types';
-import type { FrameSettings, FrameVariant } from '../frames/types';
+import type { CardAspectRatio, CardBackdrop, CardBorderStyle, FrameCardMode, FrameSettings, FrameVariant } from '../frames/types';
 import type { OverlayIntensity, TextureOverlaySettings } from '../textures/types';
 import type { CodeBlockPosition, CodeLanguage, MotionGraphicsSettings, TickerDirection, TickerPosition } from '../motion/types';
 
@@ -45,6 +46,20 @@ type PersistedState = {
   strokeColor?: string;
   strokeWidth?: number;
   shadowEnabled?: boolean;
+  glowEnabled?: boolean;
+  glowColor?: string;
+  glowIntensity?: number;
+  glowBlur?: number;
+  glowOpacity?: number;
+  gradientEnabled?: boolean;
+  gradientStart?: string;
+  gradientEnd?: string;
+  gradientAngle?: number;
+  letterSpacing?: number;
+  lineHeight?: number;
+  textTransform?: CaptionTextTransform;
+  wordOverrides?: Record<string, WordTypographyOverride>;
+
   watermarkEnabled: boolean;
   watermarkOpacity: number;
   watermarkPosition: WatermarkPosition;
@@ -54,6 +69,21 @@ type PersistedState = {
   frameVariant: FrameVariant;
   frameBgColor: string;
   bezelRadiusMultiplier: number;
+  cardMode?: FrameCardMode;
+  customScale?: number;
+  customAspectRatio?: CardAspectRatio;
+  customPositionY?: number;
+  customBorderRadius?: number;
+  customBorderEnabled?: boolean;
+  customBorderWidth?: number;
+  customBorderColor?: string;
+  customBorderStyle?: CardBorderStyle;
+  customShadowEnabled?: boolean;
+  customShadowBlur?: number;
+  customShadowOpacity?: number;
+  customBackdrop?: CardBackdrop;
+  customBackdropColor?: string;
+  customBackdropGradient?: string;
   filmDustEnabled: boolean;
   halationEnabled: boolean;
   halationIntensity: OverlayIntensity;
@@ -109,7 +139,9 @@ const persisted = readPersistedState();
 const readCachedTranscript = (): Caption[] | null => {
   try {
     const raw = localStorage.getItem(TRANSCRIPT_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Caption[]) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Caption[];
+    return ensureWordLevelCaptions(parsed);
   } catch {
     return null;
   }
@@ -193,6 +225,35 @@ interface ProjectContextType {
   setStrokeWidth: (width: number) => void;
   shadowEnabled: boolean;
   setShadowEnabled: (enabled: boolean) => void;
+  glowEnabled: boolean;
+  setGlowEnabled: (enabled: boolean) => void;
+  glowColor: string;
+  setGlowColor: (color: string) => void;
+  glowIntensity: number;
+  setGlowIntensity: (intensity: number) => void;
+  glowBlur: number;
+  setGlowBlur: (blur: number) => void;
+  glowOpacity: number;
+  setGlowOpacity: (opacity: number) => void;
+  gradientEnabled: boolean;
+  setGradientEnabled: (enabled: boolean) => void;
+  gradientStart: string;
+  setGradientStart: (color: string) => void;
+  gradientEnd: string;
+  setGradientEnd: (color: string) => void;
+  gradientAngle: number;
+  setGradientAngle: (angle: number) => void;
+  letterSpacing: number;
+  setLetterSpacing: (val: number) => void;
+  lineHeight: number;
+  setLineHeight: (val: number) => void;
+  textTransform: CaptionTextTransform;
+  setTextTransform: (val: CaptionTextTransform) => void;
+  wordOverrides: Record<string, WordTypographyOverride>;
+  setWordOverride: (wordId: string, override: Partial<WordTypographyOverride>) => void;
+  setMultipleWordOverrides: (wordIds: string[], override: Partial<WordTypographyOverride>) => void;
+  resetWordOverrides: (wordIds: string[]) => void;
+  clearAllWordOverrides: () => void;
   styleVariant: CaptionStyleVariant;
   styleOverrides: CaptionStyleOverrides;
   // Overlay tab controls, lifted the same way as the style controls above -
@@ -221,6 +282,36 @@ interface ProjectContextType {
   setFrameBgColor: (color: string) => void;
   bezelRadiusMultiplier: number;
   setBezelRadiusMultiplier: (multiplier: number) => void;
+  cardMode: FrameCardMode;
+  setCardMode: (mode: FrameCardMode) => void;
+  customScale: number;
+  setCustomScale: (scale: number) => void;
+  customAspectRatio: CardAspectRatio;
+  setCustomAspectRatio: (ratio: CardAspectRatio) => void;
+  customPositionY: number;
+  setCustomPositionY: (pos: number) => void;
+  customBorderRadius: number;
+  setCustomBorderRadius: (radius: number) => void;
+  customBorderEnabled: boolean;
+  setCustomBorderEnabled: (enabled: boolean) => void;
+  customBorderWidth: number;
+  setCustomBorderWidth: (width: number) => void;
+  customBorderColor: string;
+  setCustomBorderColor: (color: string) => void;
+  customBorderStyle: CardBorderStyle;
+  setCustomBorderStyle: (style: CardBorderStyle) => void;
+  customShadowEnabled: boolean;
+  setCustomShadowEnabled: (enabled: boolean) => void;
+  customShadowBlur: number;
+  setCustomShadowBlur: (blur: number) => void;
+  customShadowOpacity: number;
+  setCustomShadowOpacity: (opacity: number) => void;
+  customBackdrop: CardBackdrop;
+  setCustomBackdrop: (backdrop: CardBackdrop) => void;
+  customBackdropColor: string;
+  setCustomBackdropColor: (color: string) => void;
+  customBackdropGradient: string;
+  setCustomBackdropGradient: (gradient: string) => void;
   frameSettings: FrameSettings;
   // Texture overlay tab controls, lifted the same way as frameSettings above
   // - each texture is independently toggleable (unlike Frame's single-select
@@ -312,10 +403,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [projectId] = useState(() => persisted?.id ?? generateId());
   const [projectName, setProjectName] = useState(persisted?.name ?? 'Untitled Project');
 
+  const [customFontWeight, setCustomFontWeight] = useState<number | null>(persisted?.fontWeight ?? null);
+  const [customLetterSpacing, setCustomLetterSpacing] = useState<number | null>(persisted?.letterSpacing ?? null);
   const [presetName, setPresetNameState] = useState<FontPresetName>(persisted?.presetName ?? 'Viral Hook');
   const setPresetName = useCallback((name: FontPresetName) => {
     setPresetNameState(name);
     setCustomFontWeight(null);
+    setCustomLetterSpacing(null);
   }, []);
   // Defaults preserve the pre-refactor look (BOLD preset used to force
   // signature animation + always-on keyword glow) while making both
@@ -331,11 +425,87 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [fontSizeMultiplier, setFontSizeMultiplier] = useState(persisted?.fontSizeMultiplier ?? 1);
 
   const [textColor, setTextColor] = useState<string>(persisted?.textColor ?? '#ffffff');
-  const [customFontWeight, setCustomFontWeight] = useState<number | null>(persisted?.fontWeight ?? null);
   const [strokeEnabled, setStrokeEnabled] = useState<boolean>(persisted?.strokeEnabled ?? false);
   const [strokeColor, setStrokeColor] = useState<string>(persisted?.strokeColor ?? '#000000');
   const [strokeWidth, setStrokeWidth] = useState<number>(persisted?.strokeWidth ?? 2);
   const [shadowEnabled, setShadowEnabled] = useState<boolean>(persisted?.shadowEnabled ?? true);
+  const [glowEnabled, setGlowEnabled] = useState<boolean>(persisted?.glowEnabled ?? false);
+  const [glowColor, setGlowColor] = useState<string>(persisted?.glowColor ?? '#0066ff');
+  const [glowIntensity, setGlowIntensity] = useState<number>(persisted?.glowIntensity ?? 0.6);
+  const [glowBlur, setGlowBlur] = useState<number>(persisted?.glowBlur ?? 12);
+  const [glowOpacity, setGlowOpacity] = useState<number>(persisted?.glowOpacity ?? 0.8);
+  const [gradientEnabled, setGradientEnabled] = useState<boolean>(persisted?.gradientEnabled ?? false);
+  const [gradientStart, setGradientStart] = useState<string>(persisted?.gradientStart ?? '#FFFFFF');
+  const [gradientEnd, setGradientEnd] = useState<string>(persisted?.gradientEnd ?? '#10B981');
+  const [gradientAngle, setGradientAngle] = useState<number>(persisted?.gradientAngle ?? 90);
+  const setLetterSpacing = useCallback((val: number) => {
+    setCustomLetterSpacing(val);
+  }, []);
+  const [lineHeight, setLineHeight] = useState<number>(persisted?.lineHeight ?? 1.15);
+  const [textTransform, setTextTransform] = useState<CaptionTextTransform>(persisted?.textTransform ?? 'none');
+  const [wordOverrides, setWordOverrides] = useState<Record<string, WordTypographyOverride>>(
+    persisted?.wordOverrides ?? {},
+  );
+
+  const setWordOverride = useCallback((wordId: string, override: Partial<WordTypographyOverride>) => {
+    setWordOverrides((prev) => {
+      const current = prev[wordId] ?? {};
+      const updated = { ...current, ...override };
+      const cleaned: WordTypographyOverride = {};
+      if (updated.fontFamily) cleaned.fontFamily = updated.fontFamily;
+      if (updated.fontStyle) cleaned.fontStyle = updated.fontStyle;
+      if (updated.color) cleaned.color = updated.color;
+      if (updated.fontSize !== undefined && updated.fontSize !== 1) cleaned.fontSize = updated.fontSize;
+      if (updated.fontWeight) cleaned.fontWeight = updated.fontWeight;
+
+      if (Object.keys(cleaned).length === 0) {
+        const next = { ...prev };
+        delete next[wordId];
+        return next;
+      }
+      return { ...prev, [wordId]: cleaned };
+    });
+  }, []);
+
+  const setMultipleWordOverrides = useCallback(
+    (wordIds: string[], override: Partial<WordTypographyOverride>) => {
+      setWordOverrides((prev) => {
+        const next = { ...prev };
+        for (const wordId of wordIds) {
+          const current = next[wordId] ?? {};
+          const updated = { ...current, ...override };
+          const cleaned: WordTypographyOverride = {};
+          if (updated.fontFamily) cleaned.fontFamily = updated.fontFamily;
+          if (updated.fontStyle) cleaned.fontStyle = updated.fontStyle;
+          if (updated.color) cleaned.color = updated.color;
+          if (updated.fontSize !== undefined && updated.fontSize !== 1) cleaned.fontSize = updated.fontSize;
+          if (updated.fontWeight) cleaned.fontWeight = updated.fontWeight;
+
+          if (Object.keys(cleaned).length === 0) {
+            delete next[wordId];
+          } else {
+            next[wordId] = cleaned;
+          }
+        }
+        return next;
+      });
+    },
+    [],
+  );
+
+  const resetWordOverrides = useCallback((wordIds: string[]) => {
+    setWordOverrides((prev) => {
+      const next = { ...prev };
+      for (const wordId of wordIds) {
+        delete next[wordId];
+      }
+      return next;
+    });
+  }, []);
+
+  const clearAllWordOverrides = useCallback(() => {
+    setWordOverrides({});
+  }, []);
 
   const preset = FONT_PRESETS.find((p) => p.name === presetName) ?? FONT_PRESETS[0];
 
@@ -345,6 +515,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     return preset.fontWeight;
   }, [customFontWeight, preset]);
+
+  const effectiveLetterSpacing = useMemo(() => {
+    if (customLetterSpacing !== null) {
+      return customLetterSpacing;
+    }
+    return ('letterSpacing' in preset && typeof preset.letterSpacing === 'number') ? preset.letterSpacing : 0;
+  }, [customLetterSpacing, preset]);
 
   const styleVariant = animation;
   const styleOverrides: CaptionStyleOverrides = useMemo(
@@ -357,12 +534,25 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       strokeColor,
       strokeWidth,
       shadowEnabled,
+      glowEnabled,
+      glowColor,
+      glowIntensity,
+      glowBlur,
+      glowOpacity,
+      gradientEnabled,
+      gradientStart,
+      gradientEnd,
+      gradientAngle,
+      letterSpacing: effectiveLetterSpacing,
+      lineHeight,
+      textTransform,
       highlightColor,
       position,
       keywordHighlightEnabled,
       highlightIntensity,
       keywords,
       fontSizeMultiplier,
+      wordOverrides,
     }),
     [
       preset,
@@ -372,12 +562,25 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       strokeColor,
       strokeWidth,
       shadowEnabled,
+      glowEnabled,
+      glowColor,
+      glowIntensity,
+      glowBlur,
+      glowOpacity,
+      gradientEnabled,
+      gradientStart,
+      gradientEnd,
+      gradientAngle,
+      effectiveLetterSpacing,
+      lineHeight,
+      textTransform,
       highlightColor,
       position,
       keywordHighlightEnabled,
       highlightIntensity,
       keywords,
       fontSizeMultiplier,
+      wordOverrides,
     ],
   );
 
@@ -394,6 +597,37 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [frameBgColor, setFrameBgColor] = useState(persisted?.frameBgColor ?? '#000000');
   const [bezelRadiusMultiplier, setBezelRadiusMultiplier] = useState(
     persisted?.bezelRadiusMultiplier ?? 1,
+  );
+  const [cardMode, setCardMode] = useState<FrameCardMode>(persisted?.cardMode ?? 'preset');
+  const [customScale, setCustomScale] = useState<number>(persisted?.customScale ?? 0.85);
+  const [customAspectRatio, setCustomAspectRatio] = useState<CardAspectRatio>(
+    persisted?.customAspectRatio ?? '9:16',
+  );
+  const [customPositionY, setCustomPositionY] = useState<number>(persisted?.customPositionY ?? 0.5);
+  const [customBorderRadius, setCustomBorderRadius] = useState<number>(persisted?.customBorderRadius ?? 24);
+  const [customBorderEnabled, setCustomBorderEnabled] = useState<boolean>(
+    persisted?.customBorderEnabled ?? false,
+  );
+  const [customBorderWidth, setCustomBorderWidth] = useState<number>(persisted?.customBorderWidth ?? 2);
+  const [customBorderColor, setCustomBorderColor] = useState<string>(
+    persisted?.customBorderColor ?? '#ffffff',
+  );
+  const [customBorderStyle, setCustomBorderStyle] = useState<CardBorderStyle>(
+    persisted?.customBorderStyle ?? 'solid',
+  );
+  const [customShadowEnabled, setCustomShadowEnabled] = useState<boolean>(
+    persisted?.customShadowEnabled ?? false,
+  );
+  const [customShadowBlur, setCustomShadowBlur] = useState<number>(persisted?.customShadowBlur ?? 24);
+  const [customShadowOpacity, setCustomShadowOpacity] = useState<number>(
+    persisted?.customShadowOpacity ?? 40,
+  );
+  const [customBackdrop, setCustomBackdrop] = useState<CardBackdrop>(persisted?.customBackdrop ?? 'none');
+  const [customBackdropColor, setCustomBackdropColor] = useState<string>(
+    persisted?.customBackdropColor ?? '#121214',
+  );
+  const [customBackdropGradient, setCustomBackdropGradient] = useState<string>(
+    persisted?.customBackdropGradient ?? 'linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%)',
   );
 
   const [filmDustEnabled, setFilmDustEnabled] = useState(persisted?.filmDustEnabled ?? false);
@@ -469,8 +703,46 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   );
 
   const frameSettings: FrameSettings = useMemo(
-    () => ({ variant: frameVariant, bgColor: frameBgColor, bezelRadiusMultiplier }),
-    [frameVariant, frameBgColor, bezelRadiusMultiplier],
+    () => ({
+      variant: frameVariant,
+      bgColor: frameBgColor,
+      bezelRadiusMultiplier,
+      cardMode,
+      customScale,
+      customAspectRatio,
+      customPositionY,
+      customBorderRadius,
+      customBorderEnabled,
+      customBorderWidth,
+      customBorderColor,
+      customBorderStyle,
+      customShadowEnabled,
+      customShadowBlur,
+      customShadowOpacity,
+      customBackdrop,
+      customBackdropColor,
+      customBackdropGradient,
+    }),
+    [
+      frameVariant,
+      frameBgColor,
+      bezelRadiusMultiplier,
+      cardMode,
+      customScale,
+      customAspectRatio,
+      customPositionY,
+      customBorderRadius,
+      customBorderEnabled,
+      customBorderWidth,
+      customBorderColor,
+      customBorderStyle,
+      customShadowEnabled,
+      customShadowBlur,
+      customShadowOpacity,
+      customBackdrop,
+      customBackdropColor,
+      customBackdropGradient,
+    ],
   );
 
   const textureSettings: TextureOverlaySettings = useMemo(
@@ -574,6 +846,19 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       strokeColor,
       strokeWidth,
       shadowEnabled,
+      glowEnabled,
+      glowColor,
+      glowIntensity,
+      glowBlur,
+      glowOpacity,
+      gradientEnabled,
+      gradientStart,
+      gradientEnd,
+      gradientAngle,
+      letterSpacing: effectiveLetterSpacing,
+      lineHeight,
+      textTransform,
+      wordOverrides,
       watermarkEnabled,
       watermarkOpacity,
       watermarkPosition,
@@ -583,6 +868,21 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       frameVariant,
       frameBgColor,
       bezelRadiusMultiplier,
+      cardMode,
+      customScale,
+      customAspectRatio,
+      customPositionY,
+      customBorderRadius,
+      customBorderEnabled,
+      customBorderWidth,
+      customBorderColor,
+      customBorderStyle,
+      customShadowEnabled,
+      customShadowBlur,
+      customShadowOpacity,
+      customBackdrop,
+      customBackdropColor,
+      customBackdropGradient,
       filmDustEnabled,
       halationEnabled,
       halationIntensity,
@@ -636,6 +936,19 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     strokeColor,
     strokeWidth,
     shadowEnabled,
+    glowEnabled,
+    glowColor,
+    glowIntensity,
+    glowBlur,
+    glowOpacity,
+    gradientEnabled,
+    gradientStart,
+    gradientEnd,
+    gradientAngle,
+    effectiveLetterSpacing,
+    lineHeight,
+    textTransform,
+    wordOverrides,
     watermarkEnabled,
     watermarkOpacity,
     watermarkPosition,
@@ -645,6 +958,21 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     frameVariant,
     frameBgColor,
     bezelRadiusMultiplier,
+    cardMode,
+    customScale,
+    customAspectRatio,
+    customPositionY,
+    customBorderRadius,
+    customBorderEnabled,
+    customBorderWidth,
+    customBorderColor,
+    customBorderStyle,
+    customShadowEnabled,
+    customShadowBlur,
+    customShadowOpacity,
+    customBackdrop,
+    customBackdropColor,
+    customBackdropGradient,
     filmDustEnabled,
     halationEnabled,
     halationIntensity,
@@ -707,9 +1035,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       const text = await file.text();
       const { captions: parsedCaptions } = parseSrt({ input: text });
+      const wordLevelCaptions = ensureWordLevelCaptions(parsedCaptions);
       setSrtFile(file);
-      setCaptions(parsedCaptions);
-      localStorage.setItem(TRANSCRIPT_STORAGE_KEY, JSON.stringify(parsedCaptions));
+      setCaptions(wordLevelCaptions);
+      localStorage.setItem(TRANSCRIPT_STORAGE_KEY, JSON.stringify(wordLevelCaptions));
     } catch (error) {
       console.error('Failed to parse SRT:', error);
       throw error instanceof Error ? error : new Error('Failed to parse SRT file');
@@ -857,6 +1186,35 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setStrokeWidth,
         shadowEnabled,
         setShadowEnabled,
+        glowEnabled,
+        setGlowEnabled,
+        glowColor,
+        setGlowColor,
+        glowIntensity,
+        setGlowIntensity,
+        glowBlur,
+        setGlowBlur,
+        glowOpacity,
+        setGlowOpacity,
+        gradientEnabled,
+        setGradientEnabled,
+        gradientStart,
+        setGradientStart,
+        gradientEnd,
+        setGradientEnd,
+        gradientAngle,
+        setGradientAngle,
+        letterSpacing: effectiveLetterSpacing,
+        setLetterSpacing,
+        lineHeight,
+        setLineHeight,
+        textTransform,
+        setTextTransform,
+        wordOverrides,
+        setWordOverride,
+        setMultipleWordOverrides,
+        resetWordOverrides,
+        clearAllWordOverrides,
         styleVariant,
         styleOverrides,
         watermarkEnabled,
@@ -878,6 +1236,36 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setFrameBgColor,
         bezelRadiusMultiplier,
         setBezelRadiusMultiplier,
+        cardMode,
+        setCardMode,
+        customScale,
+        setCustomScale,
+        customAspectRatio,
+        setCustomAspectRatio,
+        customPositionY,
+        setCustomPositionY,
+        customBorderRadius,
+        setCustomBorderRadius,
+        customBorderEnabled,
+        setCustomBorderEnabled,
+        customBorderWidth,
+        setCustomBorderWidth,
+        customBorderColor,
+        setCustomBorderColor,
+        customBorderStyle,
+        setCustomBorderStyle,
+        customShadowEnabled,
+        setCustomShadowEnabled,
+        customShadowBlur,
+        setCustomShadowBlur,
+        customShadowOpacity,
+        setCustomShadowOpacity,
+        customBackdrop,
+        setCustomBackdrop,
+        customBackdropColor,
+        setCustomBackdropColor,
+        customBackdropGradient,
+        setCustomBackdropGradient,
         frameSettings,
         filmDustEnabled,
         setFilmDustEnabled,

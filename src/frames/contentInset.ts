@@ -16,6 +16,14 @@ export const getFrameContentInset = (
   compositionHeight: number,
   compositionWidth: number,
 ): FrameContentInset => {
+  if (frameSettings?.cardMode === 'custom') {
+    const scaleRatio = compositionWidth / 1080;
+    const borderInset = frameSettings.customBorderEnabled
+      ? Math.round((frameSettings.customBorderWidth ?? 2) * scaleRatio)
+      : 0;
+    return { top: borderInset, bottom: borderInset, left: borderInset, right: borderInset };
+  }
+
   if (frameSettings?.variant === 'cinematicScope') {
     const barHeight = compositionHeight * CINEMATIC_SCOPE_BAR_RATIO;
     return { top: barHeight, bottom: barHeight, left: 0, right: 0 };

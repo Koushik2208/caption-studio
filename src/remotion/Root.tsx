@@ -37,11 +37,18 @@ export const RemotionRoot: React.FC = () => {
             orientation: 'vertical',
           } satisfies CaptionExportProps
         }
-        calculateMetadata={async ({ props }) => ({
-          durationInFrames: props.durationInFrames ?? FALLBACK_DURATION_IN_FRAMES,
-          width: props.orientation === 'horizontal' ? 1920 : 1080,
-          height: props.orientation === 'horizontal' ? 1080 : 1920,
-        })}
+        calculateMetadata={async ({ props }) => {
+          const lastCaption =
+            props.captions && props.captions.length > 0 ? props.captions[props.captions.length - 1] : null;
+          const captionDuration = lastCaption?.endMs
+            ? Math.max(1, Math.ceil((lastCaption.endMs / 1000) * FPS))
+            : FALLBACK_DURATION_IN_FRAMES;
+          return {
+            durationInFrames: Math.max(props.durationInFrames ?? FALLBACK_DURATION_IN_FRAMES, captionDuration),
+            width: props.orientation === 'horizontal' ? 1920 : 1080,
+            height: props.orientation === 'horizontal' ? 1080 : 1920,
+          };
+        }}
       />
       <Composition
         id="CaptionExportVideo"
@@ -65,11 +72,18 @@ export const RemotionRoot: React.FC = () => {
             orientation: 'vertical',
           } satisfies CaptionExportVideoProps
         }
-        calculateMetadata={async ({ props }) => ({
-          durationInFrames: props.durationInFrames ?? FALLBACK_DURATION_IN_FRAMES,
-          width: props.orientation === 'horizontal' ? 1920 : 1080,
-          height: props.orientation === 'horizontal' ? 1080 : 1920,
-        })}
+        calculateMetadata={async ({ props }) => {
+          const lastCaption =
+            props.captions && props.captions.length > 0 ? props.captions[props.captions.length - 1] : null;
+          const captionDuration = lastCaption?.endMs
+            ? Math.max(1, Math.ceil((lastCaption.endMs / 1000) * FPS))
+            : FALLBACK_DURATION_IN_FRAMES;
+          return {
+            durationInFrames: Math.max(props.durationInFrames ?? FALLBACK_DURATION_IN_FRAMES, captionDuration),
+            width: props.orientation === 'horizontal' ? 1920 : 1080,
+            height: props.orientation === 'horizontal' ? 1080 : 1920,
+          };
+        }}
       />
     </>
   );

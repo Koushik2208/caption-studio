@@ -4,8 +4,9 @@ import type { CaptionPage } from "../processCaptions";
 import type { CaptionStyleOverrides } from "./types";
 import { applyKeywordEmphasis, DEFAULT_KEYWORDS, isKeywordToken } from "./applyKeywordEmphasis";
 import { getResponsiveFontSize } from "./fontSize";
-import { combineTextShadow, getLegibilityShadow } from "./legibility";
+import { getCaptionEffectStyle } from "./legibility";
 import { getPositionStyle } from "./position";
+import { resolveWordTypography } from "./wordOverrides";
 
 const HIGHLIGHT_COLOR = "#ffd23f";
 const OUTLINE_COLOR = "white";
@@ -60,7 +61,9 @@ export const OutlineDraw: React.FC<{
           textAlign: "center",
           whiteSpace: "pre-wrap",
           maxWidth: "85%",
-          lineHeight: 1.15,
+          lineHeight: overrides?.lineHeight ?? 1.15,
+          letterSpacing: overrides?.letterSpacing !== undefined ? `${overrides.letterSpacing}px` : undefined,
+          textTransform: overrides?.textTransform ?? "none",
         }}
       >
         {page.tokens.map((token, i) => {
@@ -85,46 +88,52 @@ export const OutlineDraw: React.FC<{
             overrides?.keywordColor,
           );
 
-          const fillColor = emphasis.color ?? highlightColor;
+          const wordTypo = resolveWordTypography(token, fontSize, overrides);
+          const hasExplicitColor = !!emphasis.color || !!wordTypo.customColor;
+          const fillColor = emphasis.color ?? (wordTypo.customColor ?? highlightColor);
+          const outlineStrokeColor = wordTypo.customColor ?? (overrides?.textColor ?? OUTLINE_COLOR);
           const stopPct = fillProgress * 100;
+          const tokenFontSize = wordTypo.fontSize * emphasis.scale;
+
+          let bgImage: string;
+          if (hasExplicitColor || !overrides?.gradientEnabled) {
+            bgImage = `linear-gradient(to right, ${fillColor} 0%, ${fillColor} ${stopPct}%, transparent ${stopPct}%, transparent 100%)`;
+          } else {
+            const start = overrides.gradientStart ?? '#FFFFFF';
+            const end = overrides.gradientEnd ?? '#10B981';
+            const angle = overrides.gradientAngle ?? 90;
+            if (fillProgress >= 1) {
+              bgImage = `linear-gradient(${angle}deg, ${start}, ${end})`;
+            } else if (fillProgress <= 0) {
+              bgImage = 'none';
+            } else {
+              bgImage = `linear-gradient(to right, ${start} 0%, ${end} ${stopPct}%, transparent ${stopPct}%, transparent 100%)`;
+            }
+          }
+
+          const effectStyle = getCaptionEffectStyle(tokenFontSize, true, overrides, emphasis.textShadow);
 
           return (
             <span
               key={`${token.fromMs}-${i}`}
               style={{
                 display: "inline-block",
-                fontFamily: overrides?.fontFamily,
-                fontWeight: overrides?.fontWeight ?? 700,
-                fontStyle: overrides?.fontStyle ?? "normal",
+                fontFamily: wordTypo.fontFamily,
+                fontWeight: wordTypo.fontWeight,
+                fontStyle: wordTypo.fontStyle,
                 color: "transparent",
                 WebkitTextFillColor: "transparent",
                 WebkitTextStroke:
                   overrides?.strokeEnabled === false
                     ? "none"
                     : overrides?.strokeWidth !== undefined || overrides?.strokeColor
-                      ? `${overrides?.strokeWidth ?? 2}px ${overrides?.strokeColor ?? (overrides?.textColor ?? OUTLINE_COLOR)}`
-                      : `2px ${overrides?.textColor ?? OUTLINE_COLOR}`,
-                // backgroundImage (longhand), never the `background` shorthand:
-                // this value changes every frame as fillProgress sweeps, and
-                // re-assigning the `background` shorthand silently resets
-                // background-clip back to border-box every time it's
-                // rewritten. React only re-writes DOM style properties whose
-                // value changed since the last render - backgroundClip's
-                // value ("text") never changes frame to frame, so React
-                // stops re-applying it after frame 1, while `background`
-                // (if used) keeps getting reapplied every frame and keeps
-                // clobbering the clip back to border-box. backgroundImage
-                // has no such sub-properties to reset, so this is safe. See
-                // LEARNINGS.md.
-                backgroundImage: `linear-gradient(to right, ${fillColor} 0%, ${fillColor} ${stopPct}%, transparent ${stopPct}%, transparent 100%)`,
+                      ? `${overrides?.strokeWidth ?? 2}px ${overrides?.strokeColor ?? outlineStrokeColor}`
+                      : `2px ${outlineStrokeColor}`,
+                backgroundImage: bgImage,
                 WebkitBackgroundClip: "text",
                 backgroundClip: "text",
-                // Keyword emphasis is applied as a real fontSize bump, not a
-                // CSS transform: scale() - transform doesn't reflow, so a
-                // scaled-up word would visually spill into its neighbor's
-                // box instead of the browser reserving extra space for it.
-                fontSize: fontSize * emphasis.scale,
-                textShadow: combineTextShadow(getLegibilityShadow(fontSize, overrides?.shadowEnabled !== false), emphasis.textShadow),
+                fontSize: tokenFontSize,
+                ...effectStyle,
               }}
             >
               {token.text}

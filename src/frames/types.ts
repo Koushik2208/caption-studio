@@ -8,10 +8,16 @@ export type FrameVariant =
   | 'squareBezel'
   | 'vintageProjector';
 
+export type FrameCardMode = 'preset' | 'custom';
+export type CardAspectRatio = '9:16' | '4:5' | '1:1' | '16:9';
+export type CardBorderStyle = 'solid' | 'dashed' | 'double';
+export type CardBackdrop = 'none' | 'solid' | 'gradient' | 'blurred-video';
+
 // Lives alongside OverlaySettings (src/overlay/types.ts) - same pattern: one
 // settings object in ProjectContext drives the live PreviewPlayer and gets
 // baked into the real export render.
 export type FrameSettings = {
+  // Preset mode variant (minimalBezel, squareBezel, neonGlow, etc.)
   variant: FrameVariant;
   // Shell color for bezel-style frames (MinimalBezel, SquareBezel) - other frames ignore it.
   bgColor: string;
@@ -19,6 +25,23 @@ export type FrameSettings = {
   // src/frames/bezelRadius.ts) - other frames ignore it. Default 1.0, same
   // multiplier-on-a-computed-default pattern as fontSizeMultiplier.
   bezelRadiusMultiplier: number;
+
+  // V4 Custom Card Mode fields
+  cardMode?: FrameCardMode;
+  customScale?: number; // 0.5 - 1.0, default 0.85
+  customAspectRatio?: CardAspectRatio; // '9:16' | '4:5' | '1:1' | '16:9'
+  customPositionY?: number; // 0 - 1 (0 = top, 0.5 = center, 1 = bottom)
+  customBorderRadius?: number; // 0 - 80px, default 24
+  customBorderEnabled?: boolean;
+  customBorderWidth?: number; // 0 - 16px, default 2
+  customBorderColor?: string; // hex
+  customBorderStyle?: CardBorderStyle;
+  customShadowEnabled?: boolean;
+  customShadowBlur?: number; // 0 - 60px, default 24
+  customShadowOpacity?: number; // 0 - 100%, default 40
+  customBackdrop?: CardBackdrop; // 'none' | 'solid' | 'gradient' | 'blurred-video'
+  customBackdropColor?: string; // hex, default '#121214'
+  customBackdropGradient?: string; // CSS gradient string
 };
 
 // How much of the composition's edges an active frame's own chrome already

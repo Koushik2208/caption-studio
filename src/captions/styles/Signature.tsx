@@ -4,8 +4,9 @@ import type { CaptionPage } from "../processCaptions";
 import type { CaptionStyleOverrides } from "./types";
 import { applyKeywordEmphasis, DEFAULT_KEYWORDS, isKeywordToken } from "./applyKeywordEmphasis";
 import { getResponsiveFontSize } from "./fontSize";
-import { combineTextShadow, getLegibilityShadow, getLegibilityStroke } from "./legibility";
+import { getCaptionEffectStyle, getCaptionFillStyle, getLegibilityStroke } from "./legibility";
 import { getPositionStyle } from "./position";
+import { resolveWordTypography } from "./wordOverrides";
 
 const HIGHLIGHT_COLOR = "#ffd23f";
 
@@ -45,9 +46,9 @@ export const Signature: React.FC<{
           textAlign: "center",
           whiteSpace: "pre-wrap",
           maxWidth: "85%",
-          lineHeight: 1.15,
-          WebkitTextStroke: getLegibilityStroke(fontSize, overrides),
-          paintOrder: "stroke fill",
+          lineHeight: overrides?.lineHeight ?? 1.15,
+          letterSpacing: overrides?.letterSpacing !== undefined ? `${overrides.letterSpacing}px` : undefined,
+          textTransform: overrides?.textTransform ?? "none",
         }}
       >
         {page.tokens.map((token, i) => {
@@ -74,21 +75,26 @@ export const Signature: React.FC<{
             overrides?.keywordColor,
           );
 
-          // Apply active pop color on current word, user-chosen textColor on other words
-          const tokenColor = emphasis.color ?? (isActive ? highlightColor : baseTextColor);
+          const wordTypo = resolveWordTypography(token, fontSize, overrides);
+          const hasExplicitColor = !!emphasis.color || !!wordTypo.customColor;
+          const isGradient = !hasExplicitColor && !!overrides?.gradientEnabled;
+          const tokenColor = emphasis.color ?? (wordTypo.customColor ?? (isActive ? highlightColor : baseTextColor));
+          const fillStyle = getCaptionFillStyle(tokenColor, hasExplicitColor, overrides);
+          const effectStyle = getCaptionEffectStyle(wordTypo.fontSize, isGradient, overrides, emphasis.textShadow);
 
           return (
             <span
               key={`${token.fromMs}-${i}`}
               style={{
                 display: "inline-block",
-                fontFamily: overrides?.fontFamily,
-                fontWeight: overrides?.fontWeight ?? 700,
-                fontStyle: overrides?.fontStyle ?? "normal",
-                WebkitTextStroke: getLegibilityStroke(fontSize, overrides),
+                fontFamily: wordTypo.fontFamily,
+                fontWeight: wordTypo.fontWeight,
+                fontStyle: wordTypo.fontStyle,
+                fontSize: wordTypo.fontSize,
+                WebkitTextStroke: getLegibilityStroke(wordTypo.fontSize, overrides),
                 paintOrder: "stroke fill",
-                color: tokenColor,
-                textShadow: combineTextShadow(getLegibilityShadow(fontSize, overrides?.shadowEnabled !== false), emphasis.textShadow),
+                ...fillStyle,
+                ...effectStyle,
                 transform: `scale(${emphasis.scale})`,
               }}
             >

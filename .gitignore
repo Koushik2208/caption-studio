@@ -16,6 +16,12 @@ dist-ssr
 tools/whisper
 tmp
 
+# Development & Scratch Files
+scratch/
+*.tsbuildinfo
+.cache/
+.temp/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -27,10 +33,11 @@ tmp
 *.sln
 *.sw?
 
-# Claude Code local state (machine-specific)
-.claude/scheduled_tasks.lock
+# Claude / Assistant local state (machine-specific)
+.claude/
 
 # Env files (none currently used, but keep local secrets out if added later)
 .env
 .env.local
 .env.*.local
+

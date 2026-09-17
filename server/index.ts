@@ -305,6 +305,15 @@ const runGreenScreenRender = async (jobId: string, body: GreenScreenRequestBody)
 
   try {
     const serveUrl = await getServeUrl();
+    const lastCaptionEndMs = Array.isArray(body.captions) && body.captions.length > 0
+      ? Math.max(...body.captions.map((c: any) => (typeof c?.endMs === 'number' ? c.endMs : 0)))
+      : 0;
+    const captionDurationFrames = lastCaptionEndMs > 0 ? Math.ceil((lastCaptionEndMs / 1000) * 30) : 150;
+    const durationInFrames = Math.max(
+      typeof body.durationInFrames === 'number' && body.durationInFrames > 0 ? body.durationInFrames : 0,
+      captionDurationFrames
+    );
+
     const inputProps = {
       captions: body.captions,
       styleVariant: body.styleVariant,
@@ -314,7 +323,7 @@ const runGreenScreenRender = async (jobId: string, body: GreenScreenRequestBody)
       textureSettings: body.textureSettings,
       motionSettings: body.motionSettings,
       audioAmplitude: body.audioAmplitude,
-      durationInFrames: body.durationInFrames,
+      durationInFrames,
       orientation: body.orientation ?? "vertical",
     };
 
@@ -355,15 +364,21 @@ app.post("/api/export-green-screen", (req, res) => {
     res.status(400).json({ error: "Missing required 'captions' array" });
     return;
   }
-  if (typeof body.durationInFrames !== "number" || body.durationInFrames <= 0) {
-    res.status(400).json({ error: "Missing required 'durationInFrames'" });
-    return;
-  }
+
+  const lastCaptionEndMs = Math.max(...body.captions.map((c: any) => (typeof c?.endMs === 'number' ? c.endMs : 0)));
+  const captionDurationFrames = lastCaptionEndMs > 0 ? Math.ceil((lastCaptionEndMs / 1000) * 30) : 150;
+  const durationInFrames = Math.max(
+    typeof body.durationInFrames === "number" && body.durationInFrames > 0 ? body.durationInFrames : 0,
+    captionDurationFrames
+  );
 
   const jobId = randomUUID();
   exportJobs.set(jobId, { status: "rendering", progress: 0 });
 
-  void runGreenScreenRender(jobId, body as GreenScreenRequestBody);
+  void runGreenScreenRender(jobId, {
+    ...body,
+    durationInFrames,
+  } as GreenScreenRequestBody);
 
   res.status(202).json({ jobId });
 });
@@ -382,6 +397,15 @@ const runVideoRender = async (jobId: string, mediaPath: string, body: VideoReque
     // OffthreadVideo needs an http(s) URL, not the local path - see the
     // /tmp-media static route registered above.
     const mediaUrl = `http://localhost:${PORT}/tmp-media/${path.basename(mediaPath)}`;
+    const lastCaptionEndMs = Array.isArray(body.captions) && body.captions.length > 0
+      ? Math.max(...body.captions.map((c: any) => (typeof c?.endMs === 'number' ? c.endMs : 0)))
+      : 0;
+    const captionDurationFrames = lastCaptionEndMs > 0 ? Math.ceil((lastCaptionEndMs / 1000) * 30) : 150;
+    const durationInFrames = Math.max(
+      typeof body.durationInFrames === 'number' && body.durationInFrames > 0 ? body.durationInFrames : 0,
+      captionDurationFrames
+    );
+
     const inputProps = {
       captions: body.captions,
       mediaUrl,
@@ -392,7 +416,7 @@ const runVideoRender = async (jobId: string, mediaPath: string, body: VideoReque
       textureSettings: body.textureSettings,
       motionSettings: body.motionSettings,
       audioAmplitude: body.audioAmplitude,
-      durationInFrames: body.durationInFrames,
+      durationInFrames,
       orientation: body.orientation ?? "vertical",
     };
 
@@ -450,16 +474,21 @@ app.post("/api/export-video", videoUpload.single("media"), (req, res) => {
     res.status(400).json({ error: "Missing required 'captions' array" });
     return;
   }
-  if (typeof body.durationInFrames !== "number" || body.durationInFrames <= 0) {
-    cleanup(mediaFile.path);
-    res.status(400).json({ error: "Missing required 'durationInFrames'" });
-    return;
-  }
+
+  const lastCaptionEndMs = Math.max(...body.captions.map((c: any) => (typeof c?.endMs === 'number' ? c.endMs : 0)));
+  const captionDurationFrames = lastCaptionEndMs > 0 ? Math.ceil((lastCaptionEndMs / 1000) * 30) : 150;
+  const durationInFrames = Math.max(
+    typeof body.durationInFrames === "number" && body.durationInFrames > 0 ? body.durationInFrames : 0,
+    captionDurationFrames
+  );
 
   const jobId = randomUUID();
   exportJobs.set(jobId, { status: "rendering", progress: 0 });
 
-  void runVideoRender(jobId, path.resolve(mediaFile.path), body as VideoRequestBody);
+  void runVideoRender(jobId, mediaFile.path, {
+    ...body,
+    durationInFrames,
+  } as VideoRequestBody);
 
   res.status(202).json({ jobId });
 });

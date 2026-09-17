@@ -15,6 +15,16 @@ export type CaptionStyleVariant = "signature" | "calmPhrase" | "typewriter" | "s
 // caption text in a vertical or horizontal video. See position.ts.
 export type CaptionPosition = "top" | "center" | "bottom";
 
+export type WordTypographyOverride = {
+  fontFamily?: string;
+  fontStyle?: "normal" | "italic";
+  color?: string;
+  fontSize?: number; // relative size multiplier, e.g. 1.25, 0.8
+  fontWeight?: number;
+};
+
+export type CaptionTextTransform = "none" | "uppercase" | "lowercase";
+
 export type CaptionStyleOverrides = {
   fontFamily?: string;
   fontWeight?: number | string;
@@ -26,6 +36,18 @@ export type CaptionStyleOverrides = {
   strokeColor?: string;
   strokeWidth?: number;
   shadowEnabled?: boolean;
+  glowEnabled?: boolean;
+  glowColor?: string;
+  glowIntensity?: number; // 0-1
+  glowBlur?: number; // px, e.g. 2-30
+  glowOpacity?: number; // 0-1
+  gradientEnabled?: boolean;
+  gradientStart?: string;
+  gradientEnd?: string;
+  gradientAngle?: number; // degrees, e.g. 0-360
+  letterSpacing?: number; // px, e.g. -2 to 8
+  lineHeight?: number; // unitless line-height multiplier, e.g. 0.9 to 1.8
+  textTransform?: CaptionTextTransform;
   // Keyword emphasis - independent of `styleVariant`, applied on top of
   // whichever base animation is active.
   keywordHighlightEnabled?: boolean;
@@ -36,4 +58,7 @@ export type CaptionStyleOverrides = {
   // default 1.0 leaves the computed default as-is; a per-video nudge for
   // when that default still feels off, not a replacement for it.
   fontSizeMultiplier?: number;
+  // Word-level typography overrides keyed by word/token ID
+  wordOverrides?: Record<string, WordTypographyOverride>;
 };
+

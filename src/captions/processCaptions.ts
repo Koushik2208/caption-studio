@@ -113,17 +113,57 @@ const toContiguousFramePages = (pages: RawPage[], fps: number): CaptionPage[] =>
     };
   });
 
-// Pipeline order: empty-text filter -> createTikTokStyleCaptions ->
+// Break down multi-word captions (such as lines from standard SRT files)
+// into word-level tokens with proportionally distributed timestamps so
+// createTikTokStyleCaptions and karaoke active-word tracking work word-by-word.
+export const ensureWordLevelCaptions = (captions: Caption[]): Caption[] => {
+  const result: Caption[] = [];
+  for (const caption of captions) {
+    const rawText = caption.text;
+    const trimmed = rawText.trim();
+    if (!trimmed) continue;
+
+    const words = trimmed.split(/\s+/).filter(Boolean);
+    if (words.length <= 1) {
+      result.push(caption);
+      continue;
+    }
+
+    const duration = Math.max(1, caption.endMs - caption.startMs);
+    const totalChars = words.reduce((acc, w) => acc + w.length, 0);
+    let currentStart = caption.startMs;
+
+    for (let i = 0; i < words.length; i++) {
+      const word = words[i];
+      const wordFraction = totalChars > 0 ? word.length / totalChars : 1 / words.length;
+      const wordDuration = Math.max(1, Math.round(duration * wordFraction));
+      const isLast = i === words.length - 1;
+      const endMs = isLast ? caption.endMs : Math.min(caption.endMs, currentStart + wordDuration);
+
+      const formattedText = i === 0 ? word : ` ${word}`;
+
+      result.push({
+        text: formattedText,
+        startMs: currentStart,
+        endMs,
+        timestampMs: currentStart,
+        confidence: caption.confidence ?? null,
+      });
+
+      currentStart = endMs;
+    }
+  }
+  return result;
+};
+
+// Pipeline order: empty-text filter -> word-level tokenization -> createTikTokStyleCaptions ->
 // char-budget split -> min-duration merge -> contiguous frame conversion.
 export const processCaptions = (
   captions: Caption[],
   fps: number,
 ): CaptionPage[] => {
-  // Tokens edited down to empty text (TranscriptEditor's deletion path)
-  // must be dropped before createTikTokStyleCaptions ever sees them - a
-  // blank token would otherwise render as an empty "word" and still eat a
-  // slot in the char-budget/min-duration merge math below.
-  const nonEmptyCaptions = captions.filter((caption) => caption.text.trim().length > 0);
+  const wordLevelCaptions = ensureWordLevelCaptions(captions);
+  const nonEmptyCaptions = wordLevelCaptions.filter((caption) => caption.text.trim().length > 0);
 
   const { pages } = createTikTokStyleCaptions({
     captions: nonEmptyCaptions,
