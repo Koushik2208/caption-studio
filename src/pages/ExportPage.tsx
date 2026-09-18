@@ -403,7 +403,7 @@ export const ExportPage: React.FC = () => {
 
               {!hasCaptions && (
                 <p className="text-center text-[10px] text-outline mt-1">
-                  Import and transcribe media before exporting.
+                  Import media and captions or Creative JSON before exporting.
                 </p>
               )}
 

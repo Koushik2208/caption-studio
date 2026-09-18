@@ -7,7 +7,6 @@
     "dev": "concurrently -n vite,server -c blue,green \"vite\" \"tsx watch server/index.ts\"",
     "dev:client": "vite",
     "dev:server": "tsx watch server/index.ts",
-    "setup:whisper": "tsx scripts/setupWhisper.mjs",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
@@ -16,7 +15,6 @@
     "@remotion/bundler": "^4.0.488",
     "@remotion/captions": "4.0.488",
     "@remotion/google-fonts": "4.0.488",
-    "@remotion/install-whisper-cpp": "4.0.488",
     "@remotion/player": "4.0.488",
     "@remotion/renderer": "^4.0.488",
     "@tailwindcss/vite": "^4.3.2",

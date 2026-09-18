@@ -7,9 +7,8 @@ import { useProject } from '../context/ProjectContext';
 // triggered it.
 export const useImportUpload = () => {
   const navigate = useNavigate();
-  const { setMedia, importSrt, transcribe, transcribeStatus, mediaFile } = useProject();
+  const { setMedia, importSrt } = useProject();
   const { setIsTranscriptEditorOpen } = useLayout();
-  const isTranscribing = transcribeStatus === 'uploading';
 
   const handleFileSelect = (file: File) => {
     setMedia(file);
@@ -25,17 +24,6 @@ export const useImportUpload = () => {
     }
   };
 
-  const handleTranscribe = async () => {
-    if (!mediaFile || isTranscribing) return;
-    try {
-      await transcribe(mediaFile);
-      navigate('/style');
-      setIsTranscriptEditorOpen(true);
-    } catch {
-      // transcribeError is already surfaced in the panel below
-    }
-  };
-
   const handleContinueWithoutCaptions = () => {
     navigate('/style');
   };
@@ -43,8 +31,7 @@ export const useImportUpload = () => {
   return {
     handleFileSelect,
     handleSrtUpload,
-    handleTranscribe,
     handleContinueWithoutCaptions,
-    isTranscribing,
   };
 };
+

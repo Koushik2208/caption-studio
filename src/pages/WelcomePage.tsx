@@ -10,7 +10,7 @@ export const WelcomePage: React.FC = () => {
     {
       icon: 'upload_file',
       title: 'Import Assets',
-      description: 'Upload MP4, MOV, MP3 files and auto-transcribe subtitles instantly.',
+      description: 'Upload MP4, MOV, MP3 files and import subtitles or Creative JSON instantly.',
     },
     {
       icon: 'palette',

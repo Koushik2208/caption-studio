@@ -12,26 +12,12 @@ export const ImportCanvasOverlay: React.FC = () => {
   const {
     handleFileSelect,
     handleSrtUpload,
-    handleTranscribe,
     handleContinueWithoutCaptions,
-    isTranscribing,
   } = useImportUpload();
   const srtInputRef = useRef<HTMLInputElement>(null);
 
   const hasMedia = !!mediaUrl;
   const hasCaptions = !!captions && captions.length > 0;
-
-  if (isTranscribing) {
-    return (
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-surface-container/80 backdrop-blur-sm z-10">
-        <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
-        <p className="text-body-md font-bold text-on-surface">Transcribing audio...</p>
-        <p className="text-body-sm text-on-surface-variant">
-          Running local Whisper.cpp - this can take a minute for longer files.
-        </p>
-      </div>
-    );
-  }
 
   if (!hasMedia && !hasCaptions) {
     return (
@@ -70,26 +56,14 @@ export const ImportCanvasOverlay: React.FC = () => {
 
           <div className="flex flex-col gap-2.5 mt-1">
             <Button
-              variant="secondary"
-              onClick={() => srtInputRef.current?.click()}
-              className="w-full py-3 justify-start px-4 text-left hover:border-primary"
-            >
-              <span className="material-symbols-outlined text-primary text-xl">description</span>
-              <div className="flex flex-col items-start">
-                <span className="text-body-sm font-bold">Upload SRT</span>
-                <span className="text-[11px] text-on-surface-variant font-normal">Use your existing subtitle file</span>
-              </div>
-            </Button>
-
-            <Button
               variant="primary"
-              onClick={handleTranscribe}
+              onClick={() => srtInputRef.current?.click()}
               className="w-full py-3 justify-start px-4 text-left"
             >
-              <span className="material-symbols-outlined text-on-primary text-xl">record_voice_over</span>
+              <span className="material-symbols-outlined text-on-primary text-xl">description</span>
               <div className="flex flex-col items-start">
-                <span className="text-body-sm font-bold">Transcribe Video</span>
-                <span className="text-[11px] text-on-primary/80 font-normal">Auto-generate captions with Whisper</span>
+                <span className="text-body-sm font-bold">Upload SRT</span>
+                <span className="text-[11px] text-on-primary/80 font-normal">Use your existing subtitle file</span>
               </div>
             </Button>
 

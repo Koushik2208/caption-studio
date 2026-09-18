@@ -9,13 +9,11 @@ import { CreativeJsonImporter } from '../components/import/CreativeJsonImporter'
 export type ImportTabMode = 'media' | 'json';
 
 export const ImportPage: React.FC = () => {
-  const { mediaFile, srtFile, transcribeError, projectId } = useProject();
+  const { mediaFile, srtFile, projectId } = useProject();
   const {
     handleFileSelect,
     handleSrtUpload,
-    handleTranscribe,
     handleContinueWithoutCaptions,
-    isTranscribing,
   } = useImportUpload();
 
   const [tabMode, setTabMode] = useState<ImportTabMode>('media');
@@ -122,7 +120,6 @@ export const ImportPage: React.FC = () => {
                     </div>
                     <Button
                       className="w-full text-body-sm group-hover:opacity-90"
-                      disabled={isTranscribing}
                       onClick={() => mainInputRef.current?.click()}
                     >
                       Select from local
@@ -198,34 +195,13 @@ export const ImportPage: React.FC = () => {
                               Upload SRT
                             </p>
                             <p className="text-[12px] text-on-surface-variant leading-snug mt-0.5">
-                              Use pre-existing subtitles without running Whisper
+                              Load subtitle file (.srt) with word or phrase timings
                             </p>
                           </div>
                         </div>
                       </Card>
 
-                      {/* Option 2: Transcribe */}
-                      <Card
-                        hoverable
-                        onClick={handleTranscribe}
-                        className="p-3.5 border-outline-variant hover:border-primary/50 group"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="w-9 h-9 rounded-lg bg-primary-container/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
-                            <span className="material-symbols-outlined text-lg">record_voice_over</span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-body-sm font-bold text-on-surface group-hover:text-primary transition-colors">
-                              Transcribe Video
-                            </p>
-                            <p className="text-[12px] text-on-surface-variant leading-snug mt-0.5">
-                              Generate word-level timestamps with local Whisper.cpp
-                            </p>
-                          </div>
-                        </div>
-                      </Card>
-
-                      {/* Option 3: Continue without captions */}
+                      {/* Option 2: Continue without captions */}
                       <Button
                         variant="ghost"
                         onClick={handleContinueWithoutCaptions}
@@ -236,12 +212,6 @@ export const ImportPage: React.FC = () => {
                     </div>
                   </div>
                 </>
-              )}
-
-              {transcribeError && (
-                <div className="p-4 rounded-xl bg-error/5 border border-error/20">
-                  <p className="text-body-sm text-error leading-relaxed">{transcribeError}</p>
-                </div>
               )}
 
               {/* Info Card */}

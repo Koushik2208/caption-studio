@@ -17,7 +17,6 @@ import {
   resolveCreativeProjectMedia,
 } from '../creative/converters';
 
-export type TranscribeStatus = 'idle' | 'uploading' | 'error';
 export type SaveStatus = 'saved' | 'saving';
 
 // Project identity + Style/Overlay tab settings persist to localStorage (not
@@ -29,12 +28,12 @@ const SAVE_DEBOUNCE_MS = 600;
 
 // Dev-workflow convenience only: the transcript itself is small JSON (unlike
 // the media File it came from), so it's cheap to cache separately and
-// restore on reload - skips re-uploading + re-running Whisper on every
-// refresh while iterating on Style/Overlay/Export. Media never persists.
+// restore on reload - skips re-uploading on every refresh while iterating
+// on Style/Overlay/Export. Media never persists.
 const TRANSCRIPT_STORAGE_KEY = 'caption-studio:cached-transcript';
-// Per-frame RMS amplitude computed alongside the transcript (server/index.ts's
-// computeAudioAmplitude) - cached the same way and for the same reason, so a
-// page reload restores Audio-Reactive Pulse without re-uploading/re-transcribing.
+// Per-frame RMS amplitude computed alongside captions (or restored from cache) -
+// cached the same way and for the same reason, so a page reload restores
+// Audio-Reactive Pulse without re-uploading.
 const AUDIO_AMPLITUDE_STORAGE_KEY = 'caption-studio:cached-audio-amplitude';
 
 type PersistedState = {
@@ -194,17 +193,10 @@ interface ProjectContextType {
   mediaUrl: string | null;
   srtFile: File | null;
   captions: Caption[] | null;
-  // Per-frame RMS amplitude (0-1, peak-normalized) computed server-side
-  // during transcription - drives Audio-Reactive Pulse. Null until a
-  // transcription completes (or a cached one restores it); read-only from
-  // the UI's perspective, no setter exposed.
   audioAmplitude: number[] | null;
-  transcribeStatus: TranscribeStatus;
-  transcribeError: string | null;
   setMedia: (file: File) => void;
   setSrtFile: (file: File | null) => void;
   importSrt: (file: File) => Promise<void>;
-  transcribe: (mediaFile?: File) => Promise<void>;
   // TranscriptEditor writes fixed-up word text straight back here (PLAN.md
   // Part H) - no separate edit-buffer state, ProjectContext.captions stays
   // the single source of truth the whole preview/export pipeline reads.
@@ -479,8 +471,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [srtFile, setSrtFile] = useState<File | null>(null);
   const [captions, setCaptions] = useState<Caption[] | null>(cachedTranscript);
   const [audioAmplitude, setAudioAmplitude] = useState<number[] | null>(cachedAudioAmplitude);
-  const [transcribeStatus, setTranscribeStatus] = useState<TranscribeStatus>('idle');
-  const [transcribeError, setTranscribeError] = useState<string | null>(null);
 
   const [projectId] = useState(() => persisted?.id ?? generateId());
   const [projectName, setProjectName] = useState(persisted?.name ?? 'Untitled Project');
@@ -1281,64 +1271,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, []);
 
-  const transcribe = useCallback(
-    async (file?: File) => {
-      const targetFile = file ?? mediaFile;
-      if (!targetFile) {
-        throw new Error('No media file selected for transcription');
-      }
-
-      setTranscribeStatus('uploading');
-      setTranscribeError(null);
-      if (file) {
-        setMediaFile(file);
-        setMediaUrl((prev) => {
-          if (prev) URL.revokeObjectURL(prev);
-          return URL.createObjectURL(file);
-        });
-      }
-
-      const formData = new FormData();
-      formData.append('audio', targetFile);
-      if (srtFile) {
-        formData.append('srt', srtFile);
-      }
-
-      try {
-        const response = await fetch('/api/transcribe', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!response.ok) {
-          const body = await response.json().catch(() => null);
-          throw new Error(body?.error ?? `Transcription failed (${response.status})`);
-        }
-
-        const data: { captions: Caption[]; audioAmplitude?: number[] } = await response.json();
-        setCaptions(data.captions);
-        localStorage.setItem(TRANSCRIPT_STORAGE_KEY, JSON.stringify(data.captions));
-        setAudioAmplitude(data.audioAmplitude ?? null);
-        if (data.audioAmplitude) {
-          localStorage.setItem(AUDIO_AMPLITUDE_STORAGE_KEY, JSON.stringify(data.audioAmplitude));
-        } else {
-          localStorage.removeItem(AUDIO_AMPLITUDE_STORAGE_KEY);
-        }
-        setTranscribeStatus('idle');
-      } catch (error) {
-        setTranscribeStatus('error');
-        setTranscribeError(error instanceof Error ? error.message : 'Transcription failed');
-        throw error;
-      }
-    },
-    [mediaFile, srtFile],
-  );
-
-  // Preserves each token's existing leading-space convention (every word but
-  // the first, plus non-punctuation tokens, carries a leading space - see
-  // server/index.ts's alignWordingWithScript) rather than re-deriving it, so
-  // an edited word still concatenates correctly in processCaptions/
-  // createTikTokStyleCaptions without needing punctuation-position logic here.
+  // Preserves each token's existing leading-space convention rather than
+  // re-deriving it, so an edited word still concatenates correctly in
+  // processCaptions/createTikTokStyleCaptions.
   const updateCaptionText = useCallback((index: number, rawText: string) => {
     setCaptions((prev) => {
       if (!prev || !prev[index]) return prev;
@@ -1361,8 +1296,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setSrtFile(null);
     setCaptions(null);
     setAudioAmplitude(null);
-    setTranscribeStatus('idle');
-    setTranscribeError(null);
   }, []);
 
   const [currentCreativeProject, setCurrentCreativeProject] = useState<CreativeProject | null>(null);
@@ -1662,12 +1595,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         srtFile,
         captions,
         audioAmplitude,
-        transcribeStatus,
-        transcribeError,
         setMedia,
         setSrtFile,
         importSrt,
-        transcribe,
         updateCaptionText,
         reset,
         clearCachedTranscript,

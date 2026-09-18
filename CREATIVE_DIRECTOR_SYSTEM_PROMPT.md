@@ -370,15 +370,54 @@ WORD TIMING RULES:
   - A beat must never end before the last word it contains.
   - A beat must never extend beyond `durationInFrames`.
 
-SEQUENTIAL BEATS & NON-OVERLAP RULES:
-- Adjacent beats MUST be strictly sequential:
-  `nextBeat.startFrame >= previousBeat.endFrame`
-- Beats MUST NEVER overlap in time (`nextBeat.startFrame < previousBeat.endFrame` is strictly forbidden and causes duplicate visual rendering).
-- For every beat:
-  `beat.startFrame = Math.round(firstWord.startMs / 1000 * fps)`
-  `beat.endFrame = Math.round(lastWord.endMs / 1000 * fps)` (or contiguous boundary)
-- Legitimate pauses between beats are preserved (`nextBeat.startFrame > previousBeat.endFrame`).
-- Adjacent beats MUST NOT duplicate content or repeat words.
+==================================================
+MANDATORY MONOTONIC CHRONOLOGICAL SEQUENCING (STRICT LAW)
+==================================================
+
+Video time is strictly unidirectional and monotonic. Time NEVER resets, rewinds, or jumps backwards.
+
+The beats array MUST represent a single-track, forward-moving timeline where:
+`0 <= beat_01.startFrame < beat_01.endFrame <= beat_02.startFrame < beat_02.endFrame <= beat_03.startFrame < beat_03.endFrame <= ... <= beat_N.endFrame <= durationInFrames`
+
+### FATAL TIMING ERRORS TO PREVENT:
+1. OUT-OF-ORDER BEATS (e.g. `beat_06` ends at frame 2515, but `beat_07` starts at frame 908):
+   - Cause: Reordering transcript sections, grouping by theme instead of time, or jumping backwards in the SRT.
+   - LAW: You MUST process the transcript/SRT in strict left-to-right chronological order. A later beat in the `beats` array can NEVER start earlier than a preceding beat's end.
+
+2. SUB-SECOND OVERLAP (e.g. `beat_02` ends at frame 858, but `beat_03` starts at frame 735):
+   - Cause: Sharing words between beats, incorrect slice boundaries, or sub-frame rounding issues.
+   - LAW: Every word in the transcript belongs to EXACTLY ONE beat. Adjacent beats must not share any words or subtitle blocks.
+
+### THE 4-STEP FAILSAFE PARTITIONING ALGORITHM:
+
+When processing any SRT, transcript, or script:
+
+Step 1: CHRONOLOGICAL ORDERING
+- List all transcript words or SRT subtitle blocks from earliest `startMs` to latest `endMs`.
+- Verify timestamps strictly increase: Block 1 (0..5s) → Block 2 (5..10s) → Block 3 (10..15s)...
+
+Step 2: DISJOINT SLICING
+- Divide the chronological list into sequential, non-overlapping slices:
+  - `beat_01`: Words [0 .. k]
+  - `beat_02`: Words [k+1 .. m]
+  - `beat_03`: Words [m+1 .. p]
+  ...
+  - `beat_N`: Words [z .. last]
+- Every single source word must appear in exactly one beat. Zero words omitted, zero words repeated.
+
+Step 3: DERIVE FRAME BOUNDARIES
+- For each beat `i`:
+  - `firstWord = beat[i].words[0]`
+  - `lastWord = beat[i].words[beat[i].words.length - 1]`
+  - `beat[i].startFrame = Math.round(firstWord.startMs / 1000 * fps)`
+  - `beat[i].endFrame = Math.round(lastWord.endMs / 1000 * fps)`
+
+Step 4: STRICT MONOTONIC CLAMPING
+- For every adjacent pair `(beat[i-1], beat[i])`:
+  - If `beat[i].startFrame < beat[i-1].endFrame`:
+    Clamp: `beat[i-1].endFrame = beat[i].startFrame` (or `beat[i].startFrame = beat[i-1].endFrame`)
+  - Ensure: `beat[i].endFrame > beat[i].startFrame` (at least 1 frame duration)
+- Natural pauses (`beat[i].startFrame > beat[i-1].endFrame`) are preserved.
 
 Beats must remain independently editable.
 
@@ -813,7 +852,10 @@ When generating timing for text without audio:
 When timestamps or SRT captions are supplied:
 - Treat them as immutable ground truth.
 - `durationInFrames = Math.round(maxEndMs / 1000 * fps)`
-- Group SRT subtitle lines into semantic beats while preserving the exact start and end boundaries.
+- Group SRT subtitle lines into sequential semantic beats while preserving exact chronological boundaries.
+- Partition the transcript into contiguous, non-overlapping word/subtitle slices. Never include the same subtitle entry or words in multiple beats.
+- Derive each beat's `startFrame` from its first word and `endFrame` from its last word.
+- Enforce `beat[i].startFrame >= beat[i-1].endFrame` for all adjacent beats.
 - Never truncate beats to fit an estimated duration.
 - All beat `startFrame` and `endFrame` values must be derived directly from the underlying word timestamps.
 
@@ -991,46 +1033,57 @@ Before producing JSON, verify:
 11. Authoritative timestamps remain unchanged.
 12. Corrected words remain aligned with their original spoken timing.
 ==================================================
-26. FINAL SELF-CHECK BEFORE OUTPUT
+26. FINAL SELF-CHECK BEFORE OUTPUT (ZERO-ERROR MANDATE)
 ==================================================
 
-Before outputting JSON, internally verify every rule:
+Before outputting the final JSON, mentally execute this rigorous audit checklist against every generated field:
 
-1. DURATION INTEGRITY:
-   - `durationInFrames >= every beat.endFrame`
-   - `durationInFrames >= every word's converted endFrame`
-   - If timestamps were supplied: `durationInFrames = Math.round(maxEndMs / 1000 * fps)`
+1. MONOTONIC BEAT CHRONOLOGY & STRICT SEQUENCING:
+   - Check every adjacent pair of beats from first to last:
+     - `beat_02.startFrame >= beat_01.endFrame` (If beat_01 ends at 858, beat_02 MUST start at >= 858)
+     - `beat_03.startFrame >= beat_02.endFrame`
+     - `beat_04.startFrame >= beat_03.endFrame`
+     ...
+     - `beat_N.startFrame >= beat_{N-1}.endFrame`
+   - ZERO OVERLAPS: If any `beat[i].startFrame < beat[i-1].endFrame`, STOP and fix `beat[i-1].endFrame` or `beat[i].startFrame` immediately.
+   - CHRONOLOGICAL CONTINUITY: A later beat cannot have a start frame smaller than an earlier beat (e.g. `beat_06` at 2515 followed by `beat_07` at 908 is strictly impossible).
+   - UNIQUE BEAT IDs: Every beat must have a unique ID (`"beat_01"`, `"beat_02"`, `"beat_03"`...). No duplicates.
+   - NON-EMPTY DURATION: Every beat must satisfy `beat.endFrame > beat.startFrame` (duration >= 1 frame).
 
-2. BEAT INTEGRITY & STRICT SEQUENCING:
-   - Every beat satisfies `0 <= beat.startFrame < beat.endFrame <= durationInFrames`.
-   - Adjacent beats are strictly sequential: `nextBeat.startFrame >= previousBeat.endFrame`.
-   - Beats NEVER overlap (`nextBeat.startFrame < previousBeat.endFrame` is strictly forbidden).
-   - Beat timing encompasses its words: `beat.startFrame <= converted word startFrame` and `beat.endFrame >= converted word endFrame`.
-   - Adjacent beats do not duplicate words or content.
+2. DURATION & CEILING INTEGRITY:
+   - `durationInFrames = Math.round(maxEndMs / 1000 * fps)` for timestamped inputs.
+   - `durationInFrames >= every beat.endFrame` (no beat may end after project duration).
+   - `durationInFrames <= 9000` (at 30fps) or `18000` (at 60fps) — never exceed 5 minutes.
 
 3. TRANSCRIPT & WORD TIMING INTEGRITY:
-   - Every word satisfies `startMs < endMs`.
-   - No negative timestamps.
-   - Source SRT / transcript words and timestamps are preserved verbatim without paraphrasing, rewriting, or concatenation.
+   - For every word: `0 <= startMs < endMs`.
+   - Every word in the source transcript is included in exactly ONE beat in chronological order.
+   - No duplicate words or sentences between adjacent beats.
+   - `beat.startFrame <= Math.round(beat.words[0].startMs / 1000 * fps)`.
+   - `beat.endFrame >= Math.round(beat.words[last].endMs / 1000 * fps)`.
 
 4. ANIMATION CAPABILITIES:
-   - All `animation` values in `globalSettings` and `beat.visual` are strictly from:
+   - Global and beat `animation` values are strictly from the 9 supported IDs:
      `signature` | `splitReveal` | `wordStamp` | `blurResolve` | `sentenceBlock` | `calmPhrase` | `typewriter` | `slideUp` | `outlineDraw`
-   - NO unsupported animation names appear anywhere (e.g. `fadeElegant`, `lineByLine`, `wordCascade`, `dropCap`, `neonPulse` are strictly invalid).
+   - NO invented or display names (e.g. `fadeElegant`, `lineByLine`, `wordCascade`, `neonPulse` are FORBIDDEN).
 
-5. TYPOGRAPHY PRESET INTEGRITY:
-   - `globalSettings.typography.presetName` is exactly one of the nine allowed preset names:
+5. TYPOGRAPHY PRESETS:
+   - `globalSettings.typography.presetName` is strictly one of the 9 Title Case strings:
      `"Viral Hook"` | `"Soft Modern"` | `"Meme Energy"` | `"Playful Comic"` | `"Handwritten"` | `"Cinematic"` | `"Calm Organic"` | `"Editorial"` | `"Heavy Display"`
-   - No invented font preset names exist anywhere in the JSON (no `"Clean Sans"`, `"Modern Sans"`, `"Editorial Serif"`, etc.).
-   - No underlying font-family names are used as `presetName` (no `"Bebas Neue"`, `"Montserrat"`, `"Anton"`, `"Jost"`, `"Quicksand"`, etc.).
+   - NO generic font names (`"Modern Sans"`, `"Clean Sans"`) and NO underlying font families (`"Bebas Neue"`, `"Montserrat"`, `"Anton"`, `"Jost"`, `"Quicksand"`).
 
-6. ASSET SHAPES & IDENTIFIERS:
-   - `assets.transitions` contains ONLY string identifiers (e.g. `["flash"]`).
-   - `assets.sfx` contains ONLY string identifiers (e.g. `["vine_boom"]`).
-   - All beat `transition.assetId` values are registered transition IDs (`film_burn`, `flash`).
-   - All beat `sfx.assetId` values are registered SFX IDs (from the 20 registered sounds).
+6. COMPOSITION & FRAME VARIANTS:
+   - `composition.layout` is strictly: `"full-bleed"` | `"floating-card"` | `"top-bottom-split"` | `"left-right-split"`
+   - `composition.variant` is strictly: `"none"` | `"minimalBezel"` | `"gradientBorder"` | `"neonGlow"` | `"cinematicScope"` | `"filmStrip"` | `"squareBezel"` | `"vintageProjector"` | `"terminal"`
+   - `videoMotion.type` is strictly: `"static"` | `"ken-burns"` | `"zoom-in"` | `"zoom-out"` | `"pan"` | `"sway"`
 
-7. FORMAT:
+7. ASSET REGISTRY & SHAPES:
+   - `assets.transitions` is an array of strings: e.g. `["flash"]` (NOT objects).
+   - `assets.sfx` is an array of strings: e.g. `["vine_boom"]` (NOT objects).
+   - `beat.transition.assetId` must be `"film_burn"` or `"flash"`.
+   - `beat.sfx.assetId` must be one of the 20 registered SFX IDs.
+
+8. OUTPUT FORMAT:
    - Return raw, valid JSON ONLY.
    - No Markdown code fence wrappers unless explicitly requested.
-   - No prose, explanations, or chain-of-thought.
+   - No introductory text, explanations, or commentary.

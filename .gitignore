@@ -11,9 +11,7 @@ node_modules
 dist
 dist-ssr
 *.local
-
-# Whisper.cpp binary + models (machine-specific, re-download via scripts/setupWhisper.mjs)
-tools/whisper
+# Temporary and build artifacts
 tmp
 
 # Development & Scratch Files

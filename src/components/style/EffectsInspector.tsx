@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { staticFile } from 'remotion';
 import { useProject } from '../../context/ProjectContext';
+import { useMediaDurationFrames } from '../../preview/useMediaDurationFrames';
 import type { OverlayIntensity } from '../../textures/types';
 import { TRANSITION_OVERLAYS, SOUND_EFFECTS, getAssetById } from '../../assets/registry';
 
@@ -88,18 +89,41 @@ export const EffectsInspector: React.FC = () => {
     addSoundEffect,
     removeSoundEffect,
     updateSoundEffect,
+    currentCreativeProject,
+    captions,
+    mediaUrl,
   } = useProject();
+
+  const fps = currentCreativeProject?.fps ?? 30;
+  const mediaDurationFrames = useMediaDurationFrames(mediaUrl, fps);
+  const hasCaptions = !!captions && captions.length > 0;
+  const captionDurationFrames = hasCaptions
+    ? Math.max(1, Math.round((captions[captions.length - 1].endMs / 1000) * fps))
+    : 300;
+  const totalDurationFrames =
+    mediaUrl && mediaDurationFrames > 0
+      ? Math.max(mediaDurationFrames, captionDurationFrames)
+      : (currentCreativeProject?.durationInFrames ?? captionDurationFrames);
+  const totalDurationSec = Math.round((totalDurationFrames / fps) * 100) / 100;
+
+  const framesToSec = (frames: number): number => {
+    return Math.round((frames / fps) * 100) / 100;
+  };
+
+  const secToFrames = (sec: number): number => {
+    return Math.round(sec * fps);
+  };
 
   const [selectedTransitionId, setSelectedTransitionId] = useState<string>(
     TRANSITION_OVERLAYS[0]?.id ?? 'film_burn',
   );
-  const [newTransitionStartFrame, setNewTransitionStartFrame] = useState<number>(0);
-  const [newTransitionDuration, setNewTransitionDuration] = useState<number>(30);
+  const [newTransitionStartSec, setNewTransitionStartSec] = useState<string>('0');
+  const [newTransitionDurationSec, setNewTransitionDurationSec] = useState<string>('0.5');
 
   const [selectedSfxId, setSelectedSfxId] = useState<string>(
     SOUND_EFFECTS[0]?.id ?? 'vine_boom',
   );
-  const [newSfxStartFrame, setNewSfxStartFrame] = useState<number>(0);
+  const [newSfxStartSec, setNewSfxStartSec] = useState<string>('0');
 
   const handlePlayAudio = (assetPath: string) => {
     try {
@@ -111,7 +135,38 @@ export const EffectsInspector: React.FC = () => {
     }
   };
 
+  const parsedTransStart = parseFloat(newTransitionStartSec);
+  const parsedTransDur = parseFloat(newTransitionDurationSec);
+
+  const isTransStartValid = !isNaN(parsedTransStart) && parsedTransStart >= 0 && (totalDurationSec <= 0 || parsedTransStart <= totalDurationSec);
+  const isTransDurValid = !isNaN(parsedTransDur) && parsedTransDur > 0 && (totalDurationSec <= 0 || (parsedTransStart + parsedTransDur) <= totalDurationSec + 0.001);
+
+  const transValidationError = isNaN(parsedTransStart) || parsedTransStart < 0
+    ? 'Start time must be >= 0 sec'
+    : totalDurationSec > 0 && parsedTransStart > totalDurationSec
+    ? `Start time exceeds project duration (${totalDurationSec}s)`
+    : isNaN(parsedTransDur) || parsedTransDur <= 0
+    ? 'Duration must be > 0 sec'
+    : totalDurationSec > 0 && (parsedTransStart + parsedTransDur) > totalDurationSec + 0.001
+    ? `Transition extends beyond project duration (${totalDurationSec}s)`
+    : null;
+
+  const parsedSfxStart = parseFloat(newSfxStartSec);
+  const isSfxStartValid = !isNaN(parsedSfxStart) && parsedSfxStart >= 0 && (totalDurationSec <= 0 || parsedSfxStart <= totalDurationSec);
+
+  const sfxValidationError = isNaN(parsedSfxStart) || parsedSfxStart < 0
+    ? 'Start time must be >= 0 sec'
+    : totalDurationSec > 0 && parsedSfxStart > totalDurationSec
+    ? `Start time exceeds project duration (${totalDurationSec}s)`
+    : null;
+
   const handleAddTransition = () => {
+    if (transValidationError) return;
+    const startSec = Math.max(0, parseFloat(newTransitionStartSec) || 0);
+    const durSec = Math.max(0.05, parseFloat(newTransitionDurationSec) || 0.5);
+    const startFrame = secToFrames(startSec);
+    const durationInFrames = Math.max(1, secToFrames(durSec));
+
     const id =
       typeof crypto !== 'undefined' && 'randomUUID' in crypto
         ? crypto.randomUUID()
@@ -119,13 +174,17 @@ export const EffectsInspector: React.FC = () => {
     addTransitionOverlay({
       id,
       assetId: selectedTransitionId,
-      startFrame: newTransitionStartFrame,
-      durationInFrames: newTransitionDuration,
+      startFrame,
+      durationInFrames,
       opacity: 1,
     });
   };
 
   const handleAddSfx = () => {
+    if (sfxValidationError) return;
+    const startSec = Math.max(0, parseFloat(newSfxStartSec) || 0);
+    const startFrame = secToFrames(startSec);
+
     const id =
       typeof crypto !== 'undefined' && 'randomUUID' in crypto
         ? crypto.randomUUID()
@@ -133,7 +192,7 @@ export const EffectsInspector: React.FC = () => {
     addSoundEffect({
       id,
       assetId: selectedSfxId,
-      startFrame: newSfxStartFrame,
+      startFrame,
       volume: 1,
     });
   };
@@ -662,31 +721,50 @@ export const EffectsInspector: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col gap-1">
-              <span className="text-[11px] text-outline">Start Frame</span>
+              <span className="text-[11px] text-outline">Start (sec)</span>
               <input
                 type="number"
                 min={0}
-                value={newTransitionStartFrame}
-                onChange={(e) => setNewTransitionStartFrame(Math.max(0, parseInt(e.target.value) || 0))}
-                className="w-full text-xs p-1.5 rounded-md bg-surface-container-high border border-outline-variant/50 text-on-surface"
+                max={totalDurationSec > 0 ? totalDurationSec : undefined}
+                step="0.05"
+                value={newTransitionStartSec}
+                onChange={(e) => setNewTransitionStartSec(e.target.value)}
+                className={`w-full text-xs p-1.5 rounded-md bg-surface-container-high border ${
+                  !isTransStartValid && newTransitionStartSec !== '' ? 'border-error' : 'border-outline-variant/50'
+                } text-on-surface`}
               />
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-[11px] text-outline">Duration (frames)</span>
+              <span className="text-[11px] text-outline">Duration (sec)</span>
               <input
                 type="number"
-                min={1}
-                value={newTransitionDuration}
-                onChange={(e) => setNewTransitionDuration(Math.max(1, parseInt(e.target.value) || 30))}
-                className="w-full text-xs p-1.5 rounded-md bg-surface-container-high border border-outline-variant/50 text-on-surface"
+                min={0.05}
+                max={totalDurationSec > 0 ? totalDurationSec : undefined}
+                step="0.05"
+                value={newTransitionDurationSec}
+                onChange={(e) => setNewTransitionDurationSec(e.target.value)}
+                className={`w-full text-xs p-1.5 rounded-md bg-surface-container-high border ${
+                  !isTransDurValid && newTransitionDurationSec !== '' ? 'border-error' : 'border-outline-variant/50'
+                } text-on-surface`}
               />
             </div>
           </div>
+          {transValidationError && (
+            <span className="text-[10px] text-error flex items-center gap-1 mt-0.5">
+              <span className="material-symbols-outlined text-xs">error</span>
+              {transValidationError}
+            </span>
+          )}
 
           <button
             type="button"
             onClick={handleAddTransition}
-            className="w-full mt-1 py-1.5 px-3 rounded-lg bg-primary text-on-primary text-xs font-semibold hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+            disabled={!!transValidationError}
+            className={`w-full mt-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs transition-colors ${
+              transValidationError
+                ? 'bg-surface-container-high text-outline cursor-not-allowed opacity-60'
+                : 'bg-primary text-on-primary hover:bg-primary/90 cursor-pointer'
+            }`}
           >
             <span className="material-symbols-outlined text-sm">add</span>
             Add Transition Placement
@@ -701,6 +779,9 @@ export const EffectsInspector: React.FC = () => {
             </span>
             {transitionOverlays.map((item) => {
               const asset = getAssetById(item.assetId);
+              const startSec = framesToSec(item.startFrame);
+              const durSec = framesToSec(item.durationInFrames);
+              const endSec = framesToSec(item.startFrame + item.durationInFrames);
               return (
                 <div
                   key={item.id}
@@ -709,8 +790,8 @@ export const EffectsInspector: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-semibold text-on-surface">{asset?.label ?? item.assetId}</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-container-high text-outline">
-                        Frame {item.startFrame} - {item.startFrame + item.durationInFrames}
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-container-high text-outline font-mono">
+                        {startSec}s - {endSec}s
                       </span>
                     </div>
                     <button
@@ -725,31 +806,50 @@ export const EffectsInspector: React.FC = () => {
 
                   <div className="grid grid-cols-2 gap-2 text-[11px]">
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-outline">Start Frame</span>
+                      <span className="text-outline">Start (sec)</span>
                       <input
                         type="number"
                         min={0}
-                        value={item.startFrame}
-                        onChange={(e) =>
-                          updateTransitionOverlay(item.id, { startFrame: Math.max(0, parseInt(e.target.value) || 0) })
-                        }
+                        max={totalDurationSec > 0 ? totalDurationSec : undefined}
+                        step="0.05"
+                        value={startSec}
+                        onChange={(e) => {
+                          const val = Math.max(0, parseFloat(e.target.value) || 0);
+                          updateTransitionOverlay(item.id, { startFrame: secToFrames(val) });
+                        }}
                         className="w-full text-xs p-1 rounded bg-surface-container-high border border-outline-variant/40 text-on-surface"
                       />
                     </div>
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-outline">Opacity ({Math.round((item.opacity ?? 1) * 100)}%)</span>
+                      <span className="text-outline">Duration (sec)</span>
                       <input
-                        type="range"
-                        min={0}
-                        max={1}
-                        step={0.05}
-                        value={item.opacity ?? 1}
-                        onChange={(e) =>
-                          updateTransitionOverlay(item.id, { opacity: parseFloat(e.target.value) })
-                        }
-                        className="w-full accent-primary h-1.5 bg-surface-container-high rounded appearance-none cursor-pointer mt-2"
+                        type="number"
+                        min={0.05}
+                        max={totalDurationSec > 0 ? totalDurationSec : undefined}
+                        step="0.05"
+                        value={durSec}
+                        onChange={(e) => {
+                          const val = Math.max(0.05, parseFloat(e.target.value) || 0.05);
+                          updateTransitionOverlay(item.id, { durationInFrames: Math.max(1, secToFrames(val)) });
+                        }}
+                        className="w-full text-xs p-1 rounded bg-surface-container-high border border-outline-variant/40 text-on-surface"
                       />
                     </div>
+                  </div>
+
+                  <div className="flex flex-col gap-0.5 text-[11px]">
+                    <span className="text-outline">Opacity ({Math.round((item.opacity ?? 1) * 100)}%)</span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      value={item.opacity ?? 1}
+                      onChange={(e) =>
+                        updateTransitionOverlay(item.id, { opacity: parseFloat(e.target.value) })
+                      }
+                      className="w-full accent-primary h-1.5 bg-surface-container-high rounded appearance-none cursor-pointer mt-1"
+                    />
                   </div>
                 </div>
               );
@@ -800,20 +900,35 @@ export const EffectsInspector: React.FC = () => {
           </div>
 
           <div className="flex flex-col gap-1">
-            <span className="text-[11px] text-outline">Trigger Frame</span>
+            <span className="text-[11px] text-outline">Start (sec)</span>
             <input
               type="number"
               min={0}
-              value={newSfxStartFrame}
-              onChange={(e) => setNewSfxStartFrame(Math.max(0, parseInt(e.target.value) || 0))}
-              className="w-full text-xs p-1.5 rounded-md bg-surface-container-high border border-outline-variant/50 text-on-surface"
+              max={totalDurationSec > 0 ? totalDurationSec : undefined}
+              step="0.05"
+              value={newSfxStartSec}
+              onChange={(e) => setNewSfxStartSec(e.target.value)}
+              className={`w-full text-xs p-1.5 rounded-md bg-surface-container-high border ${
+                !isSfxStartValid && newSfxStartSec !== '' ? 'border-error' : 'border-outline-variant/50'
+              } text-on-surface`}
             />
           </div>
+          {sfxValidationError && (
+            <span className="text-[10px] text-error flex items-center gap-1 mt-0.5">
+              <span className="material-symbols-outlined text-xs">error</span>
+              {sfxValidationError}
+            </span>
+          )}
 
           <button
             type="button"
             onClick={handleAddSfx}
-            className="w-full mt-1 py-1.5 px-3 rounded-lg bg-primary text-on-primary text-xs font-semibold hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+            disabled={!!sfxValidationError}
+            className={`w-full mt-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs transition-colors ${
+              sfxValidationError
+                ? 'bg-surface-container-high text-outline cursor-not-allowed opacity-60'
+                : 'bg-primary text-on-primary hover:bg-primary/90 cursor-pointer'
+            }`}
           >
             <span className="material-symbols-outlined text-sm">add</span>
             Add Sound Effect
@@ -828,6 +943,7 @@ export const EffectsInspector: React.FC = () => {
             </span>
             {soundEffects.map((item) => {
               const asset = getAssetById(item.assetId);
+              const startSec = framesToSec(item.startFrame);
               return (
                 <div
                   key={item.id}
@@ -846,8 +962,8 @@ export const EffectsInspector: React.FC = () => {
                         <span className="material-symbols-outlined text-sm">play_arrow</span>
                       </button>
                       <span className="text-xs font-semibold text-on-surface">{asset?.label ?? item.assetId}</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-container-high text-outline">
-                        Frame {item.startFrame}
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-container-high text-outline font-mono">
+                        @ {startSec}s
                       </span>
                     </div>
                     <button
@@ -862,14 +978,17 @@ export const EffectsInspector: React.FC = () => {
 
                   <div className="grid grid-cols-2 gap-2 text-[11px]">
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-outline">Start Frame</span>
+                      <span className="text-outline">Start (sec)</span>
                       <input
                         type="number"
                         min={0}
-                        value={item.startFrame}
-                        onChange={(e) =>
-                          updateSoundEffect(item.id, { startFrame: Math.max(0, parseInt(e.target.value) || 0) })
-                        }
+                        max={totalDurationSec > 0 ? totalDurationSec : undefined}
+                        step="0.05"
+                        value={startSec}
+                        onChange={(e) => {
+                          const val = Math.max(0, parseFloat(e.target.value) || 0);
+                          updateSoundEffect(item.id, { startFrame: secToFrames(val) });
+                        }}
                         className="w-full text-xs p-1 rounded bg-surface-container-high border border-outline-variant/40 text-on-surface"
                       />
                     </div>
