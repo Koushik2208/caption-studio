@@ -8,6 +8,14 @@ import type { OverlaySettings, ProgressBarPosition, WatermarkPosition } from '..
 import type { CardAspectRatio, CardBackdrop, CardBorderStyle, CompositionLayout, FrameCardMode, FrameSettings, FrameVariant } from '../frames/types';
 import type { OverlayIntensity, TextureOverlaySettings } from '../textures/types';
 import type { CodeBlockPosition, CodeLanguage, MotionGraphicsSettings, TickerDirection, TickerPosition } from '../motion/types';
+import { DEFAULT_VIDEO_MOTION, type VideoMotionSettings } from '../videoMotion/types';
+import type { AssetSettings, SoundEffectPlacement, TransitionOverlayPlacement } from '../assets/types';
+import type { CreativeProject, ProjectStateExportInput } from '../creative/types';
+import {
+  convertCreativeProjectToProjectState,
+  convertProjectStateToCreativeProject,
+  resolveCreativeProjectMedia,
+} from '../creative/converters';
 
 export type TranscribeStatus = 'idle' | 'uploading' | 'error';
 export type SaveStatus = 'saved' | 'saving';
@@ -60,7 +68,16 @@ type PersistedState = {
   letterSpacing?: number;
   lineHeight?: number;
   textTransform?: CaptionTextTransform;
+  backdropEnabled?: boolean;
+  backdropColor?: string;
+  backdropOpacity?: number;
+  backdropRadius?: number;
+  backdropPaddingX?: number;
+  backdropPaddingY?: number;
   wordOverrides?: Record<string, WordTypographyOverride>;
+  videoMotion?: VideoMotionSettings;
+  transitionOverlays?: TransitionOverlayPlacement[];
+  soundEffects?: SoundEffectPlacement[];
 
   watermarkEnabled: boolean;
   watermarkOpacity: number;
@@ -265,6 +282,18 @@ interface ProjectContextType {
   setLineHeight: (val: number) => void;
   textTransform: CaptionTextTransform;
   setTextTransform: (val: CaptionTextTransform) => void;
+  backdropEnabled: boolean;
+  setBackdropEnabled: (enabled: boolean) => void;
+  backdropColor: string;
+  setBackdropColor: (color: string) => void;
+  backdropOpacity: number;
+  setBackdropOpacity: (opacity: number) => void;
+  backdropRadius: number;
+  setBackdropRadius: (radius: number) => void;
+  backdropPaddingX: number;
+  setBackdropPaddingX: (padding: number) => void;
+  backdropPaddingY: number;
+  setBackdropPaddingY: (padding: number) => void;
   wordOverrides: Record<string, WordTypographyOverride>;
   setWordOverride: (wordId: string, override: Partial<WordTypographyOverride>) => void;
   setMultipleWordOverrides: (wordIds: string[], override: Partial<WordTypographyOverride>) => void;
@@ -423,6 +452,23 @@ interface ProjectContextType {
   tickerPosition: TickerPosition;
   setTickerPosition: (position: TickerPosition) => void;
   motionSettings: MotionGraphicsSettings;
+  videoMotion: VideoMotionSettings;
+  setVideoMotion: (motion: VideoMotionSettings) => void;
+  updateVideoMotion: (partial: Partial<VideoMotionSettings>) => void;
+  transitionOverlays: TransitionOverlayPlacement[];
+  setTransitionOverlays: (overlays: TransitionOverlayPlacement[]) => void;
+  addTransitionOverlay: (overlay: TransitionOverlayPlacement) => void;
+  removeTransitionOverlay: (id: string) => void;
+  updateTransitionOverlay: (id: string, partial: Partial<TransitionOverlayPlacement>) => void;
+  soundEffects: SoundEffectPlacement[];
+  setSoundEffects: (sfx: SoundEffectPlacement[]) => void;
+  addSoundEffect: (sfx: SoundEffectPlacement) => void;
+  removeSoundEffect: (id: string) => void;
+  updateSoundEffect: (id: string, partial: Partial<SoundEffectPlacement>) => void;
+  assetSettings: AssetSettings;
+  loadCreativeProject: (project: CreativeProject) => void;
+  exportCreativeProject: () => CreativeProject;
+  currentCreativeProject: CreativeProject | null;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -438,6 +484,57 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [projectId] = useState(() => persisted?.id ?? generateId());
   const [projectName, setProjectName] = useState(persisted?.name ?? 'Untitled Project');
+
+  const [videoMotion, setVideoMotionState] = useState<VideoMotionSettings>(
+    persisted?.videoMotion ?? DEFAULT_VIDEO_MOTION,
+  );
+
+  const setVideoMotion = useCallback((motion: VideoMotionSettings) => {
+    setVideoMotionState(motion);
+  }, []);
+
+  const updateVideoMotion = useCallback((partial: Partial<VideoMotionSettings>) => {
+    setVideoMotionState((prev) => ({ ...prev, ...partial }));
+  }, []);
+
+  const [transitionOverlays, setTransitionOverlays] = useState<TransitionOverlayPlacement[]>(
+    persisted?.transitionOverlays ?? [],
+  );
+  const [soundEffects, setSoundEffects] = useState<SoundEffectPlacement[]>(
+    persisted?.soundEffects ?? [],
+  );
+
+  const addTransitionOverlay = useCallback((overlay: TransitionOverlayPlacement) => {
+    setTransitionOverlays((prev) => [...prev, overlay]);
+  }, []);
+
+  const removeTransitionOverlay = useCallback((id: string) => {
+    setTransitionOverlays((prev) => prev.filter((o) => o.id !== id));
+  }, []);
+
+  const updateTransitionOverlay = useCallback((id: string, partial: Partial<TransitionOverlayPlacement>) => {
+    setTransitionOverlays((prev) => prev.map((o) => (o.id === id ? { ...o, ...partial } : o)));
+  }, []);
+
+  const addSoundEffect = useCallback((sfx: SoundEffectPlacement) => {
+    setSoundEffects((prev) => [...prev, sfx]);
+  }, []);
+
+  const removeSoundEffect = useCallback((id: string) => {
+    setSoundEffects((prev) => prev.filter((s) => s.id !== id));
+  }, []);
+
+  const updateSoundEffect = useCallback((id: string, partial: Partial<SoundEffectPlacement>) => {
+    setSoundEffects((prev) => prev.map((s) => (s.id === id ? { ...s, ...partial } : s)));
+  }, []);
+
+  const assetSettings: AssetSettings = useMemo(
+    () => ({
+      transitionOverlays,
+      soundEffects,
+    }),
+    [transitionOverlays, soundEffects],
+  );
 
   const [customFontWeight, setCustomFontWeight] = useState<number | null>(persisted?.fontWeight ?? null);
   const [customLetterSpacing, setCustomLetterSpacing] = useState<number | null>(persisted?.letterSpacing ?? null);
@@ -498,6 +595,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, []);
   const [lineHeight, setLineHeight] = useState<number>(persisted?.lineHeight ?? 1.15);
   const [textTransform, setTextTransform] = useState<CaptionTextTransform>(persisted?.textTransform ?? 'none');
+  const [backdropEnabled, setBackdropEnabled] = useState<boolean>(persisted?.backdropEnabled ?? false);
+  const [backdropColor, setBackdropColor] = useState<string>(persisted?.backdropColor ?? '#000000');
+  const [backdropOpacity, setBackdropOpacity] = useState<number>(persisted?.backdropOpacity ?? 50);
+  const [backdropRadius, setBackdropRadius] = useState<number>(persisted?.backdropRadius ?? 8);
+  const [backdropPaddingX, setBackdropPaddingX] = useState<number>(persisted?.backdropPaddingX ?? 12);
+  const [backdropPaddingY, setBackdropPaddingY] = useState<number>(persisted?.backdropPaddingY ?? 6);
   const [wordOverrides, setWordOverrides] = useState<Record<string, WordTypographyOverride>>(
     persisted?.wordOverrides ?? {},
   );
@@ -601,6 +704,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       letterSpacing: effectiveLetterSpacing,
       lineHeight,
       textTransform,
+      backdropEnabled,
+      backdropColor,
+      backdropOpacity,
+      backdropRadius,
+      backdropPaddingX,
+      backdropPaddingY,
       highlightColor,
       position,
       customPositionY: captionPositionY,
@@ -631,6 +740,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       effectiveLetterSpacing,
       lineHeight,
       textTransform,
+      backdropEnabled,
+      backdropColor,
+      backdropOpacity,
+      backdropRadius,
+      backdropPaddingX,
+      backdropPaddingY,
       highlightColor,
       position,
       captionPositionY,
@@ -949,6 +1064,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       letterSpacing: effectiveLetterSpacing,
       lineHeight,
       textTransform,
+      backdropEnabled,
+      backdropColor,
+      backdropOpacity,
+      backdropRadius,
+      backdropPaddingX,
+      backdropPaddingY,
       wordOverrides,
       watermarkEnabled,
       watermarkOpacity,
@@ -1017,6 +1138,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       tickerText,
       tickerDirection,
       tickerPosition,
+      videoMotion,
+      transitionOverlays,
+      soundEffects,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     setSaveStatus('saved');
@@ -1051,7 +1175,16 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     effectiveLetterSpacing,
     lineHeight,
     textTransform,
+    backdropEnabled,
+    backdropColor,
+    backdropOpacity,
+    backdropRadius,
+    backdropPaddingX,
+    backdropPaddingY,
     wordOverrides,
+    videoMotion,
+    transitionOverlays,
+    soundEffects,
     watermarkEnabled,
     watermarkOpacity,
     watermarkPosition,
@@ -1232,6 +1365,288 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setTranscribeError(null);
   }, []);
 
+  const [currentCreativeProject, setCurrentCreativeProject] = useState<CreativeProject | null>(null);
+
+  const loadCreativeProject = useCallback((project: CreativeProject) => {
+    const converted = convertCreativeProjectToProjectState(project);
+    setCurrentCreativeProject(project);
+
+    // Intelligent media resolution:
+    // 1. If Creative JSON has NO media reference -> preserve currently loaded video.
+    // 2. If Creative JSON references media that matches currently loaded video -> preserve/reuse current video.
+    // 3. If Creative JSON references a different media asset that is NOT loaded/available -> clear current video.
+    const mediaResolution = resolveCreativeProjectMedia(project, mediaFile, srtFile);
+    if (mediaResolution.action === 'clear') {
+      setMediaFile(null);
+      setMediaUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
+    }
+
+    // Set project identity & captions
+    setProjectName(converted.projectName || 'Imported Project');
+    setCaptions(converted.captions);
+    if (converted.captions && converted.captions.length > 0) {
+      localStorage.setItem(TRANSCRIPT_STORAGE_KEY, JSON.stringify(converted.captions));
+    } else {
+      localStorage.removeItem(TRANSCRIPT_STORAGE_KEY);
+    }
+
+    // Set style
+    setPresetNameState(converted.rawSettings.presetName ?? 'Viral Hook');
+    setAnimation(converted.styleVariant);
+    setKeywordHighlightEnabled(converted.rawSettings.keywordHighlightEnabled ?? true);
+    setHighlightIntensity(converted.rawSettings.highlightIntensity ?? 0.5);
+    setHighlightColor(converted.rawSettings.highlightColor ?? '#0066ff');
+    setKeywords(converted.rawSettings.keywords ?? DEFAULT_KEYWORDS);
+    setPositionState(converted.rawSettings.position ?? 'center');
+    setCaptionPositionY(converted.rawSettings.captionPositionY ?? 0.5);
+    setTextAlign(converted.rawSettings.textAlign ?? 'center');
+    setFontSizeMultiplier(converted.rawSettings.fontSizeMultiplier ?? 1.0);
+    setTextColor(converted.rawSettings.textColor ?? '#FFFFFF');
+    setCustomFontWeight(converted.rawSettings.fontWeight ?? null);
+    setStrokeEnabled(converted.rawSettings.strokeEnabled ?? false);
+    setStrokeColor(converted.rawSettings.strokeColor ?? '#000000');
+    setStrokeWidth(converted.rawSettings.strokeWidth ?? 2);
+    setShadowEnabled(converted.rawSettings.shadowEnabled ?? true);
+    setGlowEnabled(converted.rawSettings.glowEnabled ?? false);
+    setGlowColor(converted.rawSettings.glowColor ?? '#00e5ff');
+    setGlowIntensity(converted.rawSettings.glowIntensity ?? 0.5);
+    setGlowBlur(converted.rawSettings.glowBlur ?? 12);
+    setGlowOpacity(converted.rawSettings.glowOpacity ?? 0.8);
+    setGradientEnabled(converted.rawSettings.gradientEnabled ?? false);
+    setGradientStart(converted.rawSettings.gradientStart ?? '#ff007a');
+    setGradientEnd(converted.rawSettings.gradientEnd ?? '#7928ca');
+    setGradientAngle(converted.rawSettings.gradientAngle ?? 90);
+    setCustomLetterSpacing(converted.rawSettings.letterSpacing ?? null);
+    setLineHeight(converted.rawSettings.lineHeight ?? 1.2);
+    setTextTransform(converted.rawSettings.textTransform ?? 'none');
+    setBackdropEnabled(converted.rawSettings.backdropEnabled ?? false);
+    setBackdropColor(converted.rawSettings.backdropColor ?? '#000000');
+    setBackdropOpacity(converted.rawSettings.backdropOpacity ?? 60);
+    setBackdropRadius(converted.rawSettings.backdropRadius ?? 8);
+    setBackdropPaddingX(converted.rawSettings.backdropPaddingX ?? 16);
+    setBackdropPaddingY(converted.rawSettings.backdropPaddingY ?? 8);
+    setWordOverrides(converted.rawSettings.wordOverrides ?? {});
+
+    // Set overlay
+    setWatermarkEnabled(converted.overlaySettings.watermarkEnabled);
+    setWatermarkOpacity(converted.overlaySettings.watermarkOpacity);
+    setWatermarkPosition(converted.overlaySettings.watermarkPosition);
+    setProgressBarEnabled(converted.overlaySettings.progressBarEnabled);
+    setProgressBarColor(converted.overlaySettings.progressBarColor);
+    setProgressBarPosition(converted.overlaySettings.progressBarPosition);
+
+    // Set frame & composition
+    setFrameVariant(converted.frameSettings.variant);
+    setFrameBgColor(converted.frameSettings.bgColor);
+    setBezelRadiusMultiplier(converted.frameSettings.bezelRadiusMultiplier);
+    setLayout(converted.frameSettings.layout ?? 'full-bleed');
+    setCardMode(converted.frameSettings.cardMode ?? 'preset');
+    setCustomScale(converted.frameSettings.customScale ?? 0.85);
+    setCustomAspectRatio(converted.frameSettings.customAspectRatio ?? '9:16');
+    setCustomPositionY(converted.frameSettings.customPositionY ?? 0.5);
+    setCustomBorderRadius(converted.frameSettings.customBorderRadius ?? 24);
+    setCustomBorderEnabled(converted.frameSettings.customBorderEnabled ?? false);
+    setCustomBorderWidth(converted.frameSettings.customBorderWidth ?? 2);
+    setCustomBorderColor(converted.frameSettings.customBorderColor ?? '#ffffff');
+    setCustomBorderStyle(converted.frameSettings.customBorderStyle ?? 'solid');
+    setCustomShadowEnabled(converted.frameSettings.customShadowEnabled ?? true);
+    setCustomShadowBlur(converted.frameSettings.customShadowBlur ?? 24);
+    setCustomShadowOpacity(converted.frameSettings.customShadowOpacity ?? 40);
+    setCustomBackdrop(converted.frameSettings.customBackdrop ?? 'none');
+    setCustomBackdropColor(converted.frameSettings.customBackdropColor ?? '#121214');
+    setCustomBackdropGradient(converted.frameSettings.customBackdropGradient ?? '');
+    setSplitGap(converted.frameSettings.splitGap ?? 0);
+    setSplitTopFocalX(converted.frameSettings.splitTopFocalX ?? 0.5);
+    setSplitTopFocalY(converted.frameSettings.splitTopFocalY ?? 0.25);
+    setSplitBottomFocalX(converted.frameSettings.splitBottomFocalX ?? 0.5);
+    setSplitBottomFocalY(converted.frameSettings.splitBottomFocalY ?? 0.75);
+    setSplitLeftFocalX(converted.frameSettings.splitLeftFocalX ?? 0.25);
+    setSplitLeftFocalY(converted.frameSettings.splitLeftFocalY ?? 0.5);
+    setSplitRightFocalX(converted.frameSettings.splitRightFocalX ?? 0.75);
+    setSplitRightFocalY(converted.frameSettings.splitRightFocalY ?? 0.5);
+
+    // Set textures
+    setFilmDustEnabled(converted.textureSettings.filmDustEnabled);
+    setHalationEnabled(converted.textureSettings.halationEnabled);
+    setHalationIntensity(converted.textureSettings.halationIntensity);
+    setGridEnabled(converted.textureSettings.gridEnabled);
+    setGridIntensity(converted.textureSettings.gridIntensity);
+    setCrtScanlinesEnabled(converted.textureSettings.crtScanlinesEnabled);
+    setCrtScanlinesIntensity(converted.textureSettings.crtScanlinesIntensity);
+    setHalftoneEnabled(converted.textureSettings.halftoneEnabled);
+    setHalftoneIntensity(converted.textureSettings.halftoneIntensity);
+    setLightLeakEnabled(converted.textureSettings.lightLeakEnabled);
+    setLightLeakIntensity(converted.textureSettings.lightLeakIntensity);
+    setChromaticAberrationEnabled(converted.textureSettings.chromaticAberrationEnabled);
+    setChromaticAberrationIntensity(converted.textureSettings.chromaticAberrationIntensity);
+    setFilmGrainEnabled(converted.textureSettings.filmGrainEnabled);
+    setFilmGrainIntensity(converted.textureSettings.filmGrainIntensity);
+    setAudioPulseEnabled(converted.textureSettings.audioPulseEnabled);
+    setAudioPulseIntensity(converted.textureSettings.audioPulseIntensity);
+    setKeywordPunchEnabled(converted.textureSettings.keywordPunchEnabled);
+    setKeywordPunchIntensity(converted.textureSettings.keywordPunchIntensity);
+
+    // Set motion graphics
+    setCodeBlockEnabled(converted.motionSettings.codeBlockEnabled);
+    setCodeBlockCode(converted.motionSettings.codeBlockCode);
+    setCodeBlockLanguage(converted.motionSettings.codeBlockLanguage);
+    setCodeBlockPosition(converted.motionSettings.codeBlockPosition);
+    setCodeBlockLinesPerPage(converted.motionSettings.codeBlockLinesPerPage);
+    setNumberCounterEnabled(converted.motionSettings.numberCounterEnabled);
+    setNumberCounterStart(converted.motionSettings.numberCounterStart);
+    setNumberCounterEnd(converted.motionSettings.numberCounterEnd);
+    setNumberCounterPrefix(converted.motionSettings.numberCounterPrefix);
+    setNumberCounterSuffix(converted.motionSettings.numberCounterSuffix);
+    setTickerEnabled(converted.motionSettings.tickerEnabled);
+    setTickerText(converted.motionSettings.tickerText);
+    setTickerDirection(converted.motionSettings.tickerDirection);
+    setTickerPosition(converted.motionSettings.tickerPosition);
+
+    // Set video motion & asset placements
+    setVideoMotionState(converted.videoMotion);
+    setTransitionOverlays(converted.assetSettings.transitionOverlays);
+    setSoundEffects(converted.assetSettings.soundEffects);
+  }, [mediaFile, srtFile]);
+
+  const exportCreativeProject = useCallback((): CreativeProject => {
+    const exportInput: ProjectStateExportInput = {
+      projectId,
+      projectName,
+      mediaFileName: mediaFile ? mediaFile.name : null,
+      captions,
+      audioAmplitude,
+      presetName,
+      animation,
+      keywordHighlightEnabled,
+      highlightIntensity,
+      highlightColor,
+      keywords,
+      position,
+      captionPositionY,
+      textAlign,
+      fontSizeMultiplier,
+      textColor,
+      fontWeight: effectiveFontWeight,
+      strokeEnabled,
+      strokeColor,
+      strokeWidth,
+      shadowEnabled,
+      glowEnabled,
+      glowColor,
+      glowIntensity,
+      glowBlur,
+      glowOpacity,
+      gradientEnabled,
+      gradientStart,
+      gradientEnd,
+      gradientAngle,
+      letterSpacing: effectiveLetterSpacing,
+      lineHeight,
+      textTransform,
+      backdropEnabled,
+      backdropColor,
+      backdropOpacity,
+      backdropRadius,
+      backdropPaddingX,
+      backdropPaddingY,
+      wordOverrides,
+      watermarkEnabled,
+      watermarkOpacity,
+      watermarkPosition,
+      progressBarEnabled,
+      progressBarColor,
+      progressBarPosition,
+      frameVariant,
+      frameBgColor,
+      bezelRadiusMultiplier,
+      layout,
+      cardMode,
+      customScale,
+      customAspectRatio,
+      customPositionY,
+      customBorderRadius,
+      customBorderEnabled,
+      customBorderWidth,
+      customBorderColor,
+      customBorderStyle,
+      customShadowEnabled,
+      customShadowBlur,
+      customShadowOpacity,
+      customBackdrop,
+      customBackdropColor,
+      customBackdropGradient,
+      splitGap,
+      splitTopFocalX,
+      splitTopFocalY,
+      splitBottomFocalX,
+      splitBottomFocalY,
+      splitLeftFocalX,
+      splitLeftFocalY,
+      splitRightFocalX,
+      splitRightFocalY,
+      filmDustEnabled,
+      halationEnabled,
+      halationIntensity,
+      gridEnabled,
+      gridIntensity,
+      crtScanlinesEnabled,
+      crtScanlinesIntensity,
+      halftoneEnabled,
+      halftoneIntensity,
+      lightLeakEnabled,
+      lightLeakIntensity,
+      chromaticAberrationEnabled,
+      chromaticAberrationIntensity,
+      filmGrainEnabled,
+      filmGrainIntensity,
+      audioPulseEnabled,
+      audioPulseIntensity,
+      keywordPunchEnabled,
+      keywordPunchIntensity,
+      codeBlockEnabled,
+      codeBlockCode,
+      codeBlockLanguage,
+      codeBlockPosition,
+      codeBlockLinesPerPage,
+      numberCounterEnabled,
+      numberCounterStart,
+      numberCounterEnd,
+      numberCounterPrefix,
+      numberCounterSuffix,
+      tickerEnabled,
+      tickerText,
+      tickerDirection,
+      tickerPosition,
+      videoMotion,
+      transitionOverlays,
+      soundEffects,
+    };
+    return convertProjectStateToCreativeProject(exportInput);
+  }, [
+    projectId, projectName, captions, audioAmplitude, presetName, animation, keywordHighlightEnabled,
+    highlightIntensity, highlightColor, keywords, position, captionPositionY, textAlign, fontSizeMultiplier,
+    textColor, effectiveFontWeight, strokeEnabled, strokeColor, strokeWidth, shadowEnabled, glowEnabled,
+    glowColor, glowIntensity, glowBlur, glowOpacity, gradientEnabled, gradientStart, gradientEnd, gradientAngle,
+    effectiveLetterSpacing, lineHeight, textTransform, backdropEnabled, backdropColor, backdropOpacity,
+    backdropRadius, backdropPaddingX, backdropPaddingY, wordOverrides, watermarkEnabled, watermarkOpacity,
+    watermarkPosition, progressBarEnabled, progressBarColor, progressBarPosition, frameVariant, frameBgColor,
+    bezelRadiusMultiplier, layout, cardMode, customScale, customAspectRatio, customPositionY, customBorderRadius,
+    customBorderEnabled, customBorderWidth, customBorderColor, customBorderStyle, customShadowEnabled,
+    customShadowBlur, customShadowOpacity, customBackdrop, customBackdropColor, customBackdropGradient,
+    splitGap, splitTopFocalX, splitTopFocalY, splitBottomFocalX, splitBottomFocalY, splitLeftFocalX,
+    splitLeftFocalY, splitRightFocalX, splitRightFocalY, filmDustEnabled, halationEnabled, halationIntensity,
+    gridEnabled, gridIntensity, crtScanlinesEnabled, crtScanlinesIntensity, halftoneEnabled, halftoneIntensity,
+    lightLeakEnabled, lightLeakIntensity, chromaticAberrationEnabled, chromaticAberrationIntensity,
+    filmGrainEnabled, filmGrainIntensity, audioPulseEnabled, audioPulseIntensity, keywordPunchEnabled,
+    keywordPunchIntensity, codeBlockEnabled, codeBlockCode, codeBlockLanguage, codeBlockPosition,
+    codeBlockLinesPerPage, numberCounterEnabled, numberCounterStart, numberCounterEnd, numberCounterPrefix,
+    numberCounterSuffix, tickerEnabled, tickerText, tickerDirection, tickerPosition, videoMotion,
+    transitionOverlays, soundEffects,
+  ]);
+
   const clearCachedTranscript = useCallback(() => {
     localStorage.removeItem(TRANSCRIPT_STORAGE_KEY);
     localStorage.removeItem(AUDIO_AMPLITUDE_STORAGE_KEY);
@@ -1317,6 +1732,18 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setLineHeight,
         textTransform,
         setTextTransform,
+        backdropEnabled,
+        setBackdropEnabled,
+        backdropColor,
+        setBackdropColor,
+        backdropOpacity,
+        setBackdropOpacity,
+        backdropRadius,
+        setBackdropRadius,
+        backdropPaddingX,
+        setBackdropPaddingX,
+        backdropPaddingY,
+        setBackdropPaddingY,
         wordOverrides,
         setWordOverride,
         setMultipleWordOverrides,
@@ -1462,6 +1889,23 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         tickerPosition,
         setTickerPosition,
         motionSettings,
+        videoMotion,
+        setVideoMotion,
+        updateVideoMotion,
+        transitionOverlays,
+        setTransitionOverlays,
+        addTransitionOverlay,
+        removeTransitionOverlay,
+        updateTransitionOverlay,
+        soundEffects,
+        setSoundEffects,
+        addSoundEffect,
+        removeSoundEffect,
+        updateSoundEffect,
+        assetSettings,
+        loadCreativeProject,
+        exportCreativeProject,
+        currentCreativeProject,
       }}
     >
       {children}

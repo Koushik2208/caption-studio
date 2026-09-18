@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AbsoluteFill,
   Sequence,
@@ -14,12 +14,16 @@ import { OutlineDraw } from "./styles/OutlineDraw";
 import { Signature } from "./styles/Signature";
 import { SlideUp } from "./styles/SlideUp";
 import { Typewriter } from "./styles/Typewriter";
+import { SplitReveal } from "./styles/SplitReveal";
+import { WordStamp } from "./styles/WordStamp";
+import { BlurResolve } from "./styles/BlurResolve";
+import { SentenceBlock } from "./styles/SentenceBlock";
 import type { CaptionStyleOverrides, CaptionStyleVariant } from "./styles/types";
 
 export type CaptionMode = "energetic" | "calm";
 
 type CaptionRendererProps = {
-  captions?: Caption[];
+  captions?: Caption[] | null;
   captionsSrc?: string;
   hideBeforeMs?: number;
   getCaptionMode?: (startMs: number) => CaptionMode;
@@ -32,7 +36,7 @@ const defaultCaptionMode: CaptionMode = "energetic";
 
 export const CaptionRenderer: React.FC<CaptionRendererProps> = ({
   captions: providedCaptions,
-  captionsSrc = "captions/voice.json",
+  captionsSrc,
   hideBeforeMs = 0,
   getCaptionMode = () => defaultCaptionMode,
   styleVariant,
@@ -41,26 +45,32 @@ export const CaptionRenderer: React.FC<CaptionRendererProps> = ({
 }) => {
   const { fps } = useVideoConfig();
   const [fetchedCaptions, setFetchedCaptions] = useState<Caption[] | null>(null);
-  const { delayRender, continueRender, cancelRender } = useDelayRender();
-  const [handle] = useState(() =>
-    providedCaptions ? null : delayRender("Loading captions"),
-  );
+  const { delayRender, continueRender } = useDelayRender();
 
-  const fetchCaptions = useCallback(async () => {
-    if (handle === null) return;
-    try {
-      const response = await fetch(staticFile(captionsSrc));
-      const data: Caption[] = await response.json();
-      setFetchedCaptions(data);
-      continueRender(handle);
-    } catch (e) {
-      cancelRender(e);
-    }
-  }, [captionsSrc, continueRender, cancelRender, handle]);
-
+  // Only fetch external captions if captionsSrc was explicitly supplied AND no providedCaptions exist
   useEffect(() => {
-    fetchCaptions();
-  }, [fetchCaptions]);
+    if (providedCaptions || !captionsSrc) return;
+    let cancelled = false;
+    const handle = delayRender("Loading captions");
+    fetch(staticFile(captionsSrc))
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data: Caption[]) => {
+        if (!cancelled) setFetchedCaptions(data);
+        continueRender(handle);
+      })
+      .catch((err) => {
+        console.warn("Could not fetch captions from static source:", err);
+        continueRender(handle);
+      });
+
+    return () => {
+      cancelled = true;
+      continueRender(handle);
+    };
+  }, [providedCaptions, captionsSrc, delayRender, continueRender]);
 
   // Synchronize font rendering in both browser player and headless export
   useEffect(() => {
@@ -79,7 +89,7 @@ export const CaptionRenderer: React.FC<CaptionRendererProps> = ({
   }, [styleOverrides?.fontFamily, styleOverrides?.fontWeight, delayRender, continueRender]);
 
   const captions = providedCaptions ?? fetchedCaptions;
-  if (!captions) {
+  if (!captions || captions.length === 0) {
     return null;
   }
 
@@ -105,6 +115,14 @@ export const CaptionRenderer: React.FC<CaptionRendererProps> = ({
               <SlideUp page={page} overrides={styleOverrides} contentInset={frameContentInset} />
             ) : variant === "outlineDraw" ? (
               <OutlineDraw page={page} overrides={styleOverrides} contentInset={frameContentInset} />
+            ) : variant === "splitReveal" ? (
+              <SplitReveal page={page} overrides={styleOverrides} contentInset={frameContentInset} />
+            ) : variant === "wordStamp" ? (
+              <WordStamp page={page} overrides={styleOverrides} contentInset={frameContentInset} />
+            ) : variant === "blurResolve" ? (
+              <BlurResolve page={page} overrides={styleOverrides} contentInset={frameContentInset} />
+            ) : variant === "sentenceBlock" ? (
+              <SentenceBlock page={page} overrides={styleOverrides} contentInset={frameContentInset} />
             ) : (
               <Signature page={page} overrides={styleOverrides} contentInset={frameContentInset} />
             )}

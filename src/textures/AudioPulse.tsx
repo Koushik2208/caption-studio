@@ -32,7 +32,8 @@ export const AudioPulse: React.FC<AudioPulseProps> = ({ textureSettings, audioAm
     return <>{children}</>;
   }
 
-  const intensity = textureSettings.audioPulseIntensity;
+  const rawIntensity = textureSettings.audioPulseIntensity;
+  const intensity: OverlayIntensity = (rawIntensity && SCALE_RANGE[rawIntensity]) ? rawIntensity : 'medium';
 
   let sum = 0;
   let count = 0;

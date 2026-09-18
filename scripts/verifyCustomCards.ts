@@ -352,6 +352,197 @@ async function runVerification() {
         },
       },
     },
+    // --- New Reel-Craft Cherry-Pick Verifications ---
+    {
+      name: '19_street_split_reveal_basic',
+      inputProps: {
+        captions: testCaptions,
+        styleVariant: 'splitReveal',
+        styleOverrides: {
+          textColor: '#ffffff',
+          highlightColor: '#ffd23f',
+        },
+      },
+    },
+    {
+      name: '20_street_word_font_pairing',
+      inputProps: {
+        captions: testCaptions,
+        styleVariant: 'splitReveal',
+        styleOverrides: {
+          textColor: '#ffffff',
+          wordOverrides: {
+            '0-1': { fontFamily: 'Georgia, serif', fontStyle: 'italic', color: '#ff3d9a' },
+            '0-2': { fontWeight: 900, fontSize: 1.3, color: '#00d4ff' },
+          },
+        },
+      },
+    },
+    {
+      name: '21_street_word_color_gradient',
+      inputProps: {
+        captions: testCaptions,
+        styleVariant: 'splitReveal',
+        styleOverrides: {
+          gradientEnabled: true,
+          gradientStart: '#FF3D9A',
+          gradientEnd: '#00D4FF',
+          gradientAngle: 90,
+        },
+      },
+    },
+    {
+      name: '22_street_scale_hierarchy',
+      inputProps: {
+        captions: testCaptions,
+        styleVariant: 'splitReveal',
+        styleOverrides: {
+          fontSizeMultiplier: 1.2,
+          wordOverrides: {
+            '0-0': { fontSize: 1.4, color: '#ffd23f' },
+          },
+        },
+      },
+    },
+    {
+      name: '23_word_stamp_kinetic',
+      inputProps: {
+        captions: testCaptions,
+        styleVariant: 'wordStamp',
+        styleOverrides: {
+          textColor: '#ffffff',
+          highlightColor: '#00d4ff',
+          glowEnabled: true,
+          glowColor: '#0066ff',
+        },
+      },
+    },
+    {
+      name: '24_blur_resolve_cinematic',
+      inputProps: {
+        captions: testCaptions,
+        styleVariant: 'blurResolve',
+        styleOverrides: {
+          textColor: '#f8fafc',
+          highlightColor: '#10b981',
+        },
+      },
+    },
+    {
+      name: '25_sentence_block_backplate',
+      inputProps: {
+        captions: testCaptions,
+        styleVariant: 'sentenceBlock',
+        styleOverrides: {
+          highlightColor: '#ffffff',
+          textColor: '#ffffff',
+        },
+      },
+    },
+    {
+      name: '26_caption_backdrop_disabled',
+      inputProps: {
+        captions: testCaptions,
+        styleVariant: 'signature',
+        styleOverrides: {
+          backdropEnabled: false,
+        },
+      },
+    },
+    {
+      name: '27_caption_backdrop_enabled',
+      inputProps: {
+        captions: testCaptions,
+        styleVariant: 'signature',
+        styleOverrides: {
+          backdropEnabled: true,
+          backdropColor: '#000000',
+          backdropOpacity: 65,
+          backdropRadius: 10,
+          backdropPaddingX: 16,
+          backdropPaddingY: 8,
+          textColor: '#ffffff',
+          highlightColor: '#ffd23f',
+        },
+      },
+    },
+    {
+      name: '28_caption_backdrop_multiline',
+      inputProps: {
+        captions: [
+          { startMs: 0, endMs: 2000, text: 'CREATING HIGH IMPACT HOOKS THAT ENGAGE AND CONVERT', timestampMs: 0, confidence: 1 },
+        ],
+        styleVariant: 'signature',
+        styleOverrides: {
+          backdropEnabled: true,
+          backdropColor: '#1e1b4b',
+          backdropOpacity: 80,
+          backdropRadius: 8,
+          backdropPaddingX: 14,
+          backdropPaddingY: 6,
+        },
+      },
+    },
+    {
+      name: '29_caption_backdrop_mixed_word_typography',
+      inputProps: {
+        captions: testCaptions,
+        styleVariant: 'signature',
+        styleOverrides: {
+          backdropEnabled: true,
+          backdropColor: '#000000',
+          backdropOpacity: 70,
+          wordOverrides: {
+            '0-1': { fontFamily: 'Georgia, serif', color: '#ffd23f', fontSize: 1.25 },
+          },
+        },
+      },
+    },
+    {
+      name: '30_terminal_frame_basic',
+      inputProps: {
+        captions: testCaptions,
+        frameSettings: {
+          variant: 'terminal',
+          bgColor: '#000000',
+          bezelRadiusMultiplier: 1,
+        },
+      },
+    },
+    {
+      name: '31_terminal_frame_with_captions',
+      inputProps: {
+        captions: testCaptions,
+        styleVariant: 'splitReveal',
+        styleOverrides: {
+          textColor: '#ffffff',
+          highlightColor: '#007acc',
+        },
+        frameSettings: {
+          variant: 'terminal',
+          bgColor: '#000000',
+          bezelRadiusMultiplier: 1,
+        },
+      },
+    },
+    {
+      name: '32_terminal_frame_with_effects',
+      inputProps: {
+        captions: testCaptions,
+        styleVariant: 'wordStamp',
+        frameSettings: {
+          variant: 'terminal',
+          bgColor: '#000000',
+          bezelRadiusMultiplier: 1,
+        },
+        textureSettings: {
+          crtScanlinesEnabled: true,
+          crtScanlinesIntensity: 'medium',
+          halationEnabled: true,
+          halationIntensity: 'medium',
+        },
+      },
+    },
   ];
 
   for (const tc of testCases) {

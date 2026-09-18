@@ -20,10 +20,11 @@ const Blob: React.FC<{ x: number; y: number; strength: number }> = ({ x, y, stre
 
 // Ported verbatim from reel-craft (github.com/Koushik2208/reel-craft) - uses
 // only relative percentages, no fixed dimensions to adapt.
-export const LightLeak: React.FC<{ intensity: OverlayIntensity }> = ({ intensity }) => {
+export const LightLeak: React.FC<{ intensity?: OverlayIntensity }> = ({ intensity = 'medium' }) => {
   const frame = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
-  const strength = INTENSITY[intensity];
+  const safeIntensity: OverlayIntensity = (intensity && INTENSITY[intensity]) ? intensity : 'medium';
+  const strength = INTENSITY[safeIntensity];
 
   const x = interpolate(frame, [0, durationInFrames], [-20, 120]);
   const y = Math.sin(frame / 30) * 10 + 30;
@@ -36,7 +37,7 @@ export const LightLeak: React.FC<{ intensity: OverlayIntensity }> = ({ intensity
   return (
     <AbsoluteFill style={{ pointerEvents: 'none' }}>
       <Blob x={x} y={y} strength={strength} />
-      {intensity === 'high' && <Blob x={x2} y={y2} strength={strength} />}
+      {safeIntensity === 'high' && <Blob x={x2} y={y2} strength={strength} />}
     </AbsoluteFill>
   );
 };

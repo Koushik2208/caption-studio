@@ -1,3 +1,4 @@
+import React from "react";
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import type { FrameContentInset } from "../../frames/types";
 import type { CaptionPage } from "../processCaptions";
@@ -5,7 +6,7 @@ import type { CaptionStyleOverrides } from "./types";
 import { applyKeywordEmphasis, DEFAULT_KEYWORDS, isKeywordToken } from "./applyKeywordEmphasis";
 import { getResponsiveFontSize } from "./fontSize";
 import { getCaptionEffectStyle } from "./legibility";
-import { getPositionStyle } from "./position";
+import { formatCaptionToken, getCaptionContainerStyle, getPositionStyle } from "./position";
 import { resolveWordTypography } from "./wordOverrides";
 
 const HIGHLIGHT_COLOR = "#ffd23f";
@@ -19,14 +20,6 @@ const OUTLINE_COLOR = "white";
 // for its char reveal) - the distinctive, more stylish option called for in
 // PLAN.md Part F Phase 3c. Already-spoken tokens sit fully filled;
 // not-yet-reached tokens sit at 0% fill (pure outline).
-//
-// Single element per token, not two overlaid text nodes: a prior version
-// stacked an outline span + an absolutely-positioned fill span and tried to
-// keep them pixel-synced by matching stroke widths, but each span is an
-// independent glyph render/antialiasing pass and they drift apart token by
-// token regardless. Here the fill sweep is a background-clip: text gradient
-// with a hard color stop at fillProgress, and WebkitTextStroke draws the
-// white outline on the same element - see LEARNINGS.md.
 export const OutlineDraw: React.FC<{
   page: CaptionPage;
   overrides?: CaptionStyleOverrides;
@@ -52,21 +45,11 @@ export const OutlineDraw: React.FC<{
 
   return (
     <AbsoluteFill style={getPositionStyle(overrides?.position, height, contentInset, overrides?.customPositionY, overrides?.textAlign)}>
-      <div
-        style={{
-          fontSize,
-          fontWeight: overrides?.fontWeight ?? 700,
-          fontStyle: overrides?.fontStyle ?? "normal",
-          fontFamily: overrides?.fontFamily ?? "Arial, sans-serif",
-          textAlign: overrides?.textAlign ?? "center",
-          whiteSpace: "pre-wrap",
-          maxWidth: "85%",
-          lineHeight: overrides?.lineHeight ?? 1.15,
-          letterSpacing: overrides?.letterSpacing !== undefined ? `${overrides.letterSpacing}px` : undefined,
-          textTransform: overrides?.textTransform ?? "none",
-        }}
-      >
+      <div style={getCaptionContainerStyle(overrides, fontSize)}>
         {page.tokens.map((token, i) => {
+          const { cleanText, needsSpace } = formatCaptionToken(token.text, i);
+          if (!cleanText) return null;
+
           let fillProgress = 0;
           if (i < activeIndex) {
             fillProgress = 1;
@@ -114,30 +97,32 @@ export const OutlineDraw: React.FC<{
           const effectStyle = getCaptionEffectStyle(tokenFontSize, true, overrides, emphasis.textShadow);
 
           return (
-            <span
-              key={`${token.fromMs}-${i}`}
-              style={{
-                display: "inline-block",
-                fontFamily: wordTypo.fontFamily,
-                fontWeight: wordTypo.fontWeight,
-                fontStyle: wordTypo.fontStyle,
-                color: "transparent",
-                WebkitTextFillColor: "transparent",
-                WebkitTextStroke:
-                  overrides?.strokeEnabled === false
-                    ? "none"
-                    : overrides?.strokeWidth !== undefined || overrides?.strokeColor
-                      ? `${overrides?.strokeWidth ?? 2}px ${overrides?.strokeColor ?? outlineStrokeColor}`
-                      : `2px ${outlineStrokeColor}`,
-                backgroundImage: bgImage,
-                WebkitBackgroundClip: "text",
-                backgroundClip: "text",
-                fontSize: tokenFontSize,
-                ...effectStyle,
-              }}
-            >
-              {token.text}
-            </span>
+            <React.Fragment key={`${token.fromMs}-${i}`}>
+              {needsSpace && " "}
+              <span
+                style={{
+                  display: "inline-block",
+                  fontFamily: wordTypo.fontFamily,
+                  fontWeight: wordTypo.fontWeight,
+                  fontStyle: wordTypo.fontStyle,
+                  color: "transparent",
+                  WebkitTextFillColor: "transparent",
+                  WebkitTextStroke:
+                    overrides?.strokeEnabled === false
+                      ? "none"
+                      : overrides?.strokeWidth !== undefined || overrides?.strokeColor
+                        ? `${overrides?.strokeWidth ?? 2}px ${overrides?.strokeColor ?? outlineStrokeColor}`
+                        : `2px ${outlineStrokeColor}`,
+                  backgroundImage: bgImage,
+                  WebkitBackgroundClip: "text",
+                  backgroundClip: "text",
+                  fontSize: tokenFontSize,
+                  ...effectStyle,
+                }}
+              >
+                {cleanText}
+              </span>
+            </React.Fragment>
           );
         })}
       </div>

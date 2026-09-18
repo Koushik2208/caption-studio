@@ -12,11 +12,12 @@ const SETTINGS: Record<OverlayIntensity, { opacity: number; baseFrequency: numbe
 // the current frame number (not Math.random()), so the noise pattern is a
 // pure function of frame - deterministic and reproducible across preview and
 // export renders of the same frame, per CLAUDE.md's frame-determinism rule.
-export const FilmGrain: React.FC<{ intensity: OverlayIntensity }> = ({ intensity }) => {
+export const FilmGrain: React.FC<{ intensity?: OverlayIntensity }> = ({ intensity = 'medium' }) => {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
-  const { opacity, baseFrequency } = SETTINGS[intensity];
-  const filterId = `film-grain-${intensity}`;
+  const safeIntensity: OverlayIntensity = (intensity && SETTINGS[intensity]) ? intensity : 'medium';
+  const { opacity, baseFrequency } = SETTINGS[safeIntensity];
+  const filterId = `film-grain-${safeIntensity}`;
 
   return (
     <AbsoluteFill style={{ pointerEvents: 'none', opacity, mixBlendMode: 'overlay' }}>

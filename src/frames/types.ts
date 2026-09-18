@@ -6,7 +6,8 @@ export type FrameVariant =
   | 'cinematicScope'
   | 'filmStrip'
   | 'squareBezel'
-  | 'vintageProjector';
+  | 'vintageProjector'
+  | 'terminal';
 
 export type CompositionLayout =
   | 'full-bleed'

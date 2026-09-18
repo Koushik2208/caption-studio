@@ -42,7 +42,8 @@ export const KeywordPunch: React.FC<KeywordPunchProps> = ({
     return <>{children}</>;
   }
 
-  const intensity = textureSettings.keywordPunchIntensity;
+  const rawIntensity = textureSettings.keywordPunchIntensity;
+  const intensity: OverlayIntensity = (rawIntensity && ZOOM_RANGE[rawIntensity]) ? rawIntensity : 'medium';
   const activeKeywords = keywords ?? DEFAULT_KEYWORDS;
 
   const pages = processCaptions(captions, fps);

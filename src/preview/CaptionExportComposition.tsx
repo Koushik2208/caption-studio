@@ -13,6 +13,10 @@ import { TextureOverlayRenderer } from '../textures/TextureOverlayRenderer';
 import { BackgroundEffectsRenderer } from '../textures/BackgroundEffectsRenderer';
 import type { MotionGraphicsSettings } from '../motion/types';
 import { MotionGraphicsRenderer } from '../motion/MotionGraphicsRenderer';
+import type { VideoMotionSettings } from '../videoMotion/types';
+import type { AssetSettings } from '../assets/types';
+import { TransitionOverlayRenderer } from '../assets/TransitionOverlayRenderer';
+import { SfxRenderer } from '../assets/SfxRenderer';
 
 // DaVinci Resolve Ultra Key-compatible chroma green (see PLAN.md Part E).
 const CHROMA_GREEN = '#00B140';
@@ -25,6 +29,8 @@ export type CaptionExportProps = {
   frameSettings?: FrameSettings;
   textureSettings?: TextureOverlaySettings;
   motionSettings?: MotionGraphicsSettings;
+  videoMotion?: VideoMotionSettings;
+  assetSettings?: AssetSettings;
   audioAmplitude?: number[] | null;
   // Read by Root.tsx's calculateMetadata, not by this component - kept on
   // the same props type so the server can pass one inputProps object through
@@ -47,6 +53,8 @@ export const CaptionExportComposition: React.FC<CaptionExportProps> = ({
   frameSettings,
   textureSettings,
   motionSettings,
+  videoMotion,
+  assetSettings,
   audioAmplitude,
 }) => {
   const { width, height } = useVideoConfig();
@@ -64,6 +72,7 @@ export const CaptionExportComposition: React.FC<CaptionExportProps> = ({
   const mediaElement = (
     <BackgroundEffectsRenderer
       textureSettings={textureSettings}
+      videoMotion={videoMotion}
       audioAmplitude={audioAmplitude}
       captions={captions}
       styleOverrides={styleOverrides}
@@ -73,6 +82,14 @@ export const CaptionExportComposition: React.FC<CaptionExportProps> = ({
   );
 
   const textureElement = <TextureOverlayRenderer textureSettings={textureSettings} />;
+
+  const assetOverlaysElement = (
+    <TransitionOverlayRenderer placements={assetSettings?.transitionOverlays} />
+  );
+
+  const sfxElement = (
+    <SfxRenderer placements={assetSettings?.soundEffects} />
+  );
 
   const captionElement = (
     <CaptionRenderer
@@ -102,10 +119,14 @@ export const CaptionExportComposition: React.FC<CaptionExportProps> = ({
       captions={captionElement}
       overlays={overlayElement}
       textures={textureElement}
+      assetOverlays={assetOverlaysElement}
+      sfx={sfxElement}
     >
       <AbsoluteFill>
         {mediaElement}
         {textureElement}
+        {assetOverlaysElement}
+        {sfxElement}
         <AbsoluteFill style={hasFrameInset ? { zIndex: 1 } : undefined}>
           {captionElement}
           {overlayElement}

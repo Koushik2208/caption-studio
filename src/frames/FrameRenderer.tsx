@@ -11,6 +11,7 @@ import { MinimalBezel } from './MinimalBezel';
 import { NeonGlow } from './NeonGlow';
 import { SquareBezel } from './SquareBezel';
 import { VintageProjector } from './VintageProjector';
+import { TerminalFrame } from './TerminalFrame';
 import type { FrameSettings } from './types';
 
 export type FrameRendererProps = {
@@ -19,6 +20,8 @@ export type FrameRendererProps = {
   captions?: React.ReactNode;
   overlays?: React.ReactNode;
   textures?: React.ReactNode;
+  assetOverlays?: React.ReactNode;
+  sfx?: React.ReactNode;
   children?: React.ReactNode;
 };
 
@@ -30,6 +33,8 @@ export const FrameRenderer: React.FC<FrameRendererProps> = ({
   captions,
   overlays,
   textures,
+  assetOverlays,
+  sfx,
   children,
 }) => {
   const { width, height } = useVideoConfig();
@@ -52,6 +57,7 @@ export const FrameRenderer: React.FC<FrameRendererProps> = ({
         captions={captions}
         overlays={overlays}
         textures={textures}
+        assetOverlays={assetOverlays}
       >
         {children}
       </TopBottomSplitLayout>
@@ -75,6 +81,7 @@ export const FrameRenderer: React.FC<FrameRendererProps> = ({
         captions={captions}
         overlays={overlays}
         textures={textures}
+        assetOverlays={assetOverlays}
       >
         {children}
       </LeftRightSplitLayout>
@@ -96,6 +103,8 @@ export const FrameRenderer: React.FC<FrameRendererProps> = ({
         <AbsoluteFill>
           {visualContent}
           {textures}
+          {assetOverlays}
+          {sfx}
           <AbsoluteFill>
             {captions}
             {overlays}
@@ -167,6 +176,12 @@ export const FrameRenderer: React.FC<FrameRendererProps> = ({
         <VintageProjector width={width} height={height}>
           {children}
         </VintageProjector>
+      );
+    case 'terminal':
+      return (
+        <TerminalFrame width={width} height={height}>
+          {children}
+        </TerminalFrame>
       );
     default:
       return <>{children}</>;

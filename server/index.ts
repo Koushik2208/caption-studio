@@ -15,6 +15,8 @@ import type { OverlaySettings } from "../src/overlay/types.js";
 import type { FrameSettings } from "../src/frames/types.js";
 import type { TextureOverlaySettings } from "../src/textures/types.js";
 import type { MotionGraphicsSettings } from "../src/motion/types.js";
+import type { VideoMotionSettings } from "../src/videoMotion/types.js";
+import type { AssetSettings } from "../src/assets/types.js";
 
 // ffmpeg-static's CJS export shape doesn't line up with its own .d.ts under
 // "module": "nodenext", so import it via require() and assert the type instead.
@@ -286,6 +288,8 @@ type GreenScreenRequestBody = {
   frameSettings?: FrameSettings;
   textureSettings?: TextureOverlaySettings;
   motionSettings?: MotionGraphicsSettings;
+  videoMotion?: VideoMotionSettings;
+  assetSettings?: AssetSettings;
   audioAmplitude?: number[];
   durationInFrames: number;
   // ExportPage's Resolution dropdown, converted client-side to a renderMedia
@@ -322,6 +326,8 @@ const runGreenScreenRender = async (jobId: string, body: GreenScreenRequestBody)
       frameSettings: body.frameSettings,
       textureSettings: body.textureSettings,
       motionSettings: body.motionSettings,
+      videoMotion: body.videoMotion,
+      assetSettings: body.assetSettings,
       audioAmplitude: body.audioAmplitude,
       durationInFrames,
       orientation: body.orientation ?? "vertical",
@@ -415,6 +421,8 @@ const runVideoRender = async (jobId: string, mediaPath: string, body: VideoReque
       frameSettings: body.frameSettings,
       textureSettings: body.textureSettings,
       motionSettings: body.motionSettings,
+      videoMotion: body.videoMotion,
+      assetSettings: body.assetSettings,
       audioAmplitude: body.audioAmplitude,
       durationInFrames,
       orientation: body.orientation ?? "vertical",

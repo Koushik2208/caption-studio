@@ -125,7 +125,17 @@ export const ensureWordLevelCaptions = (captions: Caption[]): Caption[] => {
 
     const words = trimmed.split(/\s+/).filter(Boolean);
     if (words.length <= 1) {
-      result.push(caption);
+      const formattedText =
+        result.length === 0
+          ? trimmed
+          : rawText.startsWith(' ')
+            ? rawText
+            : ` ${trimmed}`;
+
+      result.push({
+        ...caption,
+        text: formattedText,
+      });
       continue;
     }
 
@@ -140,7 +150,7 @@ export const ensureWordLevelCaptions = (captions: Caption[]): Caption[] => {
       const isLast = i === words.length - 1;
       const endMs = isLast ? caption.endMs : Math.min(caption.endMs, currentStart + wordDuration);
 
-      const formattedText = i === 0 ? word : ` ${word}`;
+      const formattedText = result.length === 0 && i === 0 ? word : ` ${word}`;
 
       result.push({
         text: formattedText,

@@ -33,7 +33,7 @@ export const getLegibilityShadow = (fontSize: number, shadowEnabled: boolean = t
   return `0 0 ${(fontSize * SHADOW_BLUR_RATIO).toFixed(2)}px rgba(0, 0, 0, ${SHADOW_OPACITY})`;
 };
 
-const hexToRgba = (hex: string, alpha: number): string => {
+export const hexToRgba = (hex: string, alpha: number): string => {
   const value = hex.replace('#', '');
   const expanded = value.length === 3 ? value.split('').map((c) => c + c).join('') : value;
   const bigint = parseInt(expanded, 16);
@@ -42,6 +42,30 @@ const hexToRgba = (hex: string, alpha: number): string => {
   const g = (bigint >> 8) & 255;
   const b = bigint & 255;
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+export const getCaptionBackdropStyle = (overrides?: {
+  backdropEnabled?: boolean;
+  backdropColor?: string;
+  backdropOpacity?: number;
+  backdropRadius?: number;
+  backdropPaddingX?: number;
+  backdropPaddingY?: number;
+}): React.CSSProperties => {
+  if (!overrides?.backdropEnabled) return {};
+  const alpha = Math.max(0, Math.min(100, overrides.backdropOpacity ?? 50)) / 100;
+  const color = overrides.backdropColor ?? '#000000';
+  const radius = overrides.backdropRadius ?? 8;
+  const padX = overrides.backdropPaddingX ?? 12;
+  const padY = overrides.backdropPaddingY ?? 6;
+  return {
+    backgroundColor: hexToRgba(color, alpha),
+    borderRadius: `${radius}px`,
+    padding: `${padY}px ${padX}px`,
+    display: 'inline-block',
+    boxDecorationBreak: 'clone',
+    WebkitBoxDecorationBreak: 'clone',
+  };
 };
 
 export const getCaptionGlowShadow = (overrides?: {

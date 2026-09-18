@@ -68,6 +68,18 @@ export const TextInspector: React.FC = () => {
     setStrokeWidth,
     shadowEnabled,
     setShadowEnabled,
+    backdropEnabled,
+    setBackdropEnabled,
+    backdropColor,
+    setBackdropColor,
+    backdropOpacity,
+    setBackdropOpacity,
+    backdropRadius,
+    setBackdropRadius,
+    backdropPaddingX,
+    setBackdropPaddingX,
+    backdropPaddingY,
+    setBackdropPaddingY,
     layout,
     position,
     setPosition,
@@ -630,6 +642,149 @@ export const TextInspector: React.FC = () => {
               }`}
           />
         </button>
+      </section>
+
+      <hr className="border-outline-variant/40" />
+
+      {/* SECTION 6: Caption Backdrop */}
+      <section className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col">
+            <span className="text-xs font-semibold uppercase tracking-wider text-outline font-label-caps">
+              Caption Backdrop
+            </span>
+            <span className="text-[11px] text-outline">Text background plate for contrast</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setBackdropEnabled(!backdropEnabled)}
+            className={`relative w-9 h-5 rounded-full transition-colors duration-150 cursor-pointer ${
+              backdropEnabled ? 'bg-primary' : 'bg-outline-variant'
+            }`}
+            aria-pressed={backdropEnabled}
+            aria-label="Toggle caption backdrop"
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-xs transition-transform duration-150 ${
+                backdropEnabled ? 'translate-x-4' : ''
+              }`}
+            />
+          </button>
+        </div>
+
+        {backdropEnabled && (
+          <div className="flex flex-col gap-3 pt-2 bg-surface-container-low/50 p-3 rounded-xl border border-outline-variant/40">
+            {/* Color & Swatches */}
+            <div className="flex items-center gap-2.5">
+              <label
+                className="relative w-7 h-7 rounded-md overflow-hidden border border-outline-variant cursor-pointer shrink-0 shadow-2xs hover:border-primary transition-colors flex items-center justify-center"
+                style={{ backgroundColor: normalizeHexColor(backdropColor) }}
+              >
+                <input
+                  type="color"
+                  value={normalizeHexColor(backdropColor)}
+                  onChange={(e) => setBackdropColor(e.target.value)}
+                  className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                  aria-label="Pick backdrop color"
+                />
+              </label>
+              <input
+                type="text"
+                value={backdropColor}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setBackdropColor(val.startsWith('#') || val.length === 0 ? val : `#${val}`);
+                }}
+                placeholder="#000000"
+                className="min-w-0 w-24 px-2 py-1 text-xs font-mono uppercase border border-outline-variant/80 rounded-md bg-surface focus:outline-none focus:border-primary"
+              />
+              <div className="flex items-center gap-1.5 flex-wrap ml-auto">
+                {['#000000', '#121214', '#1e1b4b', '#0066ff', '#ffd23f', '#ffffff'].map((hex) => (
+                  <button
+                    key={hex}
+                    type="button"
+                    onClick={() => setBackdropColor(hex)}
+                    className={`w-5.5 h-5.5 rounded-md border border-outline-variant transition-transform hover:scale-110 active:scale-95 cursor-pointer ${
+                      backdropColor.toLowerCase() === hex.toLowerCase() ? 'ring-2 ring-primary ring-offset-1' : ''
+                    }`}
+                    style={{ backgroundColor: hex }}
+                    title={hex}
+                    aria-label={`Select backdrop color ${hex}`}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Opacity */}
+            <div className="flex flex-col gap-1">
+              <div className="flex justify-between text-xs text-on-surface">
+                <span className="text-[11px] font-medium">Opacity</span>
+                <span className="font-mono text-[11px] text-outline">{backdropOpacity}%</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={5}
+                value={backdropOpacity}
+                onChange={(e) => setBackdropOpacity(Number(e.target.value))}
+                className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded-lg appearance-none"
+              />
+            </div>
+
+            {/* Corner Radius */}
+            <div className="flex flex-col gap-1">
+              <div className="flex justify-between text-xs text-on-surface">
+                <span className="text-[11px] font-medium">Corner Radius</span>
+                <span className="font-mono text-[11px] text-outline">{backdropRadius}px</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={24}
+                step={1}
+                value={backdropRadius}
+                onChange={(e) => setBackdropRadius(Number(e.target.value))}
+                className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded-lg appearance-none"
+              />
+            </div>
+
+            {/* Horizontal & Vertical Padding */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <div className="flex justify-between text-xs text-on-surface">
+                  <span className="text-[11px] font-medium">Pad X</span>
+                  <span className="font-mono text-[11px] text-outline">{backdropPaddingX}px</span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={32}
+                  step={2}
+                  value={backdropPaddingX}
+                  onChange={(e) => setBackdropPaddingX(Number(e.target.value))}
+                  className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded-lg appearance-none"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <div className="flex justify-between text-xs text-on-surface">
+                  <span className="text-[11px] font-medium">Pad Y</span>
+                  <span className="font-mono text-[11px] text-outline">{backdropPaddingY}px</span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={20}
+                  step={1}
+                  value={backdropPaddingY}
+                  onChange={(e) => setBackdropPaddingY(Number(e.target.value))}
+                  className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded-lg appearance-none"
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

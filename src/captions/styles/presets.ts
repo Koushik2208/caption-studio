@@ -21,7 +21,7 @@ import { loadFont as loadJost } from '@remotion/google-fonts/Jost';
 import { loadFont as loadQuicksand } from '@remotion/google-fonts/Quicksand';
 import { loadFont as loadDMSerifDisplay } from '@remotion/google-fonts/DMSerifDisplay';
 import { loadFont as loadArchivoBlack } from '@remotion/google-fonts/ArchivoBlack';
-import type { CaptionStyleVariant } from './types';
+import type { CaptionStyleVariant } from './types.js';
 
 const { fontFamily: bebasNeue } = loadBebasNeue('normal', { weights: ['400'], subsets: ['latin'] });
 const { fontFamily: montserrat } = loadMontserrat('normal', { weights: ['400', '500', '600', '700', '800', '900'], subsets: ['latin'] });

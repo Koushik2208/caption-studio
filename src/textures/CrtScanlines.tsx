@@ -12,11 +12,12 @@ const SPACING: Record<OverlayIntensity, { lineSpacing: number; lineHeight: numbe
 // Ported from reel-craft (github.com/Koushik2208/reel-craft). Dimensions
 // read from useVideoConfig() rather than reel-craft's fixed HEIGHT constant,
 // so this also renders correctly in the horizontal 1920x1080 composition.
-export const CrtScanlines: React.FC<{ intensity: OverlayIntensity }> = ({ intensity }) => {
+export const CrtScanlines: React.FC<{ intensity?: OverlayIntensity }> = ({ intensity = 'medium' }) => {
   const frame = useCurrentFrame();
   const { height, durationInFrames } = useVideoConfig();
-  const strength = INTENSITY[intensity];
-  const { lineSpacing, lineHeight } = SPACING[intensity];
+  const safeIntensity: OverlayIntensity = (intensity && INTENSITY[intensity]) ? intensity : 'medium';
+  const strength = INTENSITY[safeIntensity];
+  const { lineSpacing, lineHeight } = SPACING[safeIntensity];
   const barY = interpolate(frame, [0, durationInFrames], [0, height]);
   const barHeight = height * 0.08;
 

@@ -13,6 +13,10 @@ import { TextureOverlayRenderer } from '../textures/TextureOverlayRenderer';
 import { BackgroundEffectsRenderer } from '../textures/BackgroundEffectsRenderer';
 import type { MotionGraphicsSettings } from '../motion/types';
 import { MotionGraphicsRenderer } from '../motion/MotionGraphicsRenderer';
+import type { VideoMotionSettings } from '../videoMotion/types';
+import type { AssetSettings } from '../assets/types';
+import { TransitionOverlayRenderer } from '../assets/TransitionOverlayRenderer';
+import { SfxRenderer } from '../assets/SfxRenderer';
 
 export type CaptionExportVideoProps = {
   captions: Caption[];
@@ -27,6 +31,8 @@ export type CaptionExportVideoProps = {
   frameSettings?: FrameSettings;
   textureSettings?: TextureOverlaySettings;
   motionSettings?: MotionGraphicsSettings;
+  videoMotion?: VideoMotionSettings;
+  assetSettings?: AssetSettings;
   audioAmplitude?: number[] | null;
   // Read by Root.tsx's calculateMetadata, not by this component.
   durationInFrames?: number;
@@ -46,6 +52,8 @@ export const CaptionExportVideoComposition: React.FC<CaptionExportVideoProps> = 
   frameSettings,
   textureSettings,
   motionSettings,
+  videoMotion,
+  assetSettings,
   audioAmplitude,
 }) => {
   const { width, height } = useVideoConfig();
@@ -61,6 +69,7 @@ export const CaptionExportVideoComposition: React.FC<CaptionExportVideoProps> = 
   const mediaElement = (
     <BackgroundEffectsRenderer
       textureSettings={textureSettings}
+      videoMotion={videoMotion}
       audioAmplitude={audioAmplitude}
       captions={captions}
       styleOverrides={styleOverrides}
@@ -70,6 +79,14 @@ export const CaptionExportVideoComposition: React.FC<CaptionExportVideoProps> = 
   );
 
   const textureElement = <TextureOverlayRenderer textureSettings={textureSettings} />;
+
+  const assetOverlaysElement = (
+    <TransitionOverlayRenderer placements={assetSettings?.transitionOverlays} />
+  );
+
+  const sfxElement = (
+    <SfxRenderer placements={assetSettings?.soundEffects} />
+  );
 
   const captionElement = (
     <CaptionRenderer
@@ -99,10 +116,13 @@ export const CaptionExportVideoComposition: React.FC<CaptionExportVideoProps> = 
       captions={captionElement}
       overlays={overlayElement}
       textures={textureElement}
+      assetOverlays={assetOverlaysElement}
     >
       <AbsoluteFill style={{ backgroundColor: 'black' }}>
         {mediaElement}
         {textureElement}
+        {assetOverlaysElement}
+        {sfxElement}
         <AbsoluteFill style={hasFrameInset ? { zIndex: 1 } : undefined}>
           {captionElement}
           {overlayElement}

@@ -12,6 +12,7 @@ export type TopBottomSplitLayoutProps = {
   captions?: React.ReactNode;
   overlays?: React.ReactNode;
   textures?: React.ReactNode;
+  assetOverlays?: React.ReactNode;
   children?: React.ReactNode;
 };
 
@@ -31,6 +32,7 @@ export const TopBottomSplitLayout: React.FC<TopBottomSplitLayoutProps> = ({
   captions,
   overlays,
   textures,
+  assetOverlays,
   children,
 }) => {
   const {
@@ -65,14 +67,14 @@ export const TopBottomSplitLayout: React.FC<TopBottomSplitLayoutProps> = ({
 
   const borderStyle: React.CSSProperties = customBorderEnabled
     ? {
-        border: `${responsiveBorderWidth}px ${customBorderStyle} ${customBorderColor}`,
-      }
+      border: `${responsiveBorderWidth}px ${customBorderStyle} ${customBorderColor}`,
+    }
     : {};
 
   const shadowStyle: React.CSSProperties = customShadowEnabled
     ? {
-        boxShadow: `0 ${Math.round(responsiveShadowBlur * 0.4)}px ${responsiveShadowBlur}px rgba(0, 0, 0, ${customShadowOpacity / 100})`,
-      }
+      boxShadow: `0 ${Math.round(responsiveShadowBlur * 0.4)}px ${responsiveShadowBlur}px rgba(0, 0, 0, ${customShadowOpacity / 100})`,
+    }
     : {};
 
   const visualContent = media ?? children;
@@ -117,6 +119,7 @@ export const TopBottomSplitLayout: React.FC<TopBottomSplitLayoutProps> = ({
           <AbsoluteFill>{visualContent}</AbsoluteFill>
         </div>
         {textures}
+        {assetOverlays}
       </div>
 
       {/* 3. Bottom Content Region */}
@@ -148,6 +151,7 @@ export const TopBottomSplitLayout: React.FC<TopBottomSplitLayoutProps> = ({
           <AbsoluteFill>{visualContent}</AbsoluteFill>
         </div>
         {textures}
+        {assetOverlays}
       </div>
 
       {/* 4. Central Caption Band & Composition Overlays */}

@@ -13,6 +13,10 @@ import { TextureOverlayRenderer } from '../textures/TextureOverlayRenderer';
 import { BackgroundEffectsRenderer } from '../textures/BackgroundEffectsRenderer';
 import type { MotionGraphicsSettings } from '../motion/types';
 import { MotionGraphicsRenderer } from '../motion/MotionGraphicsRenderer';
+import type { VideoMotionSettings } from '../videoMotion/types';
+import type { AssetSettings } from '../assets/types';
+import { TransitionOverlayRenderer } from '../assets/TransitionOverlayRenderer';
+import { SfxRenderer } from '../assets/SfxRenderer';
 
 export type CaptionPreviewProps = {
   captions: Caption[] | null;
@@ -24,15 +28,16 @@ export type CaptionPreviewProps = {
   frameSettings?: FrameSettings;
   textureSettings?: TextureOverlaySettings;
   motionSettings?: MotionGraphicsSettings;
+  videoMotion?: VideoMotionSettings;
+  assetSettings?: AssetSettings;
   // Per-frame RMS amplitude driving Audio-Reactive Pulse - see
   // src/textures/AudioPulse.tsx and ProjectContext's audioAmplitude state.
   audioAmplitude?: number[] | null;
 };
 
-// Minimal vertical-only preview: uploaded media as the background, real
-// captions overlaid via the shared CaptionRenderer/processCaptions pipeline,
-// watermark/progress bar on top - the same stack CaptionExportComposition
-// renders server-side, so what's shown here is what ends up in the file.
+// DaVinci Resolve Ultra Key-compatible chroma green for no-media creative preview
+const CHROMA_GREEN = '#00B140';
+
 export const CaptionPreviewComposition: React.FC<CaptionPreviewProps> = ({
   captions,
   mediaUrl,
@@ -43,6 +48,8 @@ export const CaptionPreviewComposition: React.FC<CaptionPreviewProps> = ({
   frameSettings,
   textureSettings,
   motionSettings,
+  videoMotion,
+  assetSettings,
   audioAmplitude,
 }) => {
   const { width, height } = useVideoConfig();
@@ -63,21 +70,50 @@ export const CaptionPreviewComposition: React.FC<CaptionPreviewProps> = ({
 
   const mediaElement = (
     <>
-      {mediaUrl && mediaKind === 'video' && (
+      {mediaUrl && mediaKind === 'video' ? (
         <BackgroundEffectsRenderer
           textureSettings={textureSettings}
+          videoMotion={videoMotion}
           audioAmplitude={audioAmplitude}
           captions={captions}
           styleOverrides={styleOverrides}
         >
           <Video src={mediaUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </BackgroundEffectsRenderer>
+      ) : mediaUrl && mediaKind === 'audio' ? (
+        <BackgroundEffectsRenderer
+          textureSettings={textureSettings}
+          videoMotion={videoMotion}
+          audioAmplitude={audioAmplitude}
+          captions={captions}
+          styleOverrides={styleOverrides}
+        >
+          <AbsoluteFill style={{ backgroundColor: CHROMA_GREEN }} />
+          <Audio src={mediaUrl} />
+        </BackgroundEffectsRenderer>
+      ) : (
+        <BackgroundEffectsRenderer
+          textureSettings={textureSettings}
+          videoMotion={videoMotion}
+          audioAmplitude={audioAmplitude}
+          captions={captions}
+          styleOverrides={styleOverrides}
+        >
+          <AbsoluteFill style={{ backgroundColor: CHROMA_GREEN }} />
+        </BackgroundEffectsRenderer>
       )}
-      {mediaUrl && mediaKind === 'audio' && <Audio src={mediaUrl} />}
     </>
   );
 
   const textureElement = <TextureOverlayRenderer textureSettings={textureSettings} />;
+
+  const assetOverlaysElement = (
+    <TransitionOverlayRenderer placements={assetSettings?.transitionOverlays} />
+  );
+
+  const sfxElement = (
+    <SfxRenderer placements={assetSettings?.soundEffects} />
+  );
 
   const captionElement =
     captions && captions.length > 0 ? (
@@ -108,10 +144,14 @@ export const CaptionPreviewComposition: React.FC<CaptionPreviewProps> = ({
       captions={captionElement}
       overlays={overlayElement}
       textures={textureElement}
+      assetOverlays={assetOverlaysElement}
+      sfx={sfxElement}
     >
-      <AbsoluteFill style={{ backgroundColor: 'black' }}>
+      <AbsoluteFill style={{ backgroundColor: !mediaUrl ? CHROMA_GREEN : 'black' }}>
         {mediaElement}
         {textureElement}
+        {assetOverlaysElement}
+        {sfxElement}
         <AbsoluteFill style={hasFrameInset ? { zIndex: 1 } : undefined}>
           {captionElement}
           {overlayElement}

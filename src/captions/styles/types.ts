@@ -8,7 +8,16 @@
 // emphasis is now an independent overlay any animation can apply on top of
 // itself via applyKeywordEmphasis() - see applyKeywordEmphasis.ts - so the
 // variant union only names base animations.
-export type CaptionStyleVariant = "signature" | "calmPhrase" | "typewriter" | "slideUp" | "outlineDraw";
+export type CaptionStyleVariant =
+  | "signature"
+  | "splitReveal"
+  | "wordStamp"
+  | "blurResolve"
+  | "sentenceBlock"
+  | "calmPhrase"
+  | "typewriter"
+  | "slideUp"
+  | "outlineDraw";
 
 // Caption text is always horizontally centered - only vertical placement is
 // configurable, since left/right/corner placement never makes sense for
@@ -52,6 +61,13 @@ export type CaptionStyleOverrides = {
   letterSpacing?: number; // px, e.g. -2 to 8
   lineHeight?: number; // unitless line-height multiplier, e.g. 0.9 to 1.8
   textTransform?: CaptionTextTransform;
+  // Caption Backdrop (Text Background) - static styling control
+  backdropEnabled?: boolean;
+  backdropColor?: string; // hex
+  backdropOpacity?: number; // 0-100%
+  backdropRadius?: number; // px
+  backdropPaddingX?: number; // px
+  backdropPaddingY?: number; // px
   // Keyword emphasis - independent of `styleVariant`, applied on top of
   // whichever base animation is active.
   keywordHighlightEnabled?: boolean;

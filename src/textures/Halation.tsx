@@ -5,8 +5,8 @@ const INTENSITY: Record<OverlayIntensity, number> = { low: 0.33, medium: 0.66, h
 
 // Ported verbatim from reel-craft (github.com/Koushik2208/reel-craft) - uses
 // only relative gradients/percentages, no fixed dimensions to adapt.
-export const Halation: React.FC<{ intensity: OverlayIntensity }> = ({ intensity }) => {
-  const strength = INTENSITY[intensity];
+export const Halation: React.FC<{ intensity?: OverlayIntensity }> = ({ intensity = 'medium' }) => {
+  const strength = (intensity && INTENSITY[intensity]) ? INTENSITY[intensity] : INTENSITY.medium;
 
   return (
     <>

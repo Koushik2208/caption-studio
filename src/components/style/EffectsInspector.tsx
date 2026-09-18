@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { staticFile } from 'remotion';
 import { useProject } from '../../context/ProjectContext';
 import type { OverlayIntensity } from '../../textures/types';
+import { TRANSITION_OVERLAYS, SOUND_EFFECTS, getAssetById } from '../../assets/registry';
 
 const STROKE_SWATCHES = ['#000000', '#ffffff', '#1a1c1d', '#e8262b'];
 const GLOW_SWATCHES = ['#0066ff', '#00f0ff', '#a855f7', '#ec4899', '#eab308', '#22c55e', '#ffffff'];
@@ -78,7 +80,63 @@ export const EffectsInspector: React.FC = () => {
     setKeywordPunchEnabled,
     keywordPunchIntensity,
     setKeywordPunchIntensity,
+    transitionOverlays,
+    addTransitionOverlay,
+    removeTransitionOverlay,
+    updateTransitionOverlay,
+    soundEffects,
+    addSoundEffect,
+    removeSoundEffect,
+    updateSoundEffect,
   } = useProject();
+
+  const [selectedTransitionId, setSelectedTransitionId] = useState<string>(
+    TRANSITION_OVERLAYS[0]?.id ?? 'film_burn',
+  );
+  const [newTransitionStartFrame, setNewTransitionStartFrame] = useState<number>(0);
+  const [newTransitionDuration, setNewTransitionDuration] = useState<number>(30);
+
+  const [selectedSfxId, setSelectedSfxId] = useState<string>(
+    SOUND_EFFECTS[0]?.id ?? 'vine_boom',
+  );
+  const [newSfxStartFrame, setNewSfxStartFrame] = useState<number>(0);
+
+  const handlePlayAudio = (assetPath: string) => {
+    try {
+      const src = staticFile(assetPath);
+      const audio = new Audio(src);
+      audio.play().catch((e) => console.warn('Audio preview error:', e));
+    } catch (err) {
+      console.warn('Failed to play preview:', err);
+    }
+  };
+
+  const handleAddTransition = () => {
+    const id =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `trans-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    addTransitionOverlay({
+      id,
+      assetId: selectedTransitionId,
+      startFrame: newTransitionStartFrame,
+      durationInFrames: newTransitionDuration,
+      opacity: 1,
+    });
+  };
+
+  const handleAddSfx = () => {
+    const id =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `sfx-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    addSoundEffect({
+      id,
+      assetId: selectedSfxId,
+      startFrame: newSfxStartFrame,
+      volume: 1,
+    });
+  };
 
   const renderTextureItem = (
     title: string,
@@ -572,6 +630,269 @@ export const EffectsInspector: React.FC = () => {
             setKeywordPunchIntensity,
           )}
         </div>
+      </section>
+
+      <hr className="border-outline-variant/40" />
+
+      {/* SECTION: Transition Overlays (Visual Assets) */}
+      <section className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wider text-outline font-label-caps">
+            Transition Overlays
+          </span>
+          <span className="text-[11px] text-outline">Visual Bursts</span>
+        </div>
+
+        {/* Add Placement Card */}
+        <div className="flex flex-col gap-2.5 p-3 rounded-xl border border-outline-variant/50 bg-surface-container-lowest">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-on-surface">Select Transition</span>
+            <select
+              value={selectedTransitionId}
+              onChange={(e) => setSelectedTransitionId(e.target.value)}
+              className="w-full text-xs p-2 rounded-lg bg-surface-container-high border border-outline-variant/50 text-on-surface focus:outline-hidden focus:border-primary cursor-pointer"
+            >
+              {TRANSITION_OVERLAYS.map((asset) => (
+                <option key={asset.id} value={asset.id}>
+                  {asset.label} ({asset.tags.join(', ')})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] text-outline">Start Frame</span>
+              <input
+                type="number"
+                min={0}
+                value={newTransitionStartFrame}
+                onChange={(e) => setNewTransitionStartFrame(Math.max(0, parseInt(e.target.value) || 0))}
+                className="w-full text-xs p-1.5 rounded-md bg-surface-container-high border border-outline-variant/50 text-on-surface"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] text-outline">Duration (frames)</span>
+              <input
+                type="number"
+                min={1}
+                value={newTransitionDuration}
+                onChange={(e) => setNewTransitionDuration(Math.max(1, parseInt(e.target.value) || 30))}
+                className="w-full text-xs p-1.5 rounded-md bg-surface-container-high border border-outline-variant/50 text-on-surface"
+              />
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleAddTransition}
+            className="w-full mt-1 py-1.5 px-3 rounded-lg bg-primary text-on-primary text-xs font-semibold hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+          >
+            <span className="material-symbols-outlined text-sm">add</span>
+            Add Transition Placement
+          </button>
+        </div>
+
+        {/* Placed Overlays List */}
+        {transitionOverlays.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <span className="text-[11px] font-semibold text-outline uppercase tracking-wider">
+              Placed Transitions ({transitionOverlays.length})
+            </span>
+            {transitionOverlays.map((item) => {
+              const asset = getAssetById(item.assetId);
+              return (
+                <div
+                  key={item.id}
+                  className="flex flex-col gap-2 p-2.5 rounded-lg border border-outline-variant/40 bg-surface-container-low"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-on-surface">{asset?.label ?? item.assetId}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-container-high text-outline">
+                        Frame {item.startFrame} - {item.startFrame + item.durationInFrames}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeTransitionOverlay(item.id)}
+                      className="p-1 rounded text-outline hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
+                      title="Remove Overlay"
+                    >
+                      <span className="material-symbols-outlined text-sm">delete</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-outline">Start Frame</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={item.startFrame}
+                        onChange={(e) =>
+                          updateTransitionOverlay(item.id, { startFrame: Math.max(0, parseInt(e.target.value) || 0) })
+                        }
+                        className="w-full text-xs p-1 rounded bg-surface-container-high border border-outline-variant/40 text-on-surface"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-outline">Opacity ({Math.round((item.opacity ?? 1) * 100)}%)</span>
+                      <input
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        value={item.opacity ?? 1}
+                        onChange={(e) =>
+                          updateTransitionOverlay(item.id, { opacity: parseFloat(e.target.value) })
+                        }
+                        className="w-full accent-primary h-1.5 bg-surface-container-high rounded appearance-none cursor-pointer mt-2"
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <hr className="border-outline-variant/40" />
+
+      {/* SECTION: Sound Effects (SFX Library) */}
+      <section className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wider text-outline font-label-caps">
+            Sound Effects (SFX)
+          </span>
+          <span className="text-[11px] text-outline">20 Audio Cues</span>
+        </div>
+
+        {/* Add SFX Card */}
+        <div className="flex flex-col gap-2.5 p-3 rounded-xl border border-outline-variant/50 bg-surface-container-lowest">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-on-surface">Select SFX</span>
+            <div className="flex gap-1.5 items-center">
+              <select
+                value={selectedSfxId}
+                onChange={(e) => setSelectedSfxId(e.target.value)}
+                className="grow text-xs p-2 rounded-lg bg-surface-container-high border border-outline-variant/50 text-on-surface focus:outline-hidden focus:border-primary cursor-pointer"
+              >
+                {SOUND_EFFECTS.map((asset) => (
+                  <option key={asset.id} value={asset.id}>
+                    [{asset.category.toUpperCase()}] {asset.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => {
+                  const asset = getAssetById(selectedSfxId);
+                  if (asset) handlePlayAudio(asset.path);
+                }}
+                className="p-2 rounded-lg bg-surface-container-high border border-outline-variant/50 hover:border-primary text-primary transition-colors cursor-pointer shrink-0"
+                title="Play Audio Preview"
+              >
+                <span className="material-symbols-outlined text-base">volume_up</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-[11px] text-outline">Trigger Frame</span>
+            <input
+              type="number"
+              min={0}
+              value={newSfxStartFrame}
+              onChange={(e) => setNewSfxStartFrame(Math.max(0, parseInt(e.target.value) || 0))}
+              className="w-full text-xs p-1.5 rounded-md bg-surface-container-high border border-outline-variant/50 text-on-surface"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={handleAddSfx}
+            className="w-full mt-1 py-1.5 px-3 rounded-lg bg-primary text-on-primary text-xs font-semibold hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+          >
+            <span className="material-symbols-outlined text-sm">add</span>
+            Add Sound Effect
+          </button>
+        </div>
+
+        {/* Placed SFX List */}
+        {soundEffects.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <span className="text-[11px] font-semibold text-outline uppercase tracking-wider">
+              Placed SFX ({soundEffects.length})
+            </span>
+            {soundEffects.map((item) => {
+              const asset = getAssetById(item.assetId);
+              return (
+                <div
+                  key={item.id}
+                  className="flex flex-col gap-2 p-2.5 rounded-lg border border-outline-variant/40 bg-surface-container-low"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (asset) handlePlayAudio(asset.path);
+                        }}
+                        className="p-1 rounded text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                        title="Play Audio"
+                      >
+                        <span className="material-symbols-outlined text-sm">play_arrow</span>
+                      </button>
+                      <span className="text-xs font-semibold text-on-surface">{asset?.label ?? item.assetId}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-container-high text-outline">
+                        Frame {item.startFrame}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeSoundEffect(item.id)}
+                      className="p-1 rounded text-outline hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
+                      title="Remove SFX"
+                    >
+                      <span className="material-symbols-outlined text-sm">delete</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-outline">Start Frame</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={item.startFrame}
+                        onChange={(e) =>
+                          updateSoundEffect(item.id, { startFrame: Math.max(0, parseInt(e.target.value) || 0) })
+                        }
+                        className="w-full text-xs p-1 rounded bg-surface-container-high border border-outline-variant/40 text-on-surface"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-outline">Volume ({Math.round((item.volume ?? 1) * 100)}%)</span>
+                      <input
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        value={item.volume ?? 1}
+                        onChange={(e) =>
+                          updateSoundEffect(item.id, { volume: parseFloat(e.target.value) })
+                        }
+                        className="w-full accent-primary h-1.5 bg-surface-container-high rounded appearance-none cursor-pointer mt-2"
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
     </div>
   );

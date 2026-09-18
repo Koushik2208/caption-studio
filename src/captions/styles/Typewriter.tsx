@@ -1,3 +1,4 @@
+import React from "react";
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import type { FrameContentInset } from "../../frames/types";
 import type { CaptionPage } from "../processCaptions";
@@ -5,7 +6,7 @@ import type { CaptionStyleOverrides } from "./types";
 import { applyKeywordEmphasis, DEFAULT_KEYWORDS, isKeywordToken } from "./applyKeywordEmphasis";
 import { getResponsiveFontSize } from "./fontSize";
 import { getCaptionEffectStyle, getCaptionFillStyle, getLegibilityStroke } from "./legibility";
-import { getPositionStyle } from "./position";
+import { formatCaptionToken, getCaptionContainerStyle, getPositionStyle } from "./position";
 import { resolveWordTypography } from "./wordOverrides";
 
 const CURSOR_BLINK_FRAMES = 10;
@@ -40,29 +41,19 @@ export const Typewriter: React.FC<{
 
   return (
     <AbsoluteFill style={getPositionStyle(overrides?.position, height, contentInset, overrides?.customPositionY, overrides?.textAlign)}>
-      <div
-        style={{
-          fontSize,
-          fontWeight: overrides?.fontWeight ?? 700,
-          fontStyle: overrides?.fontStyle ?? "normal",
-          fontFamily: overrides?.fontFamily ?? "Arial, sans-serif",
-          textAlign: overrides?.textAlign ?? "center",
-          whiteSpace: "pre-wrap",
-          maxWidth: "85%",
-          lineHeight: overrides?.lineHeight ?? 1.15,
-          letterSpacing: overrides?.letterSpacing !== undefined ? `${overrides.letterSpacing}px` : undefined,
-          textTransform: overrides?.textTransform ?? "none",
-        }}
-      >
+      <div style={getCaptionContainerStyle(overrides, fontSize)}>
         {page.tokens.map((token, i) => {
           if (i > activeIndex) return null;
 
+          const { cleanText, needsSpace } = formatCaptionToken(token.text, i);
+          if (!cleanText) return null;
+
           const spoken = i < activeIndex;
-          let charsToShow = token.text.length;
+          let charsToShow = cleanText.length;
           if (!spoken) {
             const nextFromMs = page.tokens[i + 1]?.fromMs ?? pageEndMs;
             charsToShow = Math.round(
-              interpolate(currentTimeMs, [token.fromMs, Math.max(token.fromMs + 1, nextFromMs)], [0, token.text.length], {
+              interpolate(currentTimeMs, [token.fromMs, Math.max(token.fromMs + 1, nextFromMs)], [0, cleanText.length], {
                 extrapolateLeft: "clamp",
                 extrapolateRight: "clamp",
               }),
@@ -70,7 +61,7 @@ export const Typewriter: React.FC<{
           }
           if (charsToShow === 0) return null;
 
-          const stillTyping = !spoken && charsToShow < token.text.length;
+          const stillTyping = !spoken && charsToShow < cleanText.length;
           const isKeyword = keywordHighlightEnabled && isKeywordToken(token.text, keywords);
           const emphasis = applyKeywordEmphasis(1, isKeyword, overrides?.highlightIntensity, overrides?.keywordColor);
           const wordTypo = resolveWordTypography(token, fontSize, overrides);
@@ -81,26 +72,28 @@ export const Typewriter: React.FC<{
           const effectStyle = getCaptionEffectStyle(wordTypo.fontSize, isGradient, overrides, emphasis.textShadow);
 
           return (
-            <span
-              key={`${token.fromMs}-${i}`}
-              style={{
-                display: "inline-block",
-                fontFamily: wordTypo.fontFamily,
-                fontWeight: wordTypo.fontWeight,
-                fontStyle: wordTypo.fontStyle,
-                fontSize: wordTypo.fontSize,
-                WebkitTextStroke: getLegibilityStroke(wordTypo.fontSize, overrides),
-                paintOrder: "stroke fill",
-                ...fillStyle,
-                ...effectStyle,
-                transform: `scale(${emphasis.scale})`,
-              }}
-            >
-              {token.text.slice(0, charsToShow)}
-              {stillTyping && (
-                <span style={{ opacity: isTyping ? 1 : 0, color: wordTypo.customColor ?? (overrides?.textColor ?? "white") }}>{"▌"}</span>
-              )}
-            </span>
+            <React.Fragment key={`${token.fromMs}-${i}`}>
+              {needsSpace && " "}
+              <span
+                style={{
+                  display: "inline-block",
+                  fontFamily: wordTypo.fontFamily,
+                  fontWeight: wordTypo.fontWeight,
+                  fontStyle: wordTypo.fontStyle,
+                  fontSize: wordTypo.fontSize,
+                  WebkitTextStroke: getLegibilityStroke(wordTypo.fontSize, overrides),
+                  paintOrder: "stroke fill",
+                  ...fillStyle,
+                  ...effectStyle,
+                  transform: `scale(${emphasis.scale})`,
+                }}
+              >
+                {cleanText.slice(0, charsToShow)}
+                {stillTyping && (
+                  <span style={{ opacity: isTyping ? 1 : 0, color: wordTypo.customColor ?? (overrides?.textColor ?? "white") }}>{"▌"}</span>
+                )}
+              </span>
+            </React.Fragment>
           );
         })}
       </div>

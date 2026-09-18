@@ -12,6 +12,7 @@ export type LeftRightSplitLayoutProps = {
   captions?: React.ReactNode;
   overlays?: React.ReactNode;
   textures?: React.ReactNode;
+  assetOverlays?: React.ReactNode;
   children?: React.ReactNode;
 };
 
@@ -30,6 +31,7 @@ export const LeftRightSplitLayout: React.FC<LeftRightSplitLayoutProps> = ({
   captions,
   overlays,
   textures,
+  assetOverlays,
   children,
 }) => {
   const {
@@ -64,14 +66,14 @@ export const LeftRightSplitLayout: React.FC<LeftRightSplitLayoutProps> = ({
 
   const borderStyle: React.CSSProperties = customBorderEnabled
     ? {
-        border: `${responsiveBorderWidth}px ${customBorderStyle} ${customBorderColor}`,
-      }
+      border: `${responsiveBorderWidth}px ${customBorderStyle} ${customBorderColor}`,
+    }
     : {};
 
   const shadowStyle: React.CSSProperties = customShadowEnabled
     ? {
-        boxShadow: `0 ${Math.round(responsiveShadowBlur * 0.4)}px ${responsiveShadowBlur}px rgba(0, 0, 0, ${customShadowOpacity / 100})`,
-      }
+      boxShadow: `0 ${Math.round(responsiveShadowBlur * 0.4)}px ${responsiveShadowBlur}px rgba(0, 0, 0, ${customShadowOpacity / 100})`,
+    }
     : {};
 
   const visualContent = media ?? children;
@@ -116,6 +118,7 @@ export const LeftRightSplitLayout: React.FC<LeftRightSplitLayoutProps> = ({
           <AbsoluteFill>{visualContent}</AbsoluteFill>
         </div>
         {textures}
+        {assetOverlays}
       </div>
 
       {/* 3. Right Content Region */}
@@ -147,6 +150,7 @@ export const LeftRightSplitLayout: React.FC<LeftRightSplitLayoutProps> = ({
           <AbsoluteFill>{visualContent}</AbsoluteFill>
         </div>
         {textures}
+        {assetOverlays}
       </div>
 
       {/* 4. Composition Overlays & Captions Layer */}

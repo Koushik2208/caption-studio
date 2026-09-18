@@ -25,7 +25,8 @@ type ChromaticAberrationProps = {
 export const ChromaticAberration: React.FC<ChromaticAberrationProps> = ({ textureSettings, children }) => {
   if (!textureSettings?.chromaticAberrationEnabled) return <>{children}</>;
 
-  const intensity = textureSettings.chromaticAberrationIntensity;
+  const rawIntensity = textureSettings.chromaticAberrationIntensity;
+  const intensity: OverlayIntensity = (rawIntensity && OFFSET_PX[rawIntensity]) ? rawIntensity : 'medium';
   const offset = OFFSET_PX[intensity];
   const filterId = `chromatic-aberration-${intensity}`;
 

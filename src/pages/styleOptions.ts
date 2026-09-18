@@ -4,6 +4,10 @@ import type { CaptionStyleVariant } from '../captions/styles/types';
 // list so the two views can't drift out of sync.
 export const ANIMATION_STYLES: { value: CaptionStyleVariant; label: string }[] = [
   { value: 'signature', label: 'Signature' },
+  { value: 'splitReveal', label: 'Street' },
+  { value: 'wordStamp', label: 'Word Stamp' },
+  { value: 'blurResolve', label: 'Blur Resolve' },
+  { value: 'sentenceBlock', label: 'Sentence Block' },
   { value: 'calmPhrase', label: 'Calm Phrase' },
   { value: 'typewriter', label: 'Typewriter' },
   { value: 'slideUp', label: 'Slide-up' },

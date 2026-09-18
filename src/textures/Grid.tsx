@@ -11,9 +11,10 @@ const SETTINGS: Record<OverlayIntensity, { spacing: number; strokeOpacity: numbe
 // read from useVideoConfig() rather than reel-craft's fixed WIDTH/HEIGHT
 // constants, so this also renders correctly in the horizontal 1920x1080
 // composition.
-export const Grid: React.FC<{ intensity: OverlayIntensity }> = ({ intensity }) => {
+export const Grid: React.FC<{ intensity?: OverlayIntensity }> = ({ intensity = 'medium' }) => {
   const { width, height } = useVideoConfig();
-  const { spacing, strokeOpacity } = SETTINGS[intensity];
+  const config = (intensity && SETTINGS[intensity]) ? SETTINGS[intensity] : SETTINGS.medium;
+  const { spacing, strokeOpacity } = config;
 
   const verticals: number[] = [];
   for (let x = 0; x <= width; x += spacing) verticals.push(x);

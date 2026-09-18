@@ -2,7 +2,6 @@ import { Player } from '@remotion/player';
 import { useLayout } from '../context/LayoutContext';
 import { useProject } from '../context/ProjectContext';
 import { CaptionPreviewComposition } from './CaptionPreviewComposition';
-import { CaptionExportComposition } from './CaptionExportComposition';
 import { useMediaDurationFrames } from './useMediaDurationFrames';
 
 // Base resolution is 1080x1920 vertical per CLAUDE.md; horizontal swaps to
@@ -34,45 +33,28 @@ export const PreviewPlayer: React.FC<PreviewPlayerProps> = ({ className }) => {
     frameSettings,
     textureSettings,
     motionSettings,
+    videoMotion,
+    assetSettings,
     audioAmplitude,
+    currentCreativeProject,
   } = useProject();
   const mediaDurationFrames = useMediaDurationFrames(mediaUrl, FPS);
   const mediaKind = mediaFile ? (mediaFile.type.startsWith('audio/') ? 'audio' : 'video') : null;
   const { width, height } = layoutMode === 'horizontal' ? HORIZONTAL_DIMENSIONS : VERTICAL_DIMENSIONS;
 
-  // Dev-workflow convenience: a cached transcript can restore captions
-  // without a re-uploaded media file (see ProjectContext). With no media to
-  // play, render the same chroma-key background CaptionExportComposition
-  // uses on export instead of a blank/black player.
+  // Derive duration: use uploaded media duration if available, otherwise read
+  // durationInFrames from loaded Creative JSON or the last caption's endMs.
   const hasCaptions = !!captions && captions.length > 0;
-  if (!mediaUrl && hasCaptions) {
-    const durationInFrames = Math.max(1, Math.round((captions[captions.length - 1].endMs / 1000) * FPS));
-    return (
-      <Player
-        component={CaptionExportComposition}
-        inputProps={{
-          captions,
-          styleVariant,
-          styleOverrides,
-          overlaySettings,
-          frameSettings,
-          textureSettings,
-          motionSettings,
-          audioAmplitude,
-        }}
-        durationInFrames={durationInFrames}
-        compositionWidth={width}
-        compositionHeight={height}
-        fps={FPS}
-        controls
-        style={{ width: '100%', height: '100%' }}
-        className={className}
-      />
-    );
-  }
+  const projectDurationFrames =
+    currentCreativeProject?.durationInFrames ??
+    (hasCaptions
+      ? Math.max(1, Math.round((captions[captions.length - 1].endMs / 1000) * FPS))
+      : FALLBACK_DURATION_FRAMES);
+  const durationInFrames = mediaUrl ? mediaDurationFrames : projectDurationFrames;
 
   return (
     <Player
+      acknowledgeRemotionLicense
       component={CaptionPreviewComposition}
       inputProps={{
         captions,
@@ -84,9 +66,11 @@ export const PreviewPlayer: React.FC<PreviewPlayerProps> = ({ className }) => {
         frameSettings,
         textureSettings,
         motionSettings,
+        videoMotion,
+        assetSettings,
         audioAmplitude,
       }}
-      durationInFrames={mediaUrl ? mediaDurationFrames : FALLBACK_DURATION_FRAMES}
+      durationInFrames={durationInFrames}
       compositionWidth={width}
       compositionHeight={height}
       fps={FPS}

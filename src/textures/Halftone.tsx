@@ -11,9 +11,10 @@ const SETTINGS: Record<OverlayIntensity, { dotRadius: number; spacing: number; o
 // read from useVideoConfig() rather than reel-craft's fixed WIDTH/HEIGHT
 // constants, so this also renders correctly in the horizontal 1920x1080
 // composition.
-export const Halftone: React.FC<{ intensity: OverlayIntensity }> = ({ intensity }) => {
+export const Halftone: React.FC<{ intensity?: OverlayIntensity }> = ({ intensity = 'medium' }) => {
   const { width, height } = useVideoConfig();
-  const { dotRadius, spacing, opacity } = SETTINGS[intensity];
+  const config = (intensity && SETTINGS[intensity]) ? SETTINGS[intensity] : SETTINGS.medium;
+  const { dotRadius, spacing, opacity } = config;
 
   return (
     <AbsoluteFill style={{ pointerEvents: 'none', mixBlendMode: 'overlay' }}>

@@ -12,6 +12,7 @@ export const FRAME_OPTIONS: { value: FrameVariant; label: string }[] = [
   { value: 'filmStrip', label: 'Film Strip' },
   { value: 'squareBezel', label: 'Square Bezel' },
   { value: 'vintageProjector', label: 'Vintage Projector' },
+  { value: 'terminal', label: 'Terminal' },
 ];
 
 export const FRAME_SHELL_COLORS = [

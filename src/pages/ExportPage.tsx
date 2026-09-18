@@ -6,6 +6,7 @@ import { useProject } from '../context/ProjectContext';
 import { useMediaDurationFrames } from '../preview/useMediaDurationFrames';
 import { formatProjectId, toSafeFilename } from '../utils/filename';
 import { RESOLUTION_OPTIONS, RESOLUTION_SCALE, type ResolutionOption } from '../export/resolutions';
+import { serializeCreativeProject } from '../creative/index.js';
 
 const FPS = 30;
 const POLL_INTERVAL_MS = 1000;
@@ -31,9 +32,12 @@ export const ExportPage: React.FC = () => {
     frameSettings,
     textureSettings,
     motionSettings,
+    videoMotion,
+    assetSettings,
     audioAmplitude,
     projectName,
     projectId,
+    exportCreativeProject,
   } = useProject();
   const durationInFrames = useMediaDurationFrames(mediaUrl, FPS);
   const captionDurationFrames =
@@ -45,7 +49,7 @@ export const ExportPage: React.FC = () => {
   const safeFilename = toSafeFilename(projectName);
   const mp4Available = !!mediaFile && mediaFile.type.startsWith('video/');
 
-  const [selectedFormat, setSelectedFormat] = useState<'mp4' | 'chroma' | 'srt'>('chroma');
+  const [selectedFormat, setSelectedFormat] = useState<'mp4' | 'chroma' | 'srt' | 'json'>('chroma');
   const [resolution, setResolution] = useState<ResolutionOption>(RESOLUTION_OPTIONS[0]);
 
   const [isExporting, setIsExporting] = useState(false);
@@ -96,12 +100,28 @@ export const ExportPage: React.FC = () => {
       icon: 'description',
       disabled: false,
     },
+    {
+      id: 'json',
+      name: 'Creative JSON',
+      description: 'Versioned AI Creative Document (beats, styles, assets)',
+      icon: 'data_object',
+      disabled: false,
+    },
   ] as const;
 
   const exportSrt = () => {
     if (!captions || captions.length === 0) return;
     const srtContent = serializeSrt({ lines: captions.map((caption) => [caption]) });
     triggerBlobDownload(new Blob([srtContent], { type: 'text/plain' }), `${safeFilename}.srt`);
+    setExportProgress(100);
+    setExportComplete(true);
+    setLastRender(new Date().toLocaleTimeString());
+  };
+
+  const exportCreativeJson = () => {
+    const project = exportCreativeProject();
+    const jsonContent = serializeCreativeProject(project, true);
+    triggerBlobDownload(new Blob([jsonContent], { type: 'application/json' }), `${safeFilename}.creative.json`);
     setExportProgress(100);
     setExportComplete(true);
     setLastRender(new Date().toLocaleTimeString());
@@ -172,6 +192,8 @@ export const ExportPage: React.FC = () => {
           frameSettings,
           textureSettings,
           motionSettings,
+          videoMotion,
+          assetSettings,
           audioAmplitude,
           durationInFrames: effectiveDurationFrames,
           scale: RESOLUTION_SCALE[resolution],
@@ -208,6 +230,8 @@ export const ExportPage: React.FC = () => {
           frameSettings,
           textureSettings,
           motionSettings,
+          videoMotion,
+          assetSettings,
           audioAmplitude,
           durationInFrames: effectiveDurationFrames,
           scale: RESOLUTION_SCALE[resolution],
@@ -238,6 +262,11 @@ export const ExportPage: React.FC = () => {
 
     if (selectedFormat === 'srt') {
       exportSrt();
+      return;
+    }
+
+    if (selectedFormat === 'json') {
+      exportCreativeJson();
       return;
     }
 
