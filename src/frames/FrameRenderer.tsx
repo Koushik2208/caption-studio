@@ -1,6 +1,9 @@
 import React from 'react';
-import { useVideoConfig } from 'remotion';
+import { AbsoluteFill, useVideoConfig } from 'remotion';
+import { CanvasBackground } from './CanvasBackground';
 import { CustomCardFrame } from './CustomCardFrame';
+import { TopBottomSplitLayout } from './TopBottomSplitLayout';
+import { LeftRightSplitLayout } from './LeftRightSplitLayout';
 import { CinematicScope } from './CinematicScope';
 import { FilmStrip } from './FilmStrip';
 import { GradientBorder } from './GradientBorder';
@@ -10,19 +13,99 @@ import { SquareBezel } from './SquareBezel';
 import { VintageProjector } from './VintageProjector';
 import type { FrameSettings } from './types';
 
-type FrameRendererProps = {
+export type FrameRendererProps = {
   frameSettings?: FrameSettings;
-  children: React.ReactNode;
+  media?: React.ReactNode;
+  captions?: React.ReactNode;
+  overlays?: React.ReactNode;
+  textures?: React.ReactNode;
+  children?: React.ReactNode;
 };
 
-// Applies the selected frame chrome around whatever content the caller
-// renders (media + captions + overlays) - 'none'/missing settings pass
-// children through unwrapped, matching CaptionPreviewComposition/
-// CaptionExportComposition's pre-frame output exactly.
-export const FrameRenderer: React.FC<FrameRendererProps> = ({ frameSettings, children }) => {
+// Applies the selected composition layout & frame chrome around whatever content
+// the caller renders (media + captions + overlays).
+export const FrameRenderer: React.FC<FrameRendererProps> = ({
+  frameSettings,
+  media,
+  captions,
+  overlays,
+  textures,
+  children,
+}) => {
   const { width, height } = useVideoConfig();
+  const layout = frameSettings?.layout ?? 'floating-card';
 
-  // V4 Custom Card Mode branch
+  // 1. V4 Phase 3A: Top / Bottom Split Layout
+  if (layout === 'top-bottom-split') {
+    return (
+      <TopBottomSplitLayout
+        frameSettings={
+          frameSettings ?? {
+            variant: 'none',
+            bgColor: '#000000',
+            bezelRadiusMultiplier: 1,
+          }
+        }
+        compositionWidth={width}
+        compositionHeight={height}
+        media={media}
+        captions={captions}
+        overlays={overlays}
+        textures={textures}
+      >
+        {children}
+      </TopBottomSplitLayout>
+    );
+  }
+
+  // 2. V4 Phase 3C: Left / Right Split Layout
+  if (layout === 'left-right-split') {
+    return (
+      <LeftRightSplitLayout
+        frameSettings={
+          frameSettings ?? {
+            variant: 'none',
+            bgColor: '#000000',
+            bezelRadiusMultiplier: 1,
+          }
+        }
+        compositionWidth={width}
+        compositionHeight={height}
+        media={media}
+        captions={captions}
+        overlays={overlays}
+        textures={textures}
+      >
+        {children}
+      </LeftRightSplitLayout>
+    );
+  }
+
+  // 3. V4 Phase 3A: Full Bleed Layout
+  if (layout === 'full-bleed') {
+    const visualContent = media ?? children;
+    return (
+      <AbsoluteFill style={{ backgroundColor: '#000000', overflow: 'hidden' }}>
+        <CanvasBackground
+          backdrop={frameSettings?.customBackdrop}
+          color={frameSettings?.customBackdropColor}
+          gradient={frameSettings?.customBackdropGradient}
+        >
+          {visualContent}
+        </CanvasBackground>
+        <AbsoluteFill>
+          {visualContent}
+          {textures}
+          <AbsoluteFill>
+            {captions}
+            {overlays}
+          </AbsoluteFill>
+        </AbsoluteFill>
+      </AbsoluteFill>
+    );
+  }
+
+  // 3. Floating Card Layout (Default & backward compatible)
   if (frameSettings?.cardMode === 'custom') {
     return (
       <CustomCardFrame

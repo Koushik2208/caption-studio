@@ -13,7 +13,9 @@ export type CaptionStyleVariant = "signature" | "calmPhrase" | "typewriter" | "s
 // Caption text is always horizontally centered - only vertical placement is
 // configurable, since left/right/corner placement never makes sense for
 // caption text in a vertical or horizontal video. See position.ts.
-export type CaptionPosition = "top" | "center" | "bottom";
+export type CaptionPosition = "top" | "center" | "bottom" | "split-center";
+
+export type CaptionAlignment = "left" | "center" | "right";
 
 export type WordTypographyOverride = {
   fontFamily?: string;
@@ -32,6 +34,8 @@ export type CaptionStyleOverrides = {
   textColor?: string;
   highlightColor?: string;
   position?: CaptionPosition;
+  customPositionY?: number; // Normalized vertical placement (0.0 to 1.0)
+  textAlign?: CaptionAlignment; // Horizontal alignment ('left' | 'center' | 'right')
   strokeEnabled?: boolean;
   strokeColor?: string;
   strokeWidth?: number;

@@ -35,7 +35,7 @@ export const Signature: React.FC<{
   const keywords = overrides?.keywords ?? DEFAULT_KEYWORDS;
 
   return (
-    <AbsoluteFill style={getPositionStyle(overrides?.position, height, contentInset)}>
+    <AbsoluteFill style={getPositionStyle(overrides?.position, height, contentInset, overrides?.customPositionY, overrides?.textAlign)}>
       <div
         style={{
           fontSize,
@@ -43,7 +43,7 @@ export const Signature: React.FC<{
           fontStyle: overrides?.fontStyle ?? "normal",
           fontFamily: overrides?.fontFamily ?? "Arial, sans-serif",
           color: baseTextColor,
-          textAlign: "center",
+          textAlign: overrides?.textAlign ?? "center",
           whiteSpace: "pre-wrap",
           maxWidth: "85%",
           lineHeight: overrides?.lineHeight ?? 1.15,

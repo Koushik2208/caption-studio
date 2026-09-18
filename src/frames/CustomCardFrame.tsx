@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill } from 'remotion';
+import { CanvasBackground } from './CanvasBackground';
 import { getCardDimensions } from './customCardUtils';
 import type { FrameSettings } from './types';
 
@@ -61,25 +62,14 @@ export const CustomCardFrame: React.FC<CustomCardFrameProps> = ({
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#000000', overflow: 'hidden' }}>
-      {/* 1. Backdrop Layer */}
-      {customBackdrop === 'solid' && (
-        <AbsoluteFill style={{ backgroundColor: customBackdropColor }} />
-      )}
-      {customBackdrop === 'gradient' && (
-        <AbsoluteFill style={{ background: customBackdropGradient }} />
-      )}
-      {customBackdrop === 'blurred-video' && (
-        <AbsoluteFill
-          style={{
-            overflow: 'hidden',
-            filter: 'blur(50px) brightness(0.55) saturate(1.25)',
-            transform: 'scale(1.2)',
-            pointerEvents: 'none',
-          }}
-        >
-          {children}
-        </AbsoluteFill>
-      )}
+      {/* 1. Full Canvas Backdrop Layer */}
+      <CanvasBackground
+        backdrop={customBackdrop}
+        color={customBackdropColor}
+        gradient={customBackdropGradient}
+      >
+        {children}
+      </CanvasBackground>
 
       {/* 2. Custom Video Card Container */}
       <div

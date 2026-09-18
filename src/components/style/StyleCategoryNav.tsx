@@ -1,6 +1,13 @@
 import React from 'react';
 
-export type StyleCategory = 'text' | 'position' | 'highlight' | 'animation' | 'effects' | 'overlay';
+export type StyleCategory =
+  | 'text'
+  | 'position'
+  | 'highlight'
+  | 'animation'
+  | 'effects'
+  | 'composition'
+  | 'overlay';
 
 interface CategoryItem {
   id: StyleCategory;
@@ -15,7 +22,7 @@ const CATEGORIES: CategoryItem[] = [
   { id: 'highlight', label: 'Highlight', icon: 'ink_highlighter', description: 'Active word & keywords' },
   { id: 'animation', label: 'Animation', icon: 'motion_photos_on', description: 'Motion & transitions' },
   { id: 'effects', label: 'Effects', icon: 'blur_on', description: 'Visual textures & atmosphere' },
-  { id: 'overlay', label: 'Overlay', icon: 'layers', description: 'Frames, watermark & graphics' },
+  { id: 'composition', label: 'Composition', icon: 'layers', description: 'Frames, canvas & graphics' },
 ];
 
 interface StyleCategoryNavProps {

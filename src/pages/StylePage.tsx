@@ -15,7 +15,8 @@ const CATEGORY_TITLES: Record<StyleCategory, string> = {
   highlight: 'Highlight & Karaoke',
   animation: 'Motion & Animations',
   effects: 'Effects & Atmosphere',
-  overlay: 'Frames & Overlays',
+  composition: 'Composition',
+  overlay: 'Composition',
 };
 
 const CATEGORY_ICONS: Record<StyleCategory, string> = {
@@ -24,6 +25,7 @@ const CATEGORY_ICONS: Record<StyleCategory, string> = {
   highlight: 'ink_highlighter',
   animation: 'motion_photos_on',
   effects: 'blur_on',
+  composition: 'layers',
   overlay: 'layers',
 };
 
@@ -78,7 +80,7 @@ export const StylePage: React.FC = () => {
             {activeCategory === 'highlight' && <HighlightInspector />}
             {activeCategory === 'animation' && <AnimationInspector />}
             {activeCategory === 'effects' && <EffectsInspector />}
-            {activeCategory === 'overlay' && <OverlayInspector />}
+            {(activeCategory === 'composition' || activeCategory === 'overlay') && <OverlayInspector />}
           </div>
 
           {/* Footer Navigation Action */}

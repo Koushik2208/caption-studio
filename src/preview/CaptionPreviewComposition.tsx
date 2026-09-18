@@ -61,37 +61,60 @@ export const CaptionPreviewComposition: React.FC<CaptionPreviewProps> = ({
     frameContentInset.left > 0 ||
     frameContentInset.right > 0;
 
+  const mediaElement = (
+    <>
+      {mediaUrl && mediaKind === 'video' && (
+        <BackgroundEffectsRenderer
+          textureSettings={textureSettings}
+          audioAmplitude={audioAmplitude}
+          captions={captions}
+          styleOverrides={styleOverrides}
+        >
+          <Video src={mediaUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        </BackgroundEffectsRenderer>
+      )}
+      {mediaUrl && mediaKind === 'audio' && <Audio src={mediaUrl} />}
+    </>
+  );
+
+  const textureElement = <TextureOverlayRenderer textureSettings={textureSettings} />;
+
+  const captionElement =
+    captions && captions.length > 0 ? (
+      <CaptionRenderer
+        captions={captions}
+        styleVariant={styleVariant}
+        styleOverrides={styleOverrides}
+        frameContentInset={frameContentInset}
+      />
+    ) : null;
+
+  const overlayElement = (
+    <>
+      {overlaySettings?.watermarkEnabled && (
+        <WatermarkOverlay opacity={overlaySettings.watermarkOpacity} position={overlaySettings.watermarkPosition} />
+      )}
+      {overlaySettings?.progressBarEnabled && (
+        <ProgressBarOverlay color={overlaySettings.progressBarColor} position={overlaySettings.progressBarPosition} />
+      )}
+      <MotionGraphicsRenderer motionSettings={motionSettings} />
+    </>
+  );
+
   return (
-    <FrameRenderer frameSettings={frameSettings}>
+    <FrameRenderer
+      frameSettings={frameSettings}
+      media={mediaElement}
+      captions={captionElement}
+      overlays={overlayElement}
+      textures={textureElement}
+    >
       <AbsoluteFill style={{ backgroundColor: 'black' }}>
-        {mediaUrl && mediaKind === 'video' && (
-          <BackgroundEffectsRenderer
-            textureSettings={textureSettings}
-            audioAmplitude={audioAmplitude}
-            captions={captions}
-            styleOverrides={styleOverrides}
-          >
-            <Video src={mediaUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          </BackgroundEffectsRenderer>
-        )}
-        {mediaUrl && mediaKind === 'audio' && <Audio src={mediaUrl} />}
-        <TextureOverlayRenderer textureSettings={textureSettings} />
+        {mediaElement}
+        {textureElement}
         <AbsoluteFill style={hasFrameInset ? { zIndex: 1 } : undefined}>
-          {captions && captions.length > 0 && (
-            <CaptionRenderer
-              captions={captions}
-              styleVariant={styleVariant}
-              styleOverrides={styleOverrides}
-              frameContentInset={frameContentInset}
-            />
-          )}
-          {overlaySettings?.watermarkEnabled && (
-            <WatermarkOverlay opacity={overlaySettings.watermarkOpacity} position={overlaySettings.watermarkPosition} />
-          )}
-          {overlaySettings?.progressBarEnabled && (
-            <ProgressBarOverlay color={overlaySettings.progressBarColor} position={overlaySettings.progressBarPosition} />
-          )}
-          <MotionGraphicsRenderer motionSettings={motionSettings} />
+          {captionElement}
+          {overlayElement}
         </AbsoluteFill>
       </AbsoluteFill>
     </FrameRenderer>

@@ -8,6 +8,12 @@ export type FrameVariant =
   | 'squareBezel'
   | 'vintageProjector';
 
+export type CompositionLayout =
+  | 'full-bleed'
+  | 'floating-card'
+  | 'top-bottom-split'
+  | 'left-right-split';
+
 export type FrameCardMode = 'preset' | 'custom';
 export type CardAspectRatio = '9:16' | '4:5' | '1:1' | '16:9';
 export type CardBorderStyle = 'solid' | 'dashed' | 'double';
@@ -17,6 +23,9 @@ export type CardBackdrop = 'none' | 'solid' | 'gradient' | 'blurred-video';
 // settings object in ProjectContext drives the live PreviewPlayer and gets
 // baked into the real export render.
 export type FrameSettings = {
+  // V4 Phase 3A Layout Mode
+  layout?: CompositionLayout;
+
   // Preset mode variant (minimalBezel, squareBezel, neonGlow, etc.)
   variant: FrameVariant;
   // Shell color for bezel-style frames (MinimalBezel, SquareBezel) - other frames ignore it.
@@ -42,6 +51,17 @@ export type FrameSettings = {
   customBackdrop?: CardBackdrop; // 'none' | 'solid' | 'gradient' | 'blurred-video'
   customBackdropColor?: string; // hex, default '#121214'
   customBackdropGradient?: string; // CSS gradient string
+
+  // V4 Phase 3D Split Controls
+  splitGap?: number; // 0 - 40px, default 0
+  splitTopFocalX?: number; // 0 - 1, default 0.5
+  splitTopFocalY?: number; // 0 - 1, default 0.25
+  splitBottomFocalX?: number; // 0 - 1, default 0.5
+  splitBottomFocalY?: number; // 0 - 1, default 0.75
+  splitLeftFocalX?: number; // 0 - 1, default 0.25
+  splitLeftFocalY?: number; // 0 - 1, default 0.5
+  splitRightFocalX?: number; // 0 - 1, default 0.75
+  splitRightFocalY?: number; // 0 - 1, default 0.5
 };
 
 // How much of the composition's edges an active frame's own chrome already

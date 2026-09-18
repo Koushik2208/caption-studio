@@ -1,119 +1,118 @@
 import React from 'react';
 import { useProject } from '../../context/ProjectContext';
-import type { CaptionPosition } from '../../captions/styles/types';
-
-interface PositionOption {
-  value: CaptionPosition;
-  label: string;
-  icon: string;
-  description: string;
-}
-
-const POSITION_OPTIONS: PositionOption[] = [
-  {
-    value: 'top',
-    label: 'Top',
-    icon: 'align_vertical_top',
-    description: 'Positioned near the upper area with safe status bar margin',
-  },
-  {
-    value: 'center',
-    label: 'Center',
-    icon: 'align_vertical_center',
-    description: 'Vertically and horizontally centered for maximum focus',
-  },
-  {
-    value: 'bottom',
-    label: 'Bottom',
-    icon: 'align_vertical_bottom',
-    description: 'Standard lower third placement with safe home indicator clearance',
-  },
-];
 
 export const PositionInspector: React.FC = () => {
-  const { position, setPosition } = useProject();
+  const {
+    layout,
+    position,
+    setPosition,
+    captionPositionY,
+    setCaptionPositionY,
+    textAlign,
+    setTextAlign,
+  } = useProject();
 
   return (
     <div className="flex flex-col gap-6 p-4">
+      {/* SECTION: Position Presets */}
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold uppercase tracking-wider text-outline font-label-caps">
-            Vertical Placement
+            Caption Position
           </span>
         </div>
 
-        {/* Visual Placement Selector */}
-        <div className="flex flex-col gap-2.5">
-          {POSITION_OPTIONS.map((opt) => {
-            const isSelected = position === opt.value;
-            return (
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs text-on-surface font-medium">Position Presets</span>
+          <div className={`grid ${layout === 'top-bottom-split' ? 'grid-cols-3' : 'grid-cols-2'} gap-1 bg-surface-container-low p-1 rounded-lg`}>
+            <button
+              type="button"
+              onClick={() => setPosition('bottom')}
+              className={`h-8 flex items-center justify-center rounded-md text-xs font-medium transition-all cursor-pointer ${
+                position === 'bottom'
+                  ? 'bg-white border border-primary/40 text-primary shadow-2xs font-semibold'
+                  : 'border border-transparent text-on-surface-variant hover:bg-surface-container-high/60'
+              }`}
+            >
+              Bottom
+            </button>
+            <button
+              type="button"
+              onClick={() => setPosition('center')}
+              className={`h-8 flex items-center justify-center rounded-md text-xs font-medium transition-all cursor-pointer ${
+                position === 'center'
+                  ? 'bg-white border border-primary/40 text-primary shadow-2xs font-semibold'
+                  : 'border border-transparent text-on-surface-variant hover:bg-surface-container-high/60'
+              }`}
+            >
+              Center
+            </button>
+            {layout === 'top-bottom-split' && (
               <button
-                key={opt.value}
                 type="button"
-                onClick={() => setPosition(opt.value)}
-                className={`flex items-center gap-3.5 p-3 rounded-xl border text-left transition-all duration-150 cursor-pointer ${
-                  isSelected
-                    ? 'border-primary bg-primary-container/5 shadow-xs ring-1 ring-primary'
-                    : 'border-outline-variant/60 bg-surface-container-lowest hover:border-primary/50 hover:bg-surface-container-low'
+                onClick={() => setPosition('split-center')}
+                className={`h-8 flex items-center justify-center rounded-md text-xs font-medium transition-all cursor-pointer ${
+                  position === 'split-center'
+                    ? 'bg-white border border-primary/40 text-primary shadow-2xs font-semibold'
+                    : 'border border-transparent text-on-surface-variant hover:bg-surface-container-high/60'
                 }`}
               >
-                {/* Visual miniature representation */}
-                <div
-                  className={`w-12 h-16 rounded-md border flex flex-col items-center justify-between p-1 shrink-0 ${
-                    isSelected
-                      ? 'border-primary/50 bg-primary/5'
-                      : 'border-outline-variant/50 bg-surface-container-low'
-                  }`}
-                >
-                  <div
-                    className={`w-8 h-1.5 rounded-full transition-all ${
-                      opt.value === 'top'
-                        ? isSelected
-                          ? 'bg-primary shadow-xs'
-                          : 'bg-on-surface-variant'
-                        : 'opacity-0'
-                    }`}
-                  />
-                  <div
-                    className={`w-8 h-1.5 rounded-full transition-all ${
-                      opt.value === 'center'
-                        ? isSelected
-                          ? 'bg-primary shadow-xs'
-                          : 'bg-on-surface-variant'
-                        : 'opacity-0'
-                    }`}
-                  />
-                  <div
-                    className={`w-8 h-1.5 rounded-full transition-all ${
-                      opt.value === 'bottom'
-                        ? isSelected
-                          ? 'bg-primary shadow-xs'
-                          : 'bg-on-surface-variant'
-                        : 'opacity-0'
-                    }`}
-                  />
-                </div>
-
-                <div className="flex flex-col min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[18px] text-primary">
-                      {opt.icon}
-                    </span>
-                    <span
-                      className={`text-sm font-semibold ${
-                        isSelected ? 'text-primary' : 'text-on-surface'
-                      }`}
-                    >
-                      {opt.label}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-outline mt-0.5 leading-relaxed">
-                    {opt.description}
-                  </p>
-                </div>
+                Split Center
               </button>
-            );
-          })}
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION: Continuous Vertical Position */}
+      <section className="flex flex-col gap-2">
+        <div className="flex justify-between items-center text-xs">
+          <span className="text-on-surface font-medium">Vertical Position</span>
+          <span className="text-[11px] text-outline font-mono">
+            {Math.round(captionPositionY * 100)}%
+          </span>
+        </div>
+        <input
+          type="range"
+          min={0.10}
+          max={0.90}
+          step={0.01}
+          value={captionPositionY}
+          onChange={(e) => setCaptionPositionY(Number(e.target.value))}
+          className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded-lg appearance-none"
+        />
+        <div className="flex justify-between text-[10px] text-outline font-mono px-0.5">
+          <span>Top (10%)</span>
+          <span>Center (50%)</span>
+          <span>Bottom (90%)</span>
+        </div>
+      </section>
+
+      {/* SECTION: Caption Alignment */}
+      <section className="flex flex-col gap-2">
+        <span className="text-xs text-on-surface font-medium">Alignment</span>
+        <div className="grid grid-cols-3 gap-1 bg-surface-container-low p-1 rounded-lg">
+          {(
+            [
+              { value: 'left', label: 'Left', icon: 'format_align_left' },
+              { value: 'center', label: 'Center', icon: 'format_align_center' },
+              { value: 'right', label: 'Right', icon: 'format_align_right' },
+            ] as const
+          ).map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setTextAlign(opt.value)}
+              className={`h-8 flex items-center justify-center gap-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
+                textAlign === opt.value
+                  ? 'bg-white border border-primary/40 text-primary shadow-2xs font-semibold'
+                  : 'border border-transparent text-on-surface-variant hover:bg-surface-container-high/60'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[15px]">{opt.icon}</span>
+              <span>{opt.label}</span>
+            </button>
+          ))}
         </div>
       </section>
 
@@ -125,9 +124,9 @@ export const PositionInspector: React.FC = () => {
           info
         </span>
         <div className="flex flex-col gap-0.5 text-[11px] leading-normal text-outline">
-          <span className="font-semibold text-on-surface">Safe-Zone Margin Rule</span>
+          <span className="font-semibold text-on-surface">Composition-Aware Positioning</span>
           <span>
-            Captions automatically maintain a 9% relative height buffer to stay clear of TikTok/Reels UI badges and platform navigation.
+            Caption presets and vertical slider adapt smoothly across Full Bleed, Floating Card, Top/Bottom Split, and Left/Right Split layouts.
           </span>
         </div>
       </div>

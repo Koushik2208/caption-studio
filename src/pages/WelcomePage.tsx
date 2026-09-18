@@ -19,8 +19,8 @@ export const WelcomePage: React.FC = () => {
     },
     {
       icon: 'layers',
-      title: 'Overlay Presets',
-      description: 'Layer dynamic brand watermarks and custom video progress bars.',
+      title: 'Visual Composition',
+      description: 'Layer dynamic frames, canvas backdrop, brand watermarks, and progress bars.',
     },
     {
       icon: 'ios_share',
@@ -45,7 +45,7 @@ export const WelcomePage: React.FC = () => {
             Welcome to Caption Studio
           </h1>
           <p className="text-body-md font-body-md text-on-surface-variant max-w-lg mx-auto">
-            The clinical, high-precision creative environment. Style, overlay, and finalize your video captions with surgical precision.
+            The clinical, high-precision creative environment. Style, compose, and finalize your video captions with surgical precision.
           </p>
         </div>
 

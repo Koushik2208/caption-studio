@@ -39,14 +39,14 @@ export const Typewriter: React.FC<{
   const isTyping = frame % (CURSOR_BLINK_FRAMES * 2) < CURSOR_BLINK_FRAMES;
 
   return (
-    <AbsoluteFill style={getPositionStyle(overrides?.position, height, contentInset)}>
+    <AbsoluteFill style={getPositionStyle(overrides?.position, height, contentInset, overrides?.customPositionY, overrides?.textAlign)}>
       <div
         style={{
           fontSize,
           fontWeight: overrides?.fontWeight ?? 700,
           fontStyle: overrides?.fontStyle ?? "normal",
           fontFamily: overrides?.fontFamily ?? "Arial, sans-serif",
-          textAlign: "center",
+          textAlign: overrides?.textAlign ?? "center",
           whiteSpace: "pre-wrap",
           maxWidth: "85%",
           lineHeight: overrides?.lineHeight ?? 1.15,

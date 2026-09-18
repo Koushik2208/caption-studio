@@ -2,9 +2,22 @@ import React from 'react';
 import { useProject } from '../../context/ProjectContext';
 import { useLayout } from '../../context/LayoutContext';
 import { FRAME_OPTIONS, FRAME_SHELL_COLORS } from '../../pages/overlayOptions';
-import type { CardAspectRatio, CardBackdrop, CardBorderStyle } from '../../frames/types';
-import { CODE_LANGUAGE_LABELS, type CodeBlockPosition, type CodeLanguage, type TickerDirection, type TickerPosition } from '../../motion/types';
+import type { CardAspectRatio, CardBackdrop, CardBorderStyle, CompositionLayout } from '../../frames/types';
+import {
+  CODE_LANGUAGE_LABELS,
+  type CodeBlockPosition,
+  type CodeLanguage,
+  type TickerDirection,
+  type TickerPosition,
+} from '../../motion/types';
 import type { ProgressBarPosition, WatermarkPosition } from '../../overlay/types';
+
+const LAYOUT_OPTIONS: { value: CompositionLayout; label: string; icon: string; sub: string }[] = [
+  { value: 'floating-card', label: 'Floating Card', icon: 'crop_free', sub: 'Framed card' },
+  { value: 'full-bleed', label: 'Full Bleed', icon: 'fullscreen', sub: 'Edge-to-edge' },
+  { value: 'top-bottom-split', label: 'Top / Bottom', icon: 'vertical_split', sub: 'Vertical split' },
+  { value: 'left-right-split', label: 'Left / Right', icon: 'view_column', sub: 'Horizontal split' },
+];
 
 const CARD_ASPECT_RATIOS: { value: CardAspectRatio; label: string; sub: string }[] = [
   { value: '9:16', label: '9:16', sub: 'Vertical' },
@@ -72,9 +85,22 @@ const TICKER_DIRECTIONS: { value: TickerDirection; label: string }[] = [
   { value: 'right', label: 'Scroll Right' },
 ];
 
+/**
+ * CompositionInspector (OverlayInspector)
+ * Structured across conceptual sections:
+ * 1. Layout (Floating Card, Full Bleed, Top / Bottom Split)
+ * 2. Video Frame & Styling
+ * 3. Canvas Background
+ * 4. Card Containers
+ * 5. Watermark
+ * 6. Progress Bar
+ * 7. Motion Graphics
+ */
 export const OverlayInspector: React.FC = () => {
   const { setIsCodeEditorOpen } = useLayout();
   const {
+    layout,
+    setLayout,
     frameVariant,
     setFrameVariant,
     frameBgColor,
@@ -111,6 +137,24 @@ export const OverlayInspector: React.FC = () => {
     setCustomBackdropColor,
     customBackdropGradient,
     setCustomBackdropGradient,
+    splitGap,
+    setSplitGap,
+    splitTopFocalX,
+    setSplitTopFocalX,
+    splitTopFocalY,
+    setSplitTopFocalY,
+    splitBottomFocalX,
+    setSplitBottomFocalX,
+    splitBottomFocalY,
+    setSplitBottomFocalY,
+    splitLeftFocalX,
+    setSplitLeftFocalX,
+    splitLeftFocalY,
+    setSplitLeftFocalY,
+    splitRightFocalX,
+    setSplitRightFocalX,
+    splitRightFocalY,
+    setSplitRightFocalY,
     watermarkEnabled,
     setWatermarkEnabled,
     watermarkOpacity,
@@ -152,188 +196,311 @@ export const OverlayInspector: React.FC = () => {
   } = useProject();
 
   return (
-    <div className="flex flex-col gap-6 p-4">
-      {/* SECTION 1: Frames & Video Card */}
+    <div className="flex flex-col gap-5 p-4">
+      {/* =========================================================================
+          SECTION 1: Composition Layout
+          ========================================================================= */}
+      <section className="flex flex-col gap-2.5">
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col">
+            <span className="text-xs font-semibold uppercase tracking-wider text-outline font-label-caps">
+              Composition Layout
+            </span>
+            <span className="text-[11px] text-outline">Canvas structural arrangement</span>
+          </div>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold uppercase tracking-wide">
+            {layout}
+          </span>
+        </div>
+
+        {/* Layout Mode Selector */}
+        <div className="grid grid-cols-4 gap-1 p-1 bg-surface-container rounded-xl border border-outline-variant/30">
+          {LAYOUT_OPTIONS.map((opt) => {
+            const isSelected = layout === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setLayout(opt.value)}
+                className={`py-2 px-1 rounded-lg border flex flex-col items-center justify-center transition-all cursor-pointer ${
+                  isSelected
+                    ? 'border-primary bg-white text-primary font-bold shadow-2xs'
+                    : 'border-transparent text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[18px] mb-0.5">{opt.icon}</span>
+                <span className="text-[10.5px] leading-tight text-center font-medium">{opt.label}</span>
+                <span className="text-[8.5px] text-outline opacity-75">{opt.sub}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <hr className="border-outline-variant/40" />
+
+      {/* =========================================================================
+          SECTION 2: Video Frame & Styling
+          ========================================================================= */}
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold uppercase tracking-wider text-outline font-label-caps">
-            Video Frame & Card
-          </span>
-          <span className="text-[11px] text-outline capitalize">
-            {cardMode === 'custom' ? `Custom (${customAspectRatio})` : frameVariant}
+          <div className="flex flex-col">
+            <span className="text-xs font-semibold uppercase tracking-wider text-outline font-label-caps">
+              Video Frame
+            </span>
+            <span className="text-[11px] text-outline">
+              {layout === 'top-bottom-split' || layout === 'left-right-split'
+                ? 'Dual zone card styling'
+                : layout === 'full-bleed'
+                ? 'Full canvas media'
+                : 'Card shape & styling'}
+            </span>
+          </div>
+          <span className="text-[11px] text-outline capitalize font-mono">
+            {layout === 'full-bleed'
+              ? 'Full Bleed'
+              : layout === 'top-bottom-split' || layout === 'left-right-split'
+              ? 'Split Zones'
+              : cardMode === 'custom'
+              ? `Custom (${customAspectRatio})`
+              : frameVariant}
           </span>
         </div>
 
-        {/* Mode Switch: Preset vs Custom */}
-        <div className="flex bg-surface-container p-1 rounded-lg border border-outline-variant/30">
-          <button
-            type="button"
-            onClick={() => setCardMode('preset')}
-            className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
-              cardMode === 'preset'
-                ? 'bg-white text-primary shadow-xs font-bold'
-                : 'text-on-surface-variant hover:text-on-surface'
-            }`}
-          >
-            Preset Frames
-          </button>
-          <button
-            type="button"
-            onClick={() => setCardMode('custom')}
-            className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
-              cardMode === 'custom'
-                ? 'bg-white text-primary shadow-xs font-bold'
-                : 'text-on-surface-variant hover:text-on-surface'
-            }`}
-          >
-            Custom Card
-          </button>
-        </div>
-
-        {/* PRESET MODE VIEW */}
-        {cardMode === 'preset' && (
-          <>
-            <div className="grid grid-cols-2 gap-2">
-              {FRAME_OPTIONS.map((opt) => {
-                const isSelected = frameVariant === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setFrameVariant(opt.value)}
-                    className={`h-11 flex items-center justify-center px-2 text-center border rounded-lg transition-all duration-150 cursor-pointer ${
-                      isSelected
-                        ? 'active-ring border-primary bg-primary-container/5 shadow-2xs font-semibold text-primary'
-                        : 'border-outline-variant/60 bg-surface-container-lowest text-on-surface hover:border-primary/50'
-                    }`}
-                  >
-                    <span className="text-xs leading-tight">{opt.label}</span>
-                  </button>
-                );
-              })}
+        {/* FULL BLEED NOTICE */}
+        {layout === 'full-bleed' && (
+          <div className="flex items-center gap-2 p-3 rounded-xl border border-primary/20 bg-primary/5 text-primary">
+            <span className="material-symbols-outlined text-[18px]">fullscreen</span>
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold">Full Bleed Active</span>
+              <span className="text-[11px] text-on-surface-variant">
+                Video fills the composition edge-to-edge with no border insets.
+              </span>
             </div>
-
-            {(frameVariant === 'minimalBezel' || frameVariant === 'squareBezel') && (
-              <div className="flex flex-col gap-2 p-3 bg-surface-container-low rounded-lg border border-outline-variant/40 mt-1">
-                <span className="text-[11px] font-semibold text-on-surface">Shell Color</span>
-                <div className="flex gap-2">
-                  {FRAME_SHELL_COLORS.map((color) => (
-                    <button
-                      key={color.hex}
-                      type="button"
-                      onClick={() => setFrameBgColor(color.hex)}
-                      className={`w-7 h-7 rounded-full shadow-xs hover:scale-105 transition-transform active:scale-90 cursor-pointer ${color.bgClass} ${
-                        frameBgColor === color.hex ? 'ring-2 ring-primary ring-offset-1' : ''
-                      }`}
-                      style={color.hex === '#ffffff' ? {} : { backgroundColor: color.hex }}
-                      title={color.name}
-                      aria-label={color.name}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {frameVariant === 'minimalBezel' && (
-              <div className="flex flex-col gap-1 p-3 bg-surface-container-low rounded-lg border border-outline-variant/40">
-                <div className="flex justify-between text-xs text-on-surface">
-                  <span className="text-[11px] font-medium">Corner Radius</span>
-                  <span className="font-mono text-outline">{Math.round(bezelRadiusMultiplier * 100)}%</span>
-                </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={1.5}
-                  step={0.05}
-                  value={bezelRadiusMultiplier}
-                  onChange={(e) => setBezelRadiusMultiplier(Number(e.target.value))}
-                  className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
-                />
-              </div>
-            )}
-          </>
+          </div>
         )}
 
-        {/* CUSTOM CARD MODE VIEW */}
-        {cardMode === 'custom' && (
-          <div className="flex flex-col gap-3.5">
-            {/* 1. Aspect Ratio */}
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[11px] font-medium text-on-surface">Card Aspect Ratio</span>
-              <div className="grid grid-cols-4 gap-1.5">
-                {CARD_ASPECT_RATIOS.map((ratio) => {
-                  const isSelected = customAspectRatio === ratio.value;
-                  return (
-                    <button
-                      key={ratio.value}
-                      type="button"
-                      onClick={() => setCustomAspectRatio(ratio.value)}
-                      className={`py-2 px-1 rounded-lg border flex flex-col items-center justify-center transition-all cursor-pointer ${
-                        isSelected
-                          ? 'border-primary bg-primary/5 text-primary font-bold shadow-2xs'
-                          : 'border-outline-variant/60 bg-surface-container-lowest text-on-surface-variant hover:border-primary/40'
-                      }`}
-                    >
-                      <span className="text-xs">{ratio.label}</span>
-                      <span className="text-[9px] text-outline opacity-80">{ratio.sub}</span>
-                    </button>
-                  );
-                })}
-              </div>
+        {/* TOP / BOTTOM & LEFT / RIGHT SPLIT CONTROLS */}
+        {(layout === 'top-bottom-split' || layout === 'left-right-split') && (
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2 p-2.5 rounded-lg border border-primary/20 bg-primary/5 text-primary">
+              <span className="material-symbols-outlined text-[18px]">
+                {layout === 'top-bottom-split' ? 'vertical_split' : 'view_column'}
+              </span>
+              <span className="text-xs font-medium">
+                {layout === 'top-bottom-split'
+                  ? 'Dual video cards with central typography band'
+                  : 'Dual video cards with side-by-side horizontal split'}
+              </span>
             </div>
 
-            {/* 2. Scale Slider */}
+            {/* Split Gap Slider */}
             <div className="flex flex-col gap-1 p-3 bg-surface-container-low rounded-lg border border-outline-variant/40">
               <div className="flex justify-between text-xs text-on-surface">
-                <span className="text-[11px] font-medium">Card Scale</span>
-                <span className="font-mono text-outline">{Math.round(customScale * 100)}%</span>
-              </div>
-              <input
-                type="range"
-                min={0.5}
-                max={1.0}
-                step={0.01}
-                value={customScale}
-                onChange={(e) => setCustomScale(Number(e.target.value))}
-                className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
-              />
-            </div>
-
-            {/* 3. Position Slider */}
-            <div className="flex flex-col gap-1 p-3 bg-surface-container-low rounded-lg border border-outline-variant/40">
-              <div className="flex justify-between text-xs text-on-surface">
-                <span className="text-[11px] font-medium">Vertical Placement</span>
+                <span className="text-[11px] font-medium">Split Gap</span>
                 <span className="font-mono text-outline">
-                  {customPositionY <= 0.1
-                    ? 'Top'
-                    : customPositionY >= 0.9
-                    ? 'Bottom'
-                    : customPositionY === 0.5
-                    ? 'Center'
-                    : `${Math.round(customPositionY * 100)}%`}
+                  {splitGap === 0 ? '0px (Touching)' : `${splitGap}px`}
                 </span>
               </div>
               <input
                 type="range"
                 min={0}
-                max={1}
-                step={0.02}
-                value={customPositionY}
-                onChange={(e) => setCustomPositionY(Number(e.target.value))}
+                max={40}
+                step={1}
+                value={splitGap}
+                onChange={(e) => setSplitGap(Number(e.target.value))}
                 className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
               />
             </div>
 
-            {/* 4. Corner Radius Slider */}
+            {/* Zone Video Focus Controls */}
+            <div className="flex flex-col gap-2.5 p-3 rounded-xl border border-outline-variant/50 bg-surface-container-lowest">
+              <div className="flex flex-col">
+                <span className="text-xs font-semibold text-on-surface">Zone Video Focus</span>
+                <span className="text-[11px] text-outline">Crop & focal positioning per region</span>
+              </div>
+
+              {layout === 'top-bottom-split' ? (
+                <div className="flex flex-col gap-3 pt-1 border-t border-outline-variant/30">
+                  {/* Top Video Focus */}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-primary">Top Video</span>
+                      <span className="text-[10px] font-mono text-outline">
+                        {Math.round(splitTopFocalX * 100)}% X, {Math.round(splitTopFocalY * 100)}% Y
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex justify-between text-[10px] text-outline">
+                        <span>Horizontal</span>
+                        <span>{Math.round(splitTopFocalX * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        value={splitTopFocalX}
+                        onChange={(e) => setSplitTopFocalX(Number(e.target.value))}
+                        className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex justify-between text-[10px] text-outline">
+                        <span>Vertical</span>
+                        <span>{Math.round(splitTopFocalY * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        value={splitTopFocalY}
+                        onChange={(e) => setSplitTopFocalY(Number(e.target.value))}
+                        className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
+                      />
+                    </div>
+                  </div>
+
+                  <hr className="border-outline-variant/20" />
+
+                  {/* Bottom Video Focus */}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-primary">Bottom Video</span>
+                      <span className="text-[10px] font-mono text-outline">
+                        {Math.round(splitBottomFocalX * 100)}% X, {Math.round(splitBottomFocalY * 100)}% Y
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex justify-between text-[10px] text-outline">
+                        <span>Horizontal</span>
+                        <span>{Math.round(splitBottomFocalX * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        value={splitBottomFocalX}
+                        onChange={(e) => setSplitBottomFocalX(Number(e.target.value))}
+                        className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex justify-between text-[10px] text-outline">
+                        <span>Vertical</span>
+                        <span>{Math.round(splitBottomFocalY * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        value={splitBottomFocalY}
+                        onChange={(e) => setSplitBottomFocalY(Number(e.target.value))}
+                        className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3 pt-1 border-t border-outline-variant/30">
+                  {/* Left Video Focus */}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-primary">Left Video</span>
+                      <span className="text-[10px] font-mono text-outline">
+                        {Math.round(splitLeftFocalX * 100)}% X, {Math.round(splitLeftFocalY * 100)}% Y
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex justify-between text-[10px] text-outline">
+                        <span>Horizontal</span>
+                        <span>{Math.round(splitLeftFocalX * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        value={splitLeftFocalX}
+                        onChange={(e) => setSplitLeftFocalX(Number(e.target.value))}
+                        className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex justify-between text-[10px] text-outline">
+                        <span>Vertical</span>
+                        <span>{Math.round(splitLeftFocalY * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        value={splitLeftFocalY}
+                        onChange={(e) => setSplitLeftFocalY(Number(e.target.value))}
+                        className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
+                      />
+                    </div>
+                  </div>
+
+                  <hr className="border-outline-variant/20" />
+
+                  {/* Right Video Focus */}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-primary">Right Video</span>
+                      <span className="text-[10px] font-mono text-outline">
+                        {Math.round(splitRightFocalX * 100)}% X, {Math.round(splitRightFocalY * 100)}% Y
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex justify-between text-[10px] text-outline">
+                        <span>Horizontal</span>
+                        <span>{Math.round(splitRightFocalX * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        value={splitRightFocalX}
+                        onChange={(e) => setSplitRightFocalX(Number(e.target.value))}
+                        className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex justify-between text-[10px] text-outline">
+                        <span>Vertical</span>
+                        <span>{Math.round(splitRightFocalY * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        value={splitRightFocalY}
+                        onChange={(e) => setSplitRightFocalY(Number(e.target.value))}
+                        className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Corner Radius Slider */}
             <div className="flex flex-col gap-1 p-3 bg-surface-container-low rounded-lg border border-outline-variant/40">
               <div className="flex justify-between text-xs text-on-surface">
-                <span className="text-[11px] font-medium">Corner Radius</span>
+                <span className="text-[11px] font-medium">Zone Corner Radius</span>
                 <span className="font-mono text-outline">{customBorderRadius}px</span>
               </div>
               <input
                 type="range"
                 min={0}
-                max={80}
+                max={60}
                 step={2}
                 value={customBorderRadius}
                 onChange={(e) => setCustomBorderRadius(Number(e.target.value))}
@@ -341,11 +508,11 @@ export const OverlayInspector: React.FC = () => {
               />
             </div>
 
-            {/* 5. Border Configuration */}
+            {/* Border Configuration */}
             <div className="flex flex-col gap-2.5 p-3 rounded-xl border border-outline-variant/50 bg-surface-container-lowest">
               <div className="flex items-center justify-between">
                 <div className="flex flex-col">
-                  <span className="text-xs font-semibold text-on-surface">Card Border</span>
+                  <span className="text-xs font-semibold text-on-surface">Zone Border</span>
                   <span className="text-[11px] text-outline">Outer stroke boundary</span>
                 </div>
                 <button
@@ -355,7 +522,7 @@ export const OverlayInspector: React.FC = () => {
                     customBorderEnabled ? 'bg-primary' : 'bg-outline-variant'
                   }`}
                   aria-pressed={customBorderEnabled}
-                  aria-label="Toggle card border"
+                  aria-label="Toggle zone border"
                 >
                   <span
                     className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-xs transition-transform duration-150 ${
@@ -367,7 +534,6 @@ export const OverlayInspector: React.FC = () => {
 
               {customBorderEnabled && (
                 <div className="flex flex-col gap-3 pt-2 border-t border-outline-variant/30 mt-1">
-                  {/* Border Width */}
                   <div className="flex flex-col gap-1">
                     <div className="flex justify-between text-[11px] text-on-surface">
                       <span>Width</span>
@@ -376,7 +542,7 @@ export const OverlayInspector: React.FC = () => {
                     <input
                       type="range"
                       min={1}
-                      max={16}
+                      max={12}
                       step={1}
                       value={customBorderWidth}
                       onChange={(e) => setCustomBorderWidth(Number(e.target.value))}
@@ -384,74 +550,34 @@ export const OverlayInspector: React.FC = () => {
                     />
                   </div>
 
-                  {/* Border Style */}
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[11px] text-on-surface font-medium">Style</span>
-                    <div className="grid grid-cols-3 gap-1 bg-surface-container p-1 rounded-md">
-                      {CARD_BORDER_STYLES.map((st) => (
-                        <button
-                          key={st.value}
-                          type="button"
-                          onClick={() => setCustomBorderStyle(st.value)}
-                          className={`h-7 rounded text-[11px] font-medium transition-all cursor-pointer ${
-                            customBorderStyle === st.value
-                              ? 'bg-white text-primary font-bold shadow-2xs'
-                              : 'text-on-surface-variant hover:text-on-surface'
-                          }`}
-                        >
-                          {st.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Border Color */}
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-on-surface font-medium">Color</span>
-                      <div className="flex items-center gap-1.5">
-                        <label className="relative w-6 h-6 rounded overflow-hidden border border-outline-variant cursor-pointer shrink-0">
-                          <input
-                            type="color"
-                            value={customBorderColor}
-                            onChange={(e) => setCustomBorderColor(e.target.value)}
-                            className="absolute -top-2 -left-2 w-10 h-10 cursor-pointer border-0 p-0"
-                          />
-                        </label>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-on-surface font-medium">Color</span>
+                    <div className="flex items-center gap-1.5">
+                      <label className="relative w-6 h-6 rounded overflow-hidden border border-outline-variant cursor-pointer shrink-0">
                         <input
-                          type="text"
+                          type="color"
                           value={customBorderColor}
                           onChange={(e) => setCustomBorderColor(e.target.value)}
-                          className="w-20 px-2 py-1 text-xs font-mono uppercase border border-outline-variant/80 rounded bg-surface"
+                          className="absolute -top-2 -left-2 w-10 h-10 cursor-pointer border-0 p-0"
                         />
-                      </div>
-                    </div>
-                    <div className="flex gap-1.5 flex-wrap">
-                      {CARD_BORDER_SWATCHES.map((hex) => (
-                        <button
-                          key={hex}
-                          type="button"
-                          onClick={() => setCustomBorderColor(hex)}
-                          className={`w-5 h-5 rounded border border-outline-variant cursor-pointer transition-transform hover:scale-105 ${
-                            customBorderColor.toLowerCase() === hex.toLowerCase()
-                              ? 'ring-2 ring-primary ring-offset-1'
-                              : ''
-                          }`}
-                          style={{ backgroundColor: hex }}
-                          title={hex}
-                        />
-                      ))}
+                      </label>
+                      <input
+                        type="text"
+                        value={customBorderColor}
+                        onChange={(e) => setCustomBorderColor(e.target.value)}
+                        className="w-20 px-2 py-1 text-xs font-mono uppercase border border-outline-variant/80 rounded bg-surface"
+                      />
                     </div>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* 6. Card Shadow / Elevation */}
+            {/* Shadow Elevation */}
             <div className="flex flex-col gap-2.5 p-3 rounded-xl border border-outline-variant/50 bg-surface-container-lowest">
               <div className="flex items-center justify-between">
                 <div className="flex flex-col">
-                  <span className="text-xs font-semibold text-on-surface">Card Elevation Shadow</span>
+                  <span className="text-xs font-semibold text-on-surface">Zone Elevation Shadow</span>
                   <span className="text-[11px] text-outline">Floating depth effect</span>
                 </div>
                 <button
@@ -461,7 +587,7 @@ export const OverlayInspector: React.FC = () => {
                     customShadowEnabled ? 'bg-primary' : 'bg-outline-variant'
                   }`}
                   aria-pressed={customShadowEnabled}
-                  aria-label="Toggle card shadow"
+                  aria-label="Toggle zone shadow"
                 >
                   <span
                     className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-xs transition-transform duration-150 ${
@@ -488,121 +614,575 @@ export const OverlayInspector: React.FC = () => {
                       className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
                     />
                   </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
-                  <div className="flex flex-col gap-1">
-                    <div className="flex justify-between text-[11px] text-on-surface">
-                      <span>Shadow Opacity</span>
-                      <span className="font-mono text-outline">{customShadowOpacity}%</span>
+        {/* FLOATING CARD CONTROLS (Default) */}
+        {layout === 'floating-card' && (
+          <>
+            {/* Mode Switch: Preset vs Custom */}
+            <div className="flex bg-surface-container p-1 rounded-lg border border-outline-variant/30">
+              <button
+                type="button"
+                onClick={() => setCardMode('preset')}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                  cardMode === 'preset'
+                    ? 'bg-white text-primary shadow-xs font-bold'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                Preset Frames
+              </button>
+              <button
+                type="button"
+                onClick={() => setCardMode('custom')}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                  cardMode === 'custom'
+                    ? 'bg-white text-primary shadow-xs font-bold'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                Custom Card
+              </button>
+            </div>
+
+            {/* PRESET MODE VIEW */}
+            {cardMode === 'preset' && (
+              <div className="flex flex-col gap-2.5">
+                <div className="grid grid-cols-2 gap-2">
+                  {FRAME_OPTIONS.map((opt) => {
+                    const isSelected = frameVariant === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setFrameVariant(opt.value)}
+                        className={`h-11 flex items-center justify-center px-2 text-center border rounded-lg transition-all duration-150 cursor-pointer ${
+                          isSelected
+                            ? 'active-ring border-primary bg-primary-container/5 shadow-2xs font-semibold text-primary'
+                            : 'border-outline-variant/60 bg-surface-container-lowest text-on-surface hover:border-primary/50'
+                        }`}
+                      >
+                        <span className="text-xs leading-tight">{opt.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {(frameVariant === 'minimalBezel' || frameVariant === 'squareBezel') && (
+                  <div className="flex flex-col gap-2 p-3 bg-surface-container-low rounded-lg border border-outline-variant/40">
+                    <span className="text-[11px] font-semibold text-on-surface">Shell Color</span>
+                    <div className="flex gap-2">
+                      {FRAME_SHELL_COLORS.map((color) => (
+                        <button
+                          key={color.hex}
+                          type="button"
+                          onClick={() => setFrameBgColor(color.hex)}
+                          className={`w-7 h-7 rounded-full shadow-xs hover:scale-105 transition-transform active:scale-90 cursor-pointer ${color.bgClass} ${
+                            frameBgColor === color.hex ? 'ring-2 ring-primary ring-offset-1' : ''
+                          }`}
+                          style={color.hex === '#ffffff' ? {} : { backgroundColor: color.hex }}
+                          title={color.name}
+                          aria-label={color.name}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {frameVariant === 'minimalBezel' && (
+                  <div className="flex flex-col gap-1 p-3 bg-surface-container-low rounded-lg border border-outline-variant/40">
+                    <div className="flex justify-between text-xs text-on-surface">
+                      <span className="text-[11px] font-medium">Corner Radius</span>
+                      <span className="font-mono text-outline">{Math.round(bezelRadiusMultiplier * 100)}%</span>
                     </div>
                     <input
                       type="range"
-                      min={10}
-                      max={100}
-                      step={5}
-                      value={customShadowOpacity}
-                      onChange={(e) => setCustomShadowOpacity(Number(e.target.value))}
+                      min={0}
+                      max={1.5}
+                      step={0.05}
+                      value={bezelRadiusMultiplier}
+                      onChange={(e) => setBezelRadiusMultiplier(Number(e.target.value))}
                       className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
                     />
                   </div>
-                </div>
-              )}
-            </div>
-
-            {/* 7. Canvas Backdrop */}
-            <div className="flex flex-col gap-2.5 p-3 rounded-xl border border-outline-variant/50 bg-surface-container-lowest">
-              <span className="text-xs font-semibold text-on-surface">Canvas Backdrop</span>
-              <div className="grid grid-cols-4 gap-1 bg-surface-container p-1 rounded-md">
-                {BACKDROP_OPTIONS.map((bd) => (
-                  <button
-                    key={bd.value}
-                    type="button"
-                    onClick={() => setCustomBackdrop(bd.value)}
-                    className={`h-8 rounded text-[11px] font-medium flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                      customBackdrop === bd.value
-                        ? 'bg-white text-primary font-bold shadow-2xs'
-                        : 'text-on-surface-variant hover:text-on-surface'
-                    }`}
-                  >
-                    <span>{bd.label}</span>
-                  </button>
-                ))}
+                )}
               </div>
+            )}
 
-              {/* Solid Backdrop Customizer */}
-              {customBackdrop === 'solid' && (
-                <div className="flex flex-col gap-2 pt-2 border-t border-outline-variant/30 mt-1">
+            {/* CUSTOM CARD MODE VIEW */}
+            {cardMode === 'custom' && (
+              <div className="flex flex-col gap-3">
+                {/* Aspect Ratio */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[11px] font-medium text-on-surface">Aspect Ratio</span>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {CARD_ASPECT_RATIOS.map((ratio) => {
+                      const isSelected = customAspectRatio === ratio.value;
+                      return (
+                        <button
+                          key={ratio.value}
+                          type="button"
+                          onClick={() => setCustomAspectRatio(ratio.value)}
+                          className={`py-2 px-1 rounded-lg border flex flex-col items-center justify-center transition-all cursor-pointer ${
+                            isSelected
+                              ? 'border-primary bg-primary/5 text-primary font-bold shadow-2xs'
+                              : 'border-outline-variant/60 bg-surface-container-lowest text-on-surface-variant hover:border-primary/40'
+                          }`}
+                        >
+                          <span className="text-xs">{ratio.label}</span>
+                          <span className="text-[9px] text-outline opacity-80">{ratio.sub}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Scale Slider */}
+                <div className="flex flex-col gap-1 p-3 bg-surface-container-low rounded-lg border border-outline-variant/40">
+                  <div className="flex justify-between text-xs text-on-surface">
+                    <span className="text-[11px] font-medium">Card Scale</span>
+                    <span className="font-mono text-outline">{Math.round(customScale * 100)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0.5}
+                    max={1.0}
+                    step={0.01}
+                    value={customScale}
+                    onChange={(e) => setCustomScale(Number(e.target.value))}
+                    className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
+                  />
+                </div>
+
+                {/* Vertical Position Slider */}
+                <div className="flex flex-col gap-1 p-3 bg-surface-container-low rounded-lg border border-outline-variant/40">
+                  <div className="flex justify-between text-xs text-on-surface">
+                    <span className="text-[11px] font-medium">Vertical Placement</span>
+                    <span className="font-mono text-outline">
+                      {customPositionY <= 0.1
+                        ? 'Top'
+                        : customPositionY >= 0.9
+                        ? 'Bottom'
+                        : customPositionY === 0.5
+                        ? 'Center'
+                        : `${Math.round(customPositionY * 100)}%`}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.02}
+                    value={customPositionY}
+                    onChange={(e) => setCustomPositionY(Number(e.target.value))}
+                    className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
+                  />
+                </div>
+
+                {/* Corner Radius Slider */}
+                <div className="flex flex-col gap-1 p-3 bg-surface-container-low rounded-lg border border-outline-variant/40">
+                  <div className="flex justify-between text-xs text-on-surface">
+                    <span className="text-[11px] font-medium">Corner Radius</span>
+                    <span className="font-mono text-outline">{customBorderRadius}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={80}
+                    step={2}
+                    value={customBorderRadius}
+                    onChange={(e) => setCustomBorderRadius(Number(e.target.value))}
+                    className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
+                  />
+                </div>
+
+                {/* Border Configuration */}
+                <div className="flex flex-col gap-2.5 p-3 rounded-xl border border-outline-variant/50 bg-surface-container-lowest">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-medium text-on-surface">Solid Color</span>
-                    <div className="flex items-center gap-1.5">
-                      <label className="relative w-6 h-6 rounded overflow-hidden border border-outline-variant cursor-pointer shrink-0">
-                        <input
-                          type="color"
-                          value={customBackdropColor}
-                          onChange={(e) => setCustomBackdropColor(e.target.value)}
-                          className="absolute -top-2 -left-2 w-10 h-10 cursor-pointer border-0 p-0"
-                        />
-                      </label>
-                      <input
-                        type="text"
-                        value={customBackdropColor}
-                        onChange={(e) => setCustomBackdropColor(e.target.value)}
-                        className="w-20 px-2 py-1 text-xs font-mono uppercase border border-outline-variant/80 rounded bg-surface"
-                      />
+                    <div className="flex flex-col">
+                      <span className="text-xs font-semibold text-on-surface">Card Border</span>
+                      <span className="text-[11px] text-outline">Outer stroke boundary</span>
                     </div>
-                  </div>
-                  <div className="flex gap-1.5 flex-wrap">
-                    {BACKDROP_SOLID_SWATCHES.map((hex) => (
-                      <button
-                        key={hex}
-                        type="button"
-                        onClick={() => setCustomBackdropColor(hex)}
-                        className={`w-6 h-6 rounded border border-outline-variant cursor-pointer transition-transform hover:scale-105 ${
-                          customBackdropColor.toLowerCase() === hex.toLowerCase()
-                            ? 'ring-2 ring-primary ring-offset-1'
-                            : ''
+                    <button
+                      type="button"
+                      onClick={() => setCustomBorderEnabled(!customBorderEnabled)}
+                      className={`relative w-9 h-5 rounded-full transition-colors duration-150 cursor-pointer shrink-0 ${
+                        customBorderEnabled ? 'bg-primary' : 'bg-outline-variant'
+                      }`}
+                      aria-pressed={customBorderEnabled}
+                      aria-label="Toggle card border"
+                    >
+                      <span
+                        className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-xs transition-transform duration-150 ${
+                          customBorderEnabled ? 'translate-x-4' : ''
                         }`}
-                        style={{ backgroundColor: hex }}
-                        title={hex}
                       />
-                    ))}
+                    </button>
                   </div>
-                </div>
-              )}
 
-              {/* Gradient Backdrop Customizer */}
-              {customBackdrop === 'gradient' && (
-                <div className="flex flex-col gap-2 pt-2 border-t border-outline-variant/30 mt-1">
-                  <span className="text-[11px] font-medium text-on-surface">Gradient Preset</span>
-                  <div className="grid grid-cols-2 gap-2">
-                    {BACKDROP_GRADIENT_PRESETS.map((p) => (
-                      <button
-                        key={p.name}
-                        type="button"
-                        onClick={() => setCustomBackdropGradient(p.gradient)}
-                        className={`h-9 rounded-lg border flex items-center px-2 gap-2 cursor-pointer transition-all ${
-                          customBackdropGradient === p.gradient
-                            ? 'ring-2 ring-primary ring-offset-1 border-primary font-bold'
-                            : 'border-outline-variant/60 hover:border-primary/40'
-                        }`}
-                      >
-                        <div
-                          className="w-5 h-5 rounded-md shrink-0 border border-white/20 shadow-2xs"
-                          style={{ background: p.gradient }}
+                  {customBorderEnabled && (
+                    <div className="flex flex-col gap-3 pt-2 border-t border-outline-variant/30 mt-1">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex justify-between text-[11px] text-on-surface">
+                          <span>Width</span>
+                          <span className="font-mono text-outline">{customBorderWidth}px</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={1}
+                          max={16}
+                          step={1}
+                          value={customBorderWidth}
+                          onChange={(e) => setCustomBorderWidth(Number(e.target.value))}
+                          className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
                         />
-                        <span className="text-xs text-on-surface">{p.name}</span>
-                      </button>
-                    ))}
-                  </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[11px] text-on-surface font-medium">Style</span>
+                        <div className="grid grid-cols-3 gap-1 bg-surface-container p-1 rounded-md">
+                          {CARD_BORDER_STYLES.map((st) => (
+                            <button
+                              key={st.value}
+                              type="button"
+                              onClick={() => setCustomBorderStyle(st.value)}
+                              className={`h-7 rounded text-[11px] font-medium transition-all cursor-pointer ${
+                                customBorderStyle === st.value
+                                  ? 'bg-white text-primary font-bold shadow-2xs'
+                                  : 'text-on-surface-variant hover:text-on-surface'
+                              }`}
+                            >
+                              {st.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] text-on-surface font-medium">Color</span>
+                          <div className="flex items-center gap-1.5">
+                            <label className="relative w-6 h-6 rounded overflow-hidden border border-outline-variant cursor-pointer shrink-0">
+                              <input
+                                type="color"
+                                value={customBorderColor}
+                                onChange={(e) => setCustomBorderColor(e.target.value)}
+                                className="absolute -top-2 -left-2 w-10 h-10 cursor-pointer border-0 p-0"
+                              />
+                            </label>
+                            <input
+                              type="text"
+                              value={customBorderColor}
+                              onChange={(e) => setCustomBorderColor(e.target.value)}
+                              className="w-20 px-2 py-1 text-xs font-mono uppercase border border-outline-variant/80 rounded bg-surface"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-1.5 flex-wrap">
+                          {CARD_BORDER_SWATCHES.map((hex) => (
+                            <button
+                              key={hex}
+                              type="button"
+                              onClick={() => setCustomBorderColor(hex)}
+                              className={`w-5 h-5 rounded border border-outline-variant cursor-pointer transition-transform hover:scale-105 ${
+                                customBorderColor.toLowerCase() === hex.toLowerCase()
+                                  ? 'ring-2 ring-primary ring-offset-1'
+                                  : ''
+                              }`}
+                              style={{ backgroundColor: hex }}
+                              title={hex}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
+
+                {/* Shadow Elevation */}
+                <div className="flex flex-col gap-2.5 p-3 rounded-xl border border-outline-variant/50 bg-surface-container-lowest">
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      <span className="text-xs font-semibold text-on-surface">Card Elevation Shadow</span>
+                      <span className="text-[11px] text-outline">Floating depth effect</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCustomShadowEnabled(!customShadowEnabled)}
+                      className={`relative w-9 h-5 rounded-full transition-colors duration-150 cursor-pointer shrink-0 ${
+                        customShadowEnabled ? 'bg-primary' : 'bg-outline-variant'
+                      }`}
+                      aria-pressed={customShadowEnabled}
+                      aria-label="Toggle card shadow"
+                    >
+                      <span
+                        className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-xs transition-transform duration-150 ${
+                          customShadowEnabled ? 'translate-x-4' : ''
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {customShadowEnabled && (
+                    <div className="flex flex-col gap-3 pt-2 border-t border-outline-variant/30 mt-1">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex justify-between text-[11px] text-on-surface">
+                          <span>Blur Radius</span>
+                          <span className="font-mono text-outline">{customShadowBlur}px</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={4}
+                          max={60}
+                          step={2}
+                          value={customShadowBlur}
+                          onChange={(e) => setCustomShadowBlur(Number(e.target.value))}
+                          className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <div className="flex justify-between text-[11px] text-on-surface">
+                          <span>Shadow Opacity</span>
+                          <span className="font-mono text-outline">{customShadowOpacity}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={10}
+                          max={100}
+                          step={5}
+                          value={customShadowOpacity}
+                          onChange={(e) => setCustomShadowOpacity(Number(e.target.value))}
+                          className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </section>
+
+      <hr className="border-outline-variant/40" />
+
+      {/* =========================================================================
+          SECTION 3: Canvas Background (Independent Backdrop)
+          ========================================================================= */}
+      <section className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col">
+            <span className="text-xs font-semibold uppercase tracking-wider text-outline font-label-caps">
+              Canvas Background
+            </span>
+            <span className="text-[11px] text-outline">Full composition backdrop</span>
+          </div>
+          <span className="text-[11px] text-outline capitalize font-mono">{customBackdrop}</span>
+        </div>
+
+        {/* Backdrop Mode Options */}
+        <div className="grid grid-cols-4 gap-1 bg-surface-container p-1 rounded-lg border border-outline-variant/30">
+          {BACKDROP_OPTIONS.map((bd) => (
+            <button
+              key={bd.value}
+              type="button"
+              onClick={() => setCustomBackdrop(bd.value)}
+              className={`h-8 rounded text-[11px] font-medium flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                customBackdrop === bd.value
+                  ? 'bg-white text-primary font-bold shadow-2xs'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              <span>{bd.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Solid Color Customizer */}
+        {customBackdrop === 'solid' && (
+          <div className="flex flex-col gap-2.5 p-3 rounded-xl border border-outline-variant/40 bg-surface-container-low">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-medium text-on-surface">Backdrop Color</span>
+              <div className="flex items-center gap-1.5">
+                <label className="relative w-6 h-6 rounded overflow-hidden border border-outline-variant cursor-pointer shrink-0">
+                  <input
+                    type="color"
+                    value={customBackdropColor}
+                    onChange={(e) => setCustomBackdropColor(e.target.value)}
+                    className="absolute -top-2 -left-2 w-10 h-10 cursor-pointer border-0 p-0"
+                  />
+                </label>
+                <input
+                  type="text"
+                  value={customBackdropColor}
+                  onChange={(e) => setCustomBackdropColor(e.target.value)}
+                  className="w-20 px-2 py-1 text-xs font-mono uppercase border border-outline-variant/80 rounded bg-surface"
+                />
+              </div>
             </div>
+            <div className="flex gap-1.5 flex-wrap">
+              {BACKDROP_SOLID_SWATCHES.map((hex) => (
+                <button
+                  key={hex}
+                  type="button"
+                  onClick={() => setCustomBackdropColor(hex)}
+                  className={`w-6 h-6 rounded border border-outline-variant cursor-pointer transition-transform hover:scale-105 ${
+                    customBackdropColor.toLowerCase() === hex.toLowerCase()
+                      ? 'ring-2 ring-primary ring-offset-1'
+                      : ''
+                  }`}
+                  style={{ backgroundColor: hex }}
+                  title={hex}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Gradient Presets */}
+        {customBackdrop === 'gradient' && (
+          <div className="flex flex-col gap-2 p-3 rounded-xl border border-outline-variant/40 bg-surface-container-low">
+            <span className="text-[11px] font-medium text-on-surface">Gradient Presets</span>
+            <div className="grid grid-cols-2 gap-2">
+              {BACKDROP_GRADIENT_PRESETS.map((p) => (
+                <button
+                  key={p.name}
+                  type="button"
+                  onClick={() => setCustomBackdropGradient(p.gradient)}
+                  className={`h-9 rounded-lg border flex items-center px-2 gap-2 cursor-pointer transition-all ${
+                    customBackdropGradient === p.gradient
+                      ? 'ring-2 ring-primary ring-offset-1 border-primary font-bold bg-white'
+                      : 'border-outline-variant/60 bg-surface-container-lowest hover:border-primary/40'
+                  }`}
+                >
+                  <div
+                    className="w-5 h-5 rounded-md shrink-0 border border-white/20 shadow-2xs"
+                    style={{ background: p.gradient }}
+                  />
+                  <span className="text-xs text-on-surface">{p.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Blur FX Info */}
+        {customBackdrop === 'blurred-video' && (
+          <div className="flex items-center gap-2 p-2.5 rounded-lg border border-primary/20 bg-primary/5 text-primary">
+            <span className="material-symbols-outlined text-[18px]">blur_on</span>
+            <span className="text-xs font-medium">Dynamic video blur backdrop active</span>
           </div>
         )}
       </section>
 
       <hr className="border-outline-variant/40" />
 
-      {/* SECTION 2: Watermark */}
+      {/* =========================================================================
+          SECTION 4: Card Containers (Architecture Foundation)
+          ========================================================================= */}
+      <section className="flex flex-col gap-2.5">
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col">
+            <span className="text-xs font-semibold uppercase tracking-wider text-outline font-label-caps">
+              Card Containers
+            </span>
+            <span className="text-[11px] text-outline">Composition layer hierarchy</span>
+          </div>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold">
+            {layout === 'top-bottom-split' || layout === 'left-right-split'
+              ? '2 Zones Active'
+              : layout === 'full-bleed'
+              ? 'Full Bleed'
+              : '1 Card Active'}
+          </span>
+        </div>
+
+        {layout === 'top-bottom-split' ? (
+          <div className="flex flex-col gap-2">
+            <div className="p-2.5 rounded-xl border border-outline-variant/40 bg-surface-container-lowest flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-6 h-6 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+                  <span className="material-symbols-outlined text-[15px]">vertical_align_top</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-semibold text-on-surface">Top Video Region</span>
+                  <span className="text-[10px] text-outline">Upper framing focus (42% height)</span>
+                </div>
+              </div>
+              <span className="text-[10px] font-mono text-outline">Zone 1</span>
+            </div>
+            <div className="p-2.5 rounded-xl border border-outline-variant/40 bg-surface-container-lowest flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-6 h-6 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+                  <span className="material-symbols-outlined text-[15px]">vertical_align_bottom</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-semibold text-on-surface">Bottom Video Region</span>
+                  <span className="text-[10px] text-outline">Action framing focus (42% height)</span>
+                </div>
+              </div>
+              <span className="text-[10px] font-mono text-outline">Zone 2</span>
+            </div>
+          </div>
+        ) : layout === 'left-right-split' ? (
+          <div className="flex flex-col gap-2">
+            <div className="p-2.5 rounded-xl border border-outline-variant/40 bg-surface-container-lowest flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-6 h-6 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+                  <span className="material-symbols-outlined text-[15px]">align_horizontal_left</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-semibold text-on-surface">Left Video Region</span>
+                  <span className="text-[10px] text-outline">Left framing focus (~45% width)</span>
+                </div>
+              </div>
+              <span className="text-[10px] font-mono text-outline">Zone 1</span>
+            </div>
+            <div className="p-2.5 rounded-xl border border-outline-variant/40 bg-surface-container-lowest flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-6 h-6 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+                  <span className="material-symbols-outlined text-[15px]">align_horizontal_right</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-semibold text-on-surface">Right Video Region</span>
+                  <span className="text-[10px] text-outline">Right framing focus (~45% width)</span>
+                </div>
+              </div>
+              <span className="text-[10px] font-mono text-outline">Zone 2</span>
+            </div>
+          </div>
+        ) : (
+          <div className="p-3 rounded-xl border border-outline-variant/40 bg-surface-container-lowest flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+                <span className="material-symbols-outlined text-[17px]">video_file</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-semibold text-on-surface">
+                  {layout === 'full-bleed' ? 'Full Bleed Canvas' : 'Primary Video Card'}
+                </span>
+                <span className="text-[10px] text-outline">
+                  {layout === 'full-bleed'
+                    ? 'Canvas Layer (Full Viewport)'
+                    : 'Layer 1 (Active Media Container)'}
+                </span>
+              </div>
+            </div>
+            <span className="text-[11px] text-outline font-mono">100%</span>
+          </div>
+        )}
+      </section>
+
+      <hr className="border-outline-variant/40" />
+
+      {/* =========================================================================
+          SECTION 5: Watermark
+          ========================================================================= */}
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <div className="flex flex-col">
@@ -630,7 +1210,6 @@ export const OverlayInspector: React.FC = () => {
 
         {watermarkEnabled && (
           <div className="flex flex-col gap-3 p-3 bg-surface-container-low rounded-lg border border-outline-variant/40">
-            {/* Opacity */}
             <div className="flex flex-col gap-1">
               <div className="flex justify-between text-xs text-on-surface">
                 <span className="text-[11px] font-medium">Opacity</span>
@@ -646,7 +1225,6 @@ export const OverlayInspector: React.FC = () => {
               />
             </div>
 
-            {/* Position */}
             <div className="flex flex-col gap-1">
               <span className="text-[11px] font-medium text-on-surface">Corner Position</span>
               <div className="grid grid-cols-4 gap-1 bg-surface-container p-1 rounded-md">
@@ -672,7 +1250,9 @@ export const OverlayInspector: React.FC = () => {
 
       <hr className="border-outline-variant/40" />
 
-      {/* SECTION 3: Progress Bar */}
+      {/* =========================================================================
+          SECTION 6: Progress Bar
+          ========================================================================= */}
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <div className="flex flex-col">
@@ -700,7 +1280,6 @@ export const OverlayInspector: React.FC = () => {
 
         {progressBarEnabled && (
           <div className="flex flex-col gap-3 p-3 bg-surface-container-low rounded-lg border border-outline-variant/40">
-            {/* Position */}
             <div className="flex flex-col gap-1">
               <span className="text-[11px] font-medium text-on-surface">Placement</span>
               <div className="grid grid-cols-2 gap-1 bg-surface-container p-1 rounded-md">
@@ -721,7 +1300,6 @@ export const OverlayInspector: React.FC = () => {
               </div>
             </div>
 
-            {/* Color */}
             <div className="flex items-center justify-between pt-1">
               <span className="text-[11px] font-medium text-on-surface">Bar Color</span>
               <div className="flex gap-1.5">
@@ -731,7 +1309,9 @@ export const OverlayInspector: React.FC = () => {
                     type="button"
                     onClick={() => setProgressBarColor(c.hex)}
                     className={`w-6 h-6 rounded border border-outline-variant cursor-pointer ${
-                      progressBarColor.toLowerCase() === c.hex.toLowerCase() ? 'ring-2 ring-primary ring-offset-1' : ''
+                      progressBarColor.toLowerCase() === c.hex.toLowerCase()
+                        ? 'ring-2 ring-primary ring-offset-1'
+                        : ''
                     }`}
                     style={{ backgroundColor: c.hex }}
                     title={c.name}
@@ -745,11 +1325,16 @@ export const OverlayInspector: React.FC = () => {
 
       <hr className="border-outline-variant/40" />
 
-      {/* SECTION 4: Motion Graphics */}
+      {/* =========================================================================
+          SECTION 7: Motion Graphics
+          ========================================================================= */}
       <section className="flex flex-col gap-3">
-        <span className="text-xs font-semibold uppercase tracking-wider text-outline font-label-caps">
-          Motion Graphics
-        </span>
+        <div className="flex flex-col">
+          <span className="text-xs font-semibold uppercase tracking-wider text-outline font-label-caps">
+            Motion Graphics
+          </span>
+          <span className="text-[11px] text-outline">Dynamic animated overlays</span>
+        </div>
 
         {/* 1. Code Block */}
         <div className="flex flex-col gap-2.5 p-3 rounded-xl border border-outline-variant/50 bg-surface-container-lowest">
@@ -795,7 +1380,9 @@ export const OverlayInspector: React.FC = () => {
                     className="px-2 py-1 text-xs border border-outline-variant rounded bg-surface"
                   >
                     {Object.entries(CODE_LANGUAGE_LABELS).map(([k, v]) => (
-                      <option key={k} value={k}>{v}</option>
+                      <option key={k} value={k}>
+                        {v}
+                      </option>
                     ))}
                   </select>
                 </label>
@@ -808,7 +1395,9 @@ export const OverlayInspector: React.FC = () => {
                     className="px-2 py-1 text-xs border border-outline-variant rounded bg-surface"
                   >
                     {CODE_POSITIONS.map((p) => (
-                      <option key={p.value} value={p.value}>{p.label}</option>
+                      <option key={p.value} value={p.value}>
+                        {p.label}
+                      </option>
                     ))}
                   </select>
                 </label>
@@ -950,7 +1539,9 @@ export const OverlayInspector: React.FC = () => {
                     className="px-2 py-1 text-xs border border-outline-variant rounded bg-surface"
                   >
                     {TICKER_DIRECTIONS.map((d) => (
-                      <option key={d.value} value={d.value}>{d.label}</option>
+                      <option key={d.value} value={d.value}>
+                        {d.label}
+                      </option>
                     ))}
                   </select>
                 </label>
@@ -963,7 +1554,9 @@ export const OverlayInspector: React.FC = () => {
                     className="px-2 py-1 text-xs border border-outline-variant rounded bg-surface"
                   >
                     {TICKER_POSITIONS.map((p) => (
-                      <option key={p.value} value={p.value}>{p.label}</option>
+                      <option key={p.value} value={p.value}>
+                        {p.label}
+                      </option>
                     ))}
                   </select>
                 </label>

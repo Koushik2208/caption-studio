@@ -1,46 +1,63 @@
+import type React from "react";
 import type { FrameContentInset } from "../../frames/types";
-import type { CaptionPosition } from "./types";
+import type { CaptionAlignment, CaptionPosition } from "./types";
 
-// Corner/side placement never makes sense for caption text - it's always
-// horizontally centered, only vertical placement (top/center/bottom) varies.
-// Top/bottom inset by a safe margin so captions never sit flush against the
-// edge (clears phone status bars, platform UI, home indicators). Computed in
-// JS as a fraction of the actual composition height rather than a CSS %
-// padding value - percentage padding-top/bottom resolves against the
-// containing block's *width* per the CSS spec, not its height, so a plain
-// "9%" padding would look right at 1080x1920 but wrong at 1920x1080.
+// Corner/side placement is configured via textAlign & safe horizontal insets.
+// Vertical placement is controlled via continuous vertical position (customPositionY)
+// or semantic position presets ('bottom', 'center', 'split-center', 'top').
 const SAFE_MARGIN_RATIO = 0.09;
 
 export const getPositionStyle = (
   position: CaptionPosition | undefined,
   compositionHeight: number,
-  // How much space the active frame's own chrome already occupies (e.g.
-  // Cinematic Scope's letterbox bars) - added on top of the safe margin so
-  // Top/Bottom captions clear the frame, not just the raw composition edge.
-  // Zero for 'none' or frames that don't reduce usable content area.
   contentInset?: FrameContentInset,
-): {
-  justifyContent: "flex-start" | "center" | "flex-end";
-  alignItems: "center";
-  paddingTop?: number;
-  paddingBottom?: number;
-} => {
+  customPositionY?: number,
+  textAlign: CaptionAlignment = "center",
+): React.CSSProperties => {
+  const alignStyle: React.CSSProperties = {
+    display: "flex",
+    alignItems:
+      textAlign === "left"
+        ? "flex-start"
+        : textAlign === "right"
+        ? "flex-end"
+        : "center",
+    paddingLeft: textAlign === "left" ? "7.5%" : undefined,
+    paddingRight: textAlign === "right" ? "7.5%" : undefined,
+  };
+
+  // If continuous customPositionY is provided, compute smooth deterministic Y translation
+  if (customPositionY !== undefined) {
+    const topPx = compositionHeight * customPositionY;
+    const insetOffset = ((contentInset?.top ?? 0) - (contentInset?.bottom ?? 0)) * 0.5;
+    return {
+      ...alignStyle,
+      justifyContent: "center",
+      transform: `translateY(${Math.round(topPx - compositionHeight * 0.5 + insetOffset)}px)`,
+    };
+  }
+
+  // Legacy semantic positioning fallback
   const margin = compositionHeight * SAFE_MARGIN_RATIO;
   switch (position) {
     case "top":
       return {
+        ...alignStyle,
         justifyContent: "flex-start",
-        alignItems: "center",
         paddingTop: margin + (contentInset?.top ?? 0),
       };
     case "bottom":
       return {
+        ...alignStyle,
         justifyContent: "flex-end",
-        alignItems: "center",
         paddingBottom: margin + (contentInset?.bottom ?? 0),
       };
+    case "split-center":
     case "center":
     default:
-      return { justifyContent: "center", alignItems: "center" };
+      return {
+        ...alignStyle,
+        justifyContent: "center",
+      };
   }
 };

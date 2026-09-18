@@ -2,10 +2,10 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { parseSrt, type Caption } from '@remotion/captions';
 import { ensureWordLevelCaptions } from '../captions/processCaptions';
 import { FONT_PRESETS, type FontPresetName } from '../captions/styles/presets';
-import type { CaptionPosition, CaptionStyleOverrides, CaptionStyleVariant, CaptionTextTransform, WordTypographyOverride } from '../captions/styles/types';
+import type { CaptionAlignment, CaptionPosition, CaptionStyleOverrides, CaptionStyleVariant, CaptionTextTransform, WordTypographyOverride } from '../captions/styles/types';
 import { DEFAULT_KEYWORDS } from '../captions/styles/applyKeywordEmphasis';
 import type { OverlaySettings, ProgressBarPosition, WatermarkPosition } from '../overlay/types';
-import type { CardAspectRatio, CardBackdrop, CardBorderStyle, FrameCardMode, FrameSettings, FrameVariant } from '../frames/types';
+import type { CardAspectRatio, CardBackdrop, CardBorderStyle, CompositionLayout, FrameCardMode, FrameSettings, FrameVariant } from '../frames/types';
 import type { OverlayIntensity, TextureOverlaySettings } from '../textures/types';
 import type { CodeBlockPosition, CodeLanguage, MotionGraphicsSettings, TickerDirection, TickerPosition } from '../motion/types';
 
@@ -39,6 +39,8 @@ type PersistedState = {
   highlightColor: string;
   keywords: string[];
   position: CaptionPosition;
+  captionPositionY?: number;
+  textAlign?: CaptionAlignment;
   fontSizeMultiplier: number;
   textColor?: string;
   fontWeight?: number | null;
@@ -69,6 +71,7 @@ type PersistedState = {
   frameVariant: FrameVariant;
   frameBgColor: string;
   bezelRadiusMultiplier: number;
+  layout?: CompositionLayout;
   cardMode?: FrameCardMode;
   customScale?: number;
   customAspectRatio?: CardAspectRatio;
@@ -84,6 +87,15 @@ type PersistedState = {
   customBackdrop?: CardBackdrop;
   customBackdropColor?: string;
   customBackdropGradient?: string;
+  splitGap?: number;
+  splitTopFocalX?: number;
+  splitTopFocalY?: number;
+  splitBottomFocalX?: number;
+  splitBottomFocalY?: number;
+  splitLeftFocalX?: number;
+  splitLeftFocalY?: number;
+  splitRightFocalX?: number;
+  splitRightFocalY?: number;
   filmDustEnabled: boolean;
   halationEnabled: boolean;
   halationIntensity: OverlayIntensity;
@@ -211,6 +223,10 @@ interface ProjectContextType {
   setKeywords: (keywords: string[]) => void;
   position: CaptionPosition;
   setPosition: (position: CaptionPosition) => void;
+  captionPositionY: number;
+  setCaptionPositionY: (pos: number) => void;
+  textAlign: CaptionAlignment;
+  setTextAlign: (align: CaptionAlignment) => void;
   fontSizeMultiplier: number;
   setFontSizeMultiplier: (multiplier: number) => void;
   textColor: string;
@@ -282,6 +298,8 @@ interface ProjectContextType {
   setFrameBgColor: (color: string) => void;
   bezelRadiusMultiplier: number;
   setBezelRadiusMultiplier: (multiplier: number) => void;
+  layout: CompositionLayout;
+  setLayout: (layout: CompositionLayout) => void;
   cardMode: FrameCardMode;
   setCardMode: (mode: FrameCardMode) => void;
   customScale: number;
@@ -312,6 +330,24 @@ interface ProjectContextType {
   setCustomBackdropColor: (color: string) => void;
   customBackdropGradient: string;
   setCustomBackdropGradient: (gradient: string) => void;
+  splitGap: number;
+  setSplitGap: (gap: number) => void;
+  splitTopFocalX: number;
+  setSplitTopFocalX: (val: number) => void;
+  splitTopFocalY: number;
+  setSplitTopFocalY: (val: number) => void;
+  splitBottomFocalX: number;
+  setSplitBottomFocalX: (val: number) => void;
+  splitBottomFocalY: number;
+  setSplitBottomFocalY: (val: number) => void;
+  splitLeftFocalX: number;
+  setSplitLeftFocalX: (val: number) => void;
+  splitLeftFocalY: number;
+  setSplitLeftFocalY: (val: number) => void;
+  splitRightFocalX: number;
+  setSplitRightFocalX: (val: number) => void;
+  splitRightFocalY: number;
+  setSplitRightFocalY: (val: number) => void;
   frameSettings: FrameSettings;
   // Texture overlay tab controls, lifted the same way as frameSettings above
   // - each texture is independently toggleable (unlike Frame's single-select
@@ -421,7 +457,26 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [highlightIntensity, setHighlightIntensity] = useState(persisted?.highlightIntensity ?? 0.4);
   const [highlightColor, setHighlightColor] = useState(persisted?.highlightColor ?? '#0066ff');
   const [keywords, setKeywords] = useState<string[]>(persisted?.keywords ?? DEFAULT_KEYWORDS);
-  const [position, setPosition] = useState<CaptionPosition>(persisted?.position ?? 'center');
+  const [position, setPositionState] = useState<CaptionPosition>(persisted?.position ?? 'bottom');
+  const [captionPositionY, setCaptionPositionY] = useState<number>(() => {
+    if (persisted?.captionPositionY !== undefined) return persisted.captionPositionY;
+    if (persisted?.position === 'top') return 0.15;
+    if (persisted?.position === 'center' || persisted?.position === 'split-center') return 0.50;
+    return 0.85;
+  });
+  const [textAlign, setTextAlign] = useState<CaptionAlignment>(persisted?.textAlign ?? 'center');
+
+  const setPosition = useCallback((newPos: CaptionPosition) => {
+    setPositionState(newPos);
+    if (newPos === 'bottom') {
+      setCaptionPositionY(0.85);
+    } else if (newPos === 'center' || newPos === 'split-center') {
+      setCaptionPositionY(0.50);
+    } else if (newPos === 'top') {
+      setCaptionPositionY(0.15);
+    }
+  }, []);
+
   const [fontSizeMultiplier, setFontSizeMultiplier] = useState(persisted?.fontSizeMultiplier ?? 1);
 
   const [textColor, setTextColor] = useState<string>(persisted?.textColor ?? '#ffffff');
@@ -548,6 +603,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       textTransform,
       highlightColor,
       position,
+      customPositionY: captionPositionY,
+      textAlign,
       keywordHighlightEnabled,
       highlightIntensity,
       keywords,
@@ -576,6 +633,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       textTransform,
       highlightColor,
       position,
+      captionPositionY,
+      textAlign,
       keywordHighlightEnabled,
       highlightIntensity,
       keywords,
@@ -598,6 +657,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [bezelRadiusMultiplier, setBezelRadiusMultiplier] = useState(
     persisted?.bezelRadiusMultiplier ?? 1,
   );
+  const [layout, setLayout] = useState<CompositionLayout>(persisted?.layout ?? 'floating-card');
   const [cardMode, setCardMode] = useState<FrameCardMode>(persisted?.cardMode ?? 'preset');
   const [customScale, setCustomScale] = useState<number>(persisted?.customScale ?? 0.85);
   const [customAspectRatio, setCustomAspectRatio] = useState<CardAspectRatio>(
@@ -629,6 +689,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [customBackdropGradient, setCustomBackdropGradient] = useState<string>(
     persisted?.customBackdropGradient ?? 'linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%)',
   );
+  const [splitGap, setSplitGap] = useState<number>(persisted?.splitGap ?? 0);
+  const [splitTopFocalX, setSplitTopFocalX] = useState<number>(persisted?.splitTopFocalX ?? 0.5);
+  const [splitTopFocalY, setSplitTopFocalY] = useState<number>(persisted?.splitTopFocalY ?? 0.25);
+  const [splitBottomFocalX, setSplitBottomFocalX] = useState<number>(persisted?.splitBottomFocalX ?? 0.5);
+  const [splitBottomFocalY, setSplitBottomFocalY] = useState<number>(persisted?.splitBottomFocalY ?? 0.75);
+  const [splitLeftFocalX, setSplitLeftFocalX] = useState<number>(persisted?.splitLeftFocalX ?? 0.25);
+  const [splitLeftFocalY, setSplitLeftFocalY] = useState<number>(persisted?.splitLeftFocalY ?? 0.5);
+  const [splitRightFocalX, setSplitRightFocalX] = useState<number>(persisted?.splitRightFocalX ?? 0.75);
+  const [splitRightFocalY, setSplitRightFocalY] = useState<number>(persisted?.splitRightFocalY ?? 0.5);
 
   const [filmDustEnabled, setFilmDustEnabled] = useState(persisted?.filmDustEnabled ?? false);
   const [halationEnabled, setHalationEnabled] = useState(persisted?.halationEnabled ?? false);
@@ -704,6 +773,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const frameSettings: FrameSettings = useMemo(
     () => ({
+      layout,
       variant: frameVariant,
       bgColor: frameBgColor,
       bezelRadiusMultiplier,
@@ -722,8 +792,18 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       customBackdrop,
       customBackdropColor,
       customBackdropGradient,
+      splitGap,
+      splitTopFocalX,
+      splitTopFocalY,
+      splitBottomFocalX,
+      splitBottomFocalY,
+      splitLeftFocalX,
+      splitLeftFocalY,
+      splitRightFocalX,
+      splitRightFocalY,
     }),
     [
+      layout,
       frameVariant,
       frameBgColor,
       bezelRadiusMultiplier,
@@ -742,6 +822,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       customBackdrop,
       customBackdropColor,
       customBackdropGradient,
+      splitGap,
+      splitTopFocalX,
+      splitTopFocalY,
+      splitBottomFocalX,
+      splitBottomFocalY,
+      splitLeftFocalX,
+      splitLeftFocalY,
+      splitRightFocalX,
+      splitRightFocalY,
     ],
   );
 
@@ -839,6 +928,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       highlightColor,
       keywords,
       position,
+      captionPositionY,
+      textAlign,
       fontSizeMultiplier,
       textColor,
       fontWeight: customFontWeight,
@@ -868,6 +959,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       frameVariant,
       frameBgColor,
       bezelRadiusMultiplier,
+      layout,
       cardMode,
       customScale,
       customAspectRatio,
@@ -883,6 +975,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       customBackdrop,
       customBackdropColor,
       customBackdropGradient,
+      splitGap,
+      splitTopFocalX,
+      splitTopFocalY,
+      splitBottomFocalX,
+      splitBottomFocalY,
+      splitLeftFocalX,
+      splitLeftFocalY,
+      splitRightFocalX,
+      splitRightFocalY,
       filmDustEnabled,
       halationEnabled,
       halationIntensity,
@@ -929,6 +1030,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     highlightColor,
     keywords,
     position,
+    captionPositionY,
+    textAlign,
     fontSizeMultiplier,
     textColor,
     customFontWeight,
@@ -1172,6 +1275,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setKeywords,
         position,
         setPosition,
+        captionPositionY,
+        setCaptionPositionY,
+        textAlign,
+        setTextAlign,
         fontSizeMultiplier,
         setFontSizeMultiplier,
         textColor,
@@ -1236,6 +1343,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setFrameBgColor,
         bezelRadiusMultiplier,
         setBezelRadiusMultiplier,
+        layout,
+        setLayout,
         cardMode,
         setCardMode,
         customScale,
@@ -1266,6 +1375,24 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setCustomBackdropColor,
         customBackdropGradient,
         setCustomBackdropGradient,
+        splitGap,
+        setSplitGap,
+        splitTopFocalX,
+        setSplitTopFocalX,
+        splitTopFocalY,
+        setSplitTopFocalY,
+        splitBottomFocalX,
+        setSplitBottomFocalX,
+        splitBottomFocalY,
+        setSplitBottomFocalY,
+        splitLeftFocalX,
+        setSplitLeftFocalX,
+        splitLeftFocalY,
+        setSplitLeftFocalY,
+        splitRightFocalX,
+        setSplitRightFocalX,
+        splitRightFocalY,
+        setSplitRightFocalY,
         frameSettings,
         filmDustEnabled,
         setFilmDustEnabled,

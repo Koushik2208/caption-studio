@@ -61,17 +61,6 @@ export const TopBar: React.FC = () => {
             Style
           </NavLink>
           <NavLink
-            to="/overlay"
-            className={({ isActive }) =>
-              `pb-1 font-bold font-label-caps text-label-caps uppercase transition-colors duration-200 border-b-2 ${isActive
-                ? 'text-primary border-primary'
-                : 'text-on-surface-variant hover:text-primary border-transparent'
-              }`
-            }
-          >
-            Overlay
-          </NavLink>
-          <NavLink
             to="/export"
             className={({ isActive }) =>
               `pb-1 font-bold font-label-caps text-label-caps uppercase transition-colors duration-200 border-b-2 ${isActive

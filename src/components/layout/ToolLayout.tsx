@@ -21,19 +21,13 @@ const CANVAS_CONFIG: Record<string, CanvasConfig> = {
     canvasClassName: 'relative bg-black rounded-2xl overflow-hidden canvas-shadow border border-outline-variant/30 transition-all duration-300',
     showAspectTag: true,
   },
-  '/overlay': {
-    mainClassName: 'flex-1 bg-surface flex flex-col items-center justify-center p-canvas-margin overflow-hidden relative',
-    canvasClassName: 'relative bg-black rounded-2xl overflow-hidden canvas-shadow border border-outline-variant/30 transition-all duration-300',
-    showAspectTag: true,
-    showResolutionTag: true,
-  },
   '/export': {
     mainClassName: 'flex-1 bg-surface-container flex items-center justify-center p-canvas-margin overflow-hidden relative',
     canvasClassName: 'relative bg-black rounded-xl overflow-hidden preview-canvas-shadow border-8 border-white/5 transition-all duration-300',
   },
 };
 
-// Parent route for Import/Style/Overlay/Export. Owns the single PreviewPlayer
+// Parent route for Import/Style/Export. Owns the single PreviewPlayer
 // instance so navigating between tool tabs only swaps the <Outlet /> (right
 // tool panel), never the player itself - React Router keeps this component
 // mounted across those route changes, so playback survives navigation.

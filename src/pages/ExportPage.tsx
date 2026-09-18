@@ -333,7 +333,7 @@ export const ExportPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-body-sm text-on-surface-variant">Watermark</span>
                 <Link
-                  to="/overlay"
+                  to="/style"
                   className="flex items-center gap-1 text-body-sm font-semibold text-primary hover:underline"
                 >
                   {overlaySettings.watermarkEnabled ? 'On' : 'Off'}

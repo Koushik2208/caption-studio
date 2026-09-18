@@ -58,32 +58,54 @@ export const CaptionExportVideoComposition: React.FC<CaptionExportVideoProps> = 
     frameContentInset.left > 0 ||
     frameContentInset.right > 0;
 
+  const mediaElement = (
+    <BackgroundEffectsRenderer
+      textureSettings={textureSettings}
+      audioAmplitude={audioAmplitude}
+      captions={captions}
+      styleOverrides={styleOverrides}
+    >
+      <OffthreadVideo src={mediaUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+    </BackgroundEffectsRenderer>
+  );
+
+  const textureElement = <TextureOverlayRenderer textureSettings={textureSettings} />;
+
+  const captionElement = (
+    <CaptionRenderer
+      captions={captions}
+      styleVariant={styleVariant}
+      styleOverrides={styleOverrides}
+      frameContentInset={frameContentInset}
+    />
+  );
+
+  const overlayElement = (
+    <>
+      {overlaySettings?.watermarkEnabled && (
+        <WatermarkOverlay opacity={overlaySettings.watermarkOpacity} position={overlaySettings.watermarkPosition} />
+      )}
+      {overlaySettings?.progressBarEnabled && (
+        <ProgressBarOverlay color={overlaySettings.progressBarColor} position={overlaySettings.progressBarPosition} />
+      )}
+      <MotionGraphicsRenderer motionSettings={motionSettings} />
+    </>
+  );
+
   return (
-    <FrameRenderer frameSettings={frameSettings}>
+    <FrameRenderer
+      frameSettings={frameSettings}
+      media={mediaElement}
+      captions={captionElement}
+      overlays={overlayElement}
+      textures={textureElement}
+    >
       <AbsoluteFill style={{ backgroundColor: 'black' }}>
-        <BackgroundEffectsRenderer
-          textureSettings={textureSettings}
-          audioAmplitude={audioAmplitude}
-          captions={captions}
-          styleOverrides={styleOverrides}
-        >
-          <OffthreadVideo src={mediaUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        </BackgroundEffectsRenderer>
-        <TextureOverlayRenderer textureSettings={textureSettings} />
+        {mediaElement}
+        {textureElement}
         <AbsoluteFill style={hasFrameInset ? { zIndex: 1 } : undefined}>
-          <CaptionRenderer
-            captions={captions}
-            styleVariant={styleVariant}
-            styleOverrides={styleOverrides}
-            frameContentInset={frameContentInset}
-          />
-          {overlaySettings?.watermarkEnabled && (
-            <WatermarkOverlay opacity={overlaySettings.watermarkOpacity} position={overlaySettings.watermarkPosition} />
-          )}
-          {overlaySettings?.progressBarEnabled && (
-            <ProgressBarOverlay color={overlaySettings.progressBarColor} position={overlaySettings.progressBarPosition} />
-          )}
-          <MotionGraphicsRenderer motionSettings={motionSettings} />
+          {captionElement}
+          {overlayElement}
         </AbsoluteFill>
       </AbsoluteFill>
     </FrameRenderer>
