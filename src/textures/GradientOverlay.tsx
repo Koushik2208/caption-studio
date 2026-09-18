@@ -1,6 +1,6 @@
 import React from 'react';
 import { AbsoluteFill } from 'remotion';
-import type { GradientOverlayDirection } from './types';
+import type { GradientOverlayDirection } from './types.js';
 import { getGradientDirectionCss, getGradientOverlayBackground } from './gradientUtils';
 
 export { getGradientDirectionCss, getGradientOverlayBackground };

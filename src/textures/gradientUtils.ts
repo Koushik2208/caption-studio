@@ -1,4 +1,4 @@
-import type { GradientOverlayDirection } from './types';
+import type { GradientOverlayDirection } from './types.js';
 
 export const getGradientDirectionCss = (direction: GradientOverlayDirection): string => {
   switch (direction) {
