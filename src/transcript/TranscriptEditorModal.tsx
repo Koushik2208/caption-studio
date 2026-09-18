@@ -14,11 +14,11 @@ export const TranscriptEditorModal: React.FC = () => {
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 transition-opacity duration-300"
+      className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4 transition-opacity duration-300"
       onClick={() => setIsTranscriptEditorOpen(false)}
     >
       <div
-        className="relative flex h-[75vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-outline-variant/60 bg-surface-container-lowest shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+        className="relative flex h-[88vh] sm:h-[75vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-outline-variant/60 bg-surface-container-lowest shadow-2xl animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         <button

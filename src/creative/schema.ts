@@ -2,6 +2,7 @@ import type { CaptionStyleVariant } from '../captions/styles/types.js';
 import { FONT_PRESETS, type FontPresetName } from '../captions/styles/presets.js';
 import type { CompositionLayout, FrameCardMode, FrameVariant } from '../frames/types.js';
 import type { VideoMotionType } from '../videoMotion/types.js';
+import type { GradientOverlayDirection } from '../textures/types.js';
 import { TRANSITION_OVERLAYS, SOUND_EFFECTS } from '../assets/registry.js';
 
 export const SUPPORTED_ANIMATION_VARIANTS: readonly CaptionStyleVariant[] = [
@@ -65,6 +66,21 @@ export const VALID_INPUT_MODES = new Set<string>([
   'transcript',
   'text',
 ]);
+
+export const SUPPORTED_GRADIENT_OVERLAY_DIRECTIONS: readonly GradientOverlayDirection[] = [
+  'bottom',
+  'top',
+  'left',
+  'right',
+  'bottom-left',
+  'bottom-right',
+  'top-left',
+  'top-right',
+] as const;
+
+export const VALID_GRADIENT_OVERLAY_DIRECTIONS = new Set<string>(
+  SUPPORTED_GRADIENT_OVERLAY_DIRECTIONS,
+);
 
 // Normalization lookup maps to be lenient with external AI casing (e.g. "word-stamp" -> "wordStamp", "blur_resolve" -> "blurResolve")
 const ANIMATION_VARIANT_MAP: Record<string, CaptionStyleVariant> = {

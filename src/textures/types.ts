@@ -1,10 +1,25 @@
 export type OverlayIntensity = 'low' | 'medium' | 'high';
 
+export type GradientOverlayDirection =
+  | 'bottom'
+  | 'top'
+  | 'left'
+  | 'right'
+  | 'bottom-left'
+  | 'bottom-right'
+  | 'top-left'
+  | 'top-right';
+
 // Lives alongside FrameSettings (src/frames/types.ts) - same pattern: one
 // settings object in ProjectContext drives the live PreviewPlayer and gets
 // baked into the real export render. Film Dust has no intensity control
 // (on/off only, per its Reel Craft origin - see src/textures/FilmDust.tsx).
 export type TextureOverlaySettings = {
+  gradientOverlayEnabled: boolean;
+  gradientOverlayColor: string;
+  gradientOverlayOpacity: number;
+  gradientOverlayStrength: number;
+  gradientOverlayDirection: GradientOverlayDirection;
   filmDustEnabled: boolean;
   halationEnabled: boolean;
   halationIntensity: OverlayIntensity;

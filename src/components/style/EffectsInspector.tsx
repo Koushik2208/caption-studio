@@ -2,12 +2,24 @@ import React, { useState } from 'react';
 import { staticFile } from 'remotion';
 import { useProject } from '../../context/ProjectContext';
 import { useMediaDurationFrames } from '../../preview/useMediaDurationFrames';
-import type { OverlayIntensity } from '../../textures/types';
+import type { OverlayIntensity, GradientOverlayDirection } from '../../textures/types';
 import { TRANSITION_OVERLAYS, SOUND_EFFECTS, getAssetById } from '../../assets/registry';
 
 const STROKE_SWATCHES = ['#000000', '#ffffff', '#1a1c1d', '#e8262b'];
 const GLOW_SWATCHES = ['#0066ff', '#00f0ff', '#a855f7', '#ec4899', '#eab308', '#22c55e', '#ffffff'];
 const GRADIENT_SWATCHES = ['#ffffff', '#10b981', '#0066ff', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6'];
+const GRADIENT_OVERLAY_SWATCHES = ['#000000', '#111827', '#0f172a', '#1e1b4b', '#18181b', '#ffffff'];
+
+const GRADIENT_OVERLAY_DIRECTIONS: { value: GradientOverlayDirection; label: string }[] = [
+  { value: 'bottom', label: 'Bottom' },
+  { value: 'top', label: 'Top' },
+  { value: 'left', label: 'Left' },
+  { value: 'right', label: 'Right' },
+  { value: 'bottom-left', label: 'Bottom Left' },
+  { value: 'bottom-right', label: 'Bottom Right' },
+  { value: 'top-left', label: 'Top Left' },
+  { value: 'top-right', label: 'Top Right' },
+];
 
 const INTENSITIES: { value: OverlayIntensity; label: string }[] = [
   { value: 'low', label: 'Subtle' },
@@ -49,6 +61,16 @@ export const EffectsInspector: React.FC = () => {
     setFilmGrainEnabled,
     filmGrainIntensity,
     setFilmGrainIntensity,
+    gradientOverlayEnabled,
+    setGradientOverlayEnabled,
+    gradientOverlayColor,
+    setGradientOverlayColor,
+    gradientOverlayOpacity,
+    setGradientOverlayOpacity,
+    gradientOverlayStrength,
+    setGradientOverlayStrength,
+    gradientOverlayDirection,
+    setGradientOverlayDirection,
     halationEnabled,
     setHalationEnabled,
     halationIntensity,
@@ -601,6 +623,122 @@ export const EffectsInspector: React.FC = () => {
         </div>
 
         <div className="flex flex-col gap-2">
+          {/* Gradient Overlay */}
+          <div className="flex flex-col gap-2.5 p-3 rounded-xl border border-outline-variant/50 bg-surface-container-lowest">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="text-xs font-semibold text-on-surface">Gradient Overlay</span>
+                <span className="text-[11px] text-outline">Directional vignette for video depth & caption legibility</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setGradientOverlayEnabled(!gradientOverlayEnabled)}
+                className={`relative w-9 h-5 rounded-full transition-colors duration-150 cursor-pointer shrink-0 ${
+                  gradientOverlayEnabled ? 'bg-primary' : 'bg-outline-variant'
+                }`}
+                aria-pressed={gradientOverlayEnabled}
+                aria-label="Toggle gradient overlay"
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-xs transition-transform duration-150 ${
+                    gradientOverlayEnabled ? 'translate-x-4' : ''
+                  }`}
+                />
+              </button>
+            </div>
+
+            {gradientOverlayEnabled && (
+              <div className="flex flex-col gap-3 pt-2 border-t border-outline-variant/30 mt-1">
+                {/* Color */}
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-medium text-on-surface">Color</span>
+                    <div className="flex items-center gap-1.5">
+                      <label className="relative w-6 h-6 rounded overflow-hidden border border-outline-variant cursor-pointer shrink-0">
+                        <input
+                          type="color"
+                          value={gradientOverlayColor}
+                          onChange={(e) => setGradientOverlayColor(e.target.value)}
+                          className="absolute -top-2 -left-2 w-10 h-10 cursor-pointer border-0 p-0"
+                        />
+                      </label>
+                      <input
+                        type="text"
+                        value={gradientOverlayColor}
+                        onChange={(e) => setGradientOverlayColor(e.target.value)}
+                        className="w-20 px-2 py-1 text-xs font-mono uppercase border border-outline-variant/80 rounded bg-surface"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {GRADIENT_OVERLAY_SWATCHES.map((hex) => (
+                      <button
+                        key={hex}
+                        type="button"
+                        onClick={() => setGradientOverlayColor(hex)}
+                        className={`w-5 h-5 rounded border border-outline-variant cursor-pointer transition-transform hover:scale-105 ${
+                          gradientOverlayColor.toLowerCase() === hex.toLowerCase() ? 'ring-2 ring-primary ring-offset-1' : ''
+                        }`}
+                        style={{ backgroundColor: hex }}
+                        title={hex}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Direction */}
+                <div className="flex flex-col gap-1">
+                  <span className="text-[11px] font-medium text-on-surface">Direction</span>
+                  <select
+                    value={gradientOverlayDirection}
+                    onChange={(e) => setGradientOverlayDirection(e.target.value as GradientOverlayDirection)}
+                    className="w-full text-xs p-1.5 rounded-md bg-surface-container-high border border-outline-variant/50 text-on-surface focus:outline-hidden focus:border-primary cursor-pointer"
+                  >
+                    {GRADIENT_OVERLAY_DIRECTIONS.map((dir) => (
+                      <option key={dir.value} value={dir.value}>
+                        {dir.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Opacity Slider */}
+                <div className="flex flex-col gap-1">
+                  <div className="flex justify-between text-[11px] text-on-surface">
+                    <span>Opacity</span>
+                    <span className="font-mono text-outline">{Math.round(gradientOverlayOpacity * 100)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={gradientOverlayOpacity}
+                    onChange={(e) => setGradientOverlayOpacity(Number(e.target.value))}
+                    className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
+                  />
+                </div>
+
+                {/* Strength Slider */}
+                <div className="flex flex-col gap-1">
+                  <div className="flex justify-between text-[11px] text-on-surface">
+                    <span>Strength</span>
+                    <span className="font-mono text-outline">{Math.round(gradientOverlayStrength * 100)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={gradientOverlayStrength}
+                    onChange={(e) => setGradientOverlayStrength(Number(e.target.value))}
+                    className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
           {renderTextureItem(
             'Film Grain',
             'Organic 35mm cinematic film grain',

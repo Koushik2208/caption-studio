@@ -6,9 +6,10 @@ interface SidebarItemProps {
   label: string;
   to?: string;
   onClick?: () => void;
+  isMobile?: boolean;
 }
 
-export const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, to, onClick }) => {
+export const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, to, onClick, isMobile }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const isActive = to ? location.pathname === to || location.pathname.startsWith(`${to}/`) : false;
@@ -20,6 +21,27 @@ export const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, to, onCli
       navigate(to);
     }
   };
+
+  if (isMobile) {
+    return (
+      <button
+        onClick={handleClick}
+        className={`flex flex-col items-center justify-center flex-1 py-1.5 px-1 rounded-xl transition-all duration-150 cursor-pointer ${
+          isActive
+            ? 'text-primary bg-primary-container/10 font-bold'
+            : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container/60 font-medium'
+        }`}
+        aria-label={label}
+      >
+        <span className="material-symbols-outlined text-[22px]" aria-hidden="true">
+          {icon}
+        </span>
+        <span className="text-[10px] font-label-caps tracking-tight leading-tight mt-0.5">
+          {label}
+        </span>
+      </button>
+    );
+  }
 
   return (
     <button

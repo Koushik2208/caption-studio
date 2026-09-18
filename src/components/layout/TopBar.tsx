@@ -8,32 +8,33 @@ export const TopBar: React.FC = () => {
   const { projectName, setProjectName, saveStatus } = useProject();
 
   return (
-    <header className="fixed top-0 left-0 right-0 bg-surface-container-lowest border-b border-outline-variant flex justify-between items-center h-16 px-canvas-margin w-full z-50">
-      <div className="flex items-center gap-4">
-        <NavLink to="/" className="text-headline-md font-headline-md font-bold text-on-surface hover:text-primary transition-colors">
+    <header className="fixed top-0 left-0 right-0 bg-surface-container-lowest border-b border-outline-variant flex justify-between items-center h-16 px-3 sm:px-4 lg:px-canvas-margin w-full z-50">
+      <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+        <NavLink to="/" className="text-sm sm:text-base lg:text-headline-md font-headline-md font-bold text-on-surface hover:text-primary transition-colors shrink-0">
           Caption Studio
         </NavLink>
-        <div className="h-6 w-px bg-outline-variant mx-2"></div>
+        <div className="hidden sm:block h-6 w-px bg-outline-variant mx-1 lg:mx-2 shrink-0"></div>
         <input
           value={projectName}
           onChange={(e) => setProjectName(e.target.value)}
           placeholder="Untitled Project"
           aria-label="Project name"
-          className="text-body-md font-body-md text-on-surface-variant italic bg-transparent border border-transparent rounded-md px-1.5 py-0.5 w-40 truncate outline-none hover:border-outline-variant focus:border-primary focus:text-on-surface transition-colors"
+          className="hidden sm:block text-body-md font-body-md text-on-surface-variant italic bg-transparent border border-transparent rounded-md px-1.5 py-0.5 w-24 sm:w-32 lg:w-40 truncate outline-none hover:border-outline-variant focus:border-primary focus:text-on-surface transition-colors"
         />
 
         {/* Aspect Ratio Toggle Pill */}
-        <div className="h-6 w-px bg-outline-variant mx-1"></div>
+        <div className="hidden sm:block h-6 w-px bg-outline-variant mx-1 shrink-0"></div>
         <button
           onClick={() => setLayoutMode(layoutMode === 'vertical' ? 'horizontal' : 'vertical')}
-          className="px-3 py-1 bg-surface-container rounded-full border border-outline-variant flex items-center gap-1.5 cursor-pointer hover:bg-surface-container-high transition-colors text-on-surface-variant hover:text-on-surface"
+          className="px-2 sm:px-3 py-1 bg-surface-container rounded-full border border-outline-variant flex items-center gap-1 sm:gap-1.5 cursor-pointer hover:bg-surface-container-high transition-colors text-on-surface-variant hover:text-on-surface shrink-0"
           title="Click to toggle layout aspect ratio"
         >
-          <span className="material-symbols-outlined text-[16px] leading-none">
+          <span className="material-symbols-outlined text-[15px] sm:text-[16px] leading-none">
             {layoutMode === 'vertical' ? 'stay_current_portrait' : 'stay_current_landscape'}
           </span>
-          <span className="text-label-caps font-label-caps text-[10px] uppercase">
-            {layoutMode === 'vertical' ? '9:16 Vertical' : '16:9 Horizontal'}
+          <span className="text-label-caps font-label-caps text-[9px] sm:text-[10px] uppercase">
+            <span className="hidden sm:inline">{layoutMode === 'vertical' ? '9:16 Vertical' : '16:9 Horizontal'}</span>
+            <span className="sm:hidden">{layoutMode === 'vertical' ? '9:16' : '16:9'}</span>
           </span>
         </button>
 
@@ -74,27 +75,27 @@ export const TopBar: React.FC = () => {
         </nav>
       </div>
 
-      <div className="flex items-center gap-4">
-        <span className="text-body-sm font-body-sm text-outline">
+      <div className="flex items-center gap-1.5 sm:gap-3 lg:gap-4 shrink-0">
+        <span className="hidden sm:inline text-body-sm font-body-sm text-outline">
           {saveStatus === 'saving' ? 'Saving...' : 'Saved'}
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className="p-2 text-on-surface-variant hover:bg-surface-container rounded-lg transition-all active:scale-95 cursor-pointer"
+            className="p-1.5 sm:p-2 text-on-surface-variant hover:bg-surface-container rounded-lg transition-all active:scale-95 cursor-pointer"
             aria-label="Settings"
           >
-            <span className="material-symbols-outlined">settings</span>
+            <span className="material-symbols-outlined text-[20px] sm:text-[24px]">settings</span>
           </button>
           <button
-            className="p-2 text-on-surface-variant hover:bg-surface-container rounded-lg transition-all active:scale-95 cursor-pointer"
+            className="hidden sm:block p-2 text-on-surface-variant hover:bg-surface-container rounded-lg transition-all active:scale-95 cursor-pointer"
             aria-label="Help"
           >
-            <span className="material-symbols-outlined">help</span>
+            <span className="material-symbols-outlined text-[20px] sm:text-[24px]">help</span>
           </button>
         </div>
         <NavLink to="/export">
-          <button className="bg-primary text-on-primary px-4 py-1.5 rounded-lg font-bold text-body-md transition-all active:scale-95 hover:bg-primary-container cursor-pointer">
+          <button className="bg-primary text-on-primary px-2.5 sm:px-4 py-1.5 rounded-lg font-bold text-xs sm:text-body-md transition-all active:scale-95 hover:bg-primary-container cursor-pointer">
             Export
           </button>
         </NavLink>

@@ -58,7 +58,7 @@ const CodeEditorModalContent: React.FC = () => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 transition-opacity duration-300"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4 transition-opacity duration-300"
       role="dialog"
       aria-modal="true"
       aria-label="Edit Code Block"
@@ -66,10 +66,10 @@ const CodeEditorModalContent: React.FC = () => {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="flex max-h-[85vh] w-full max-w-xl flex-col rounded-2xl border border-outline-variant/60 bg-surface-container-lowest shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+        className="flex max-h-[90vh] sm:max-h-[85vh] w-full max-w-xl flex-col rounded-2xl border border-outline-variant/60 bg-surface-container-lowest shadow-2xl animate-in fade-in zoom-in-95 duration-200"
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-outline-variant/60 px-5 py-4">
-          <h2 className="text-headline-md font-headline-md font-bold text-on-surface">Edit Code Block</h2>
+        <div className="flex shrink-0 items-center justify-between border-b border-outline-variant/60 px-4 py-3 sm:px-5 sm:py-4">
+          <h2 className="text-base sm:text-headline-md font-headline-md font-bold text-on-surface">Edit Code Block</h2>
           <button
             onClick={close}
             aria-label="Close"
@@ -79,13 +79,13 @@ const CodeEditorModalContent: React.FC = () => {
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-3 sm:px-5 sm:py-4">
           <label className="flex flex-col gap-1.5">
             <span className="text-label-caps font-label-caps text-on-surface-variant uppercase text-[10px]">
               Code
             </span>
             <textarea
-              rows={14}
+              rows={10}
               value={draft.code}
               placeholder="Paste your code here..."
               onChange={(e) => setDraft((d) => ({ ...d, code: e.target.value }))}
@@ -102,7 +102,7 @@ const CodeEditorModalContent: React.FC = () => {
                 <button
                   key={lang}
                   onClick={() => setDraft((d) => ({ ...d, language: lang }))}
-                  className={`rounded-md py-1.5 text-[11px] font-bold transition cursor-pointer ${
+                  className={`rounded-md py-1.5 text-[10px] sm:text-[11px] font-bold transition cursor-pointer ${
                     draft.language === lang
                       ? 'bg-primary-container text-on-primary-container shadow-xs'
                       : 'text-on-surface-variant hover:text-on-surface'

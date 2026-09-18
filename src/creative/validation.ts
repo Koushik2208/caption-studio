@@ -16,7 +16,9 @@ import {
   SUPPORTED_ANIMATION_VARIANTS,
   SUPPORTED_COMPOSITION_LAYOUTS,
   SUPPORTED_FRAME_VARIANTS,
+  SUPPORTED_GRADIENT_OVERLAY_DIRECTIONS,
   SUPPORTED_VIDEO_MOTION_TYPES,
+  VALID_GRADIENT_OVERLAY_DIRECTIONS,
   VALID_INPUT_MODES,
 } from './schema.js';
 
@@ -137,6 +139,97 @@ export function validateSfxPlacement(
         path: `${pathPrefix}.volume`,
         message: 'SFX volume must be a number between 0.0 and 1.0',
         code: 'INVALID_SFX_VOLUME',
+      });
+    }
+  }
+
+  return errors;
+}
+
+function isValidColorString(color: unknown): boolean {
+  if (typeof color !== 'string') return false;
+  const trimmed = color.trim();
+  if (!trimmed) return false;
+  return (
+    /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(trimmed) ||
+    /^rgba?\s*\(/.test(trimmed) ||
+    /^hsla?\s*\(/.test(trimmed) ||
+    /^[a-zA-Z]+$/.test(trimmed)
+  );
+}
+
+export function validateEffectsSettings(
+  effects: unknown,
+  pathPrefix: string,
+): ValidationError[] {
+  const errors: ValidationError[] = [];
+
+  if (!isPlainObject(effects)) {
+    errors.push({
+      path: pathPrefix,
+      message: 'Effects settings must be an object',
+      code: 'INVALID_EFFECTS_SETTINGS',
+    });
+    return errors;
+  }
+
+  if (effects.gradientOverlayEnabled !== undefined && typeof effects.gradientOverlayEnabled !== 'boolean') {
+    errors.push({
+      path: `${pathPrefix}.gradientOverlayEnabled`,
+      message: 'gradientOverlayEnabled must be a boolean',
+      code: 'INVALID_GRADIENT_OVERLAY_ENABLED',
+    });
+  }
+
+  if (effects.gradientOverlayColor !== undefined) {
+    if (typeof effects.gradientOverlayColor !== 'string' || !isValidColorString(effects.gradientOverlayColor)) {
+      errors.push({
+        path: `${pathPrefix}.gradientOverlayColor`,
+        message: 'gradientOverlayColor must be a valid color string (e.g. #000000)',
+        code: 'INVALID_GRADIENT_OVERLAY_COLOR',
+      });
+    }
+  }
+
+  if (effects.gradientOverlayOpacity !== undefined) {
+    if (
+      typeof effects.gradientOverlayOpacity !== 'number' ||
+      !Number.isFinite(effects.gradientOverlayOpacity) ||
+      effects.gradientOverlayOpacity < 0 ||
+      effects.gradientOverlayOpacity > 1
+    ) {
+      errors.push({
+        path: `${pathPrefix}.gradientOverlayOpacity`,
+        message: 'gradientOverlayOpacity must be a number between 0.0 and 1.0',
+        code: 'INVALID_GRADIENT_OVERLAY_OPACITY',
+      });
+    }
+  }
+
+  if (effects.gradientOverlayStrength !== undefined) {
+    if (
+      typeof effects.gradientOverlayStrength !== 'number' ||
+      !Number.isFinite(effects.gradientOverlayStrength) ||
+      effects.gradientOverlayStrength < 0 ||
+      effects.gradientOverlayStrength > 1
+    ) {
+      errors.push({
+        path: `${pathPrefix}.gradientOverlayStrength`,
+        message: 'gradientOverlayStrength must be a number between 0.0 and 1.0',
+        code: 'INVALID_GRADIENT_OVERLAY_STRENGTH',
+      });
+    }
+  }
+
+  if (effects.gradientOverlayDirection !== undefined) {
+    if (
+      typeof effects.gradientOverlayDirection !== 'string' ||
+      !VALID_GRADIENT_OVERLAY_DIRECTIONS.has(effects.gradientOverlayDirection)
+    ) {
+      errors.push({
+        path: `${pathPrefix}.gradientOverlayDirection`,
+        message: `Unsupported gradientOverlayDirection '${effects.gradientOverlayDirection}'. Supported directions: ${SUPPORTED_GRADIENT_OVERLAY_DIRECTIONS.join(', ')}`,
+        code: 'UNSUPPORTED_GRADIENT_OVERLAY_DIRECTION',
       });
     }
   }
@@ -360,6 +453,9 @@ export function validateBeat(
           });
         }
       }
+      if (beat.visual.effects !== undefined) {
+        errors.push(...validateEffectsSettings(beat.visual.effects, `${pathPrefix}.visual.effects`));
+      }
     }
   }
 
@@ -481,6 +577,20 @@ export function validateCreativeProject(data: unknown): ValidationResult<Creativ
         code: 'INVALID_INPUT_MODE',
       });
     }
+    if (data.input.sourceLanguage !== undefined && (typeof data.input.sourceLanguage !== 'string' || !data.input.sourceLanguage.trim())) {
+      errors.push({
+        path: 'input.sourceLanguage',
+        message: 'input.sourceLanguage must be a non-empty string when specified',
+        code: 'INVALID_SOURCE_LANGUAGE',
+      });
+    }
+    if (data.input.outputLanguage !== undefined && (typeof data.input.outputLanguage !== 'string' || !data.input.outputLanguage.trim())) {
+      errors.push({
+        path: 'input.outputLanguage',
+        message: 'input.outputLanguage must be a non-empty string when specified',
+        code: 'INVALID_OUTPUT_LANGUAGE',
+      });
+    }
   }
 
   // 7. Global settings check
@@ -552,6 +662,9 @@ export function validateCreativeProject(data: unknown): ValidationResult<Creativ
           code: 'UNSUPPORTED_VIDEO_MOTION_TYPE',
         });
       }
+    }
+    if (gs.effects !== undefined) {
+      errors.push(...validateEffectsSettings(gs.effects, 'globalSettings.effects'));
     }
   }
 

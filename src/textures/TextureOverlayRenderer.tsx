@@ -1,3 +1,4 @@
+import { GradientOverlay } from './GradientOverlay';
 import { CrtScanlines } from './CrtScanlines';
 import { FilmDust } from './FilmDust';
 import { FilmGrain } from './FilmGrain';
@@ -12,7 +13,7 @@ type TextureOverlayRendererProps = {
 };
 
 // Renders active texture overlays stacked from subtlest/most-structural to
-// most-expressive: grid and halftone are static dot/line patterns, film dust
+// most-expressive: gradient overlay, grid and halftone are static dot/line patterns, film dust
 // and light leak are moving particle/color effects, CRT scanlines and
 // halation paint last so their scan-bar/glow sit visibly on top of
 // everything beneath. Sits between the background/media and the caption
@@ -22,6 +23,15 @@ export const TextureOverlayRenderer: React.FC<TextureOverlayRendererProps> = ({ 
 
   return (
     <>
+      {textureSettings.gradientOverlayEnabled && (
+        <GradientOverlay
+          enabled={textureSettings.gradientOverlayEnabled}
+          color={textureSettings.gradientOverlayColor}
+          opacity={textureSettings.gradientOverlayOpacity}
+          strength={textureSettings.gradientOverlayStrength}
+          direction={textureSettings.gradientOverlayDirection}
+        />
+      )}
       {textureSettings.gridEnabled && <Grid intensity={textureSettings.gridIntensity} />}
       {textureSettings.halftoneEnabled && <Halftone intensity={textureSettings.halftoneIntensity} />}
       {textureSettings.filmGrainEnabled && <FilmGrain intensity={textureSettings.filmGrainIntensity} />}
@@ -32,3 +42,4 @@ export const TextureOverlayRenderer: React.FC<TextureOverlayRendererProps> = ({ 
     </>
   );
 };
+

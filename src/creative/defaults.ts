@@ -62,6 +62,11 @@ export const DEFAULT_CREATIVE_TYPOGRAPHY: CreativeTypographySettings = {
 };
 
 export const DEFAULT_CREATIVE_TEXTURES: TextureOverlaySettings = {
+  gradientOverlayEnabled: false,
+  gradientOverlayColor: '#000000',
+  gradientOverlayOpacity: 0.65,
+  gradientOverlayStrength: 0.6,
+  gradientOverlayDirection: 'bottom',
   filmDustEnabled: false,
   halationEnabled: false,
   halationIntensity: 'medium',
@@ -235,7 +240,15 @@ export function createDefaultCreativeProject(overrides?: Partial<CreativeProject
         },
       },
     ],
-    globalSettings: overrides?.globalSettings ?? DEFAULT_GLOBAL_SETTINGS,
+    globalSettings: overrides?.globalSettings ?? {
+      typography: { ...DEFAULT_CREATIVE_TYPOGRAPHY },
+      animation: DEFAULT_GLOBAL_SETTINGS.animation,
+      effects: { ...DEFAULT_CREATIVE_TEXTURES },
+      composition: { ...DEFAULT_CREATIVE_FRAME },
+      overlay: { ...DEFAULT_CREATIVE_OVERLAY },
+      motion: { ...DEFAULT_CREATIVE_MOTION },
+      videoMotion: { ...DEFAULT_VIDEO_MOTION },
+    },
     assets: overrides?.assets ?? {
       media: [
         {

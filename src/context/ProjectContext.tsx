@@ -6,7 +6,7 @@ import type { CaptionAlignment, CaptionPosition, CaptionStyleOverrides, CaptionS
 import { DEFAULT_KEYWORDS } from '../captions/styles/applyKeywordEmphasis';
 import type { OverlaySettings, ProgressBarPosition, WatermarkPosition } from '../overlay/types';
 import type { CardAspectRatio, CardBackdrop, CardBorderStyle, CompositionLayout, FrameCardMode, FrameSettings, FrameVariant } from '../frames/types';
-import type { OverlayIntensity, TextureOverlaySettings } from '../textures/types';
+import type { GradientOverlayDirection, OverlayIntensity, TextureOverlaySettings } from '../textures/types';
 import type { CodeBlockPosition, CodeLanguage, MotionGraphicsSettings, TickerDirection, TickerPosition } from '../motion/types';
 import { DEFAULT_VIDEO_MOTION, type VideoMotionSettings } from '../videoMotion/types';
 import type { AssetSettings, SoundEffectPlacement, TransitionOverlayPlacement } from '../assets/types';
@@ -112,6 +112,11 @@ type PersistedState = {
   splitLeftFocalY?: number;
   splitRightFocalX?: number;
   splitRightFocalY?: number;
+  gradientOverlayEnabled: boolean;
+  gradientOverlayColor: string;
+  gradientOverlayOpacity: number;
+  gradientOverlayStrength: number;
+  gradientOverlayDirection: GradientOverlayDirection;
   filmDustEnabled: boolean;
   halationEnabled: boolean;
   halationIntensity: OverlayIntensity;
@@ -373,6 +378,16 @@ interface ProjectContextType {
   // Texture overlay tab controls, lifted the same way as frameSettings above
   // - each texture is independently toggleable (unlike Frame's single-select
   // variant) since reel-craft's textures are designed to combine.
+  gradientOverlayEnabled: boolean;
+  setGradientOverlayEnabled: (enabled: boolean) => void;
+  gradientOverlayColor: string;
+  setGradientOverlayColor: (color: string) => void;
+  gradientOverlayOpacity: number;
+  setGradientOverlayOpacity: (opacity: number) => void;
+  gradientOverlayStrength: number;
+  setGradientOverlayStrength: (strength: number) => void;
+  gradientOverlayDirection: GradientOverlayDirection;
+  setGradientOverlayDirection: (direction: GradientOverlayDirection) => void;
   filmDustEnabled: boolean;
   setFilmDustEnabled: (enabled: boolean) => void;
   halationEnabled: boolean;
@@ -804,6 +819,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [splitRightFocalX, setSplitRightFocalX] = useState<number>(persisted?.splitRightFocalX ?? 0.75);
   const [splitRightFocalY, setSplitRightFocalY] = useState<number>(persisted?.splitRightFocalY ?? 0.5);
 
+  const [gradientOverlayEnabled, setGradientOverlayEnabled] = useState(persisted?.gradientOverlayEnabled ?? false);
+  const [gradientOverlayColor, setGradientOverlayColor] = useState(persisted?.gradientOverlayColor ?? '#000000');
+  const [gradientOverlayOpacity, setGradientOverlayOpacity] = useState(persisted?.gradientOverlayOpacity ?? 0.65);
+  const [gradientOverlayStrength, setGradientOverlayStrength] = useState(persisted?.gradientOverlayStrength ?? 0.6);
+  const [gradientOverlayDirection, setGradientOverlayDirection] = useState<GradientOverlayDirection>(
+    persisted?.gradientOverlayDirection ?? 'bottom',
+  );
+
   const [filmDustEnabled, setFilmDustEnabled] = useState(persisted?.filmDustEnabled ?? false);
   const [halationEnabled, setHalationEnabled] = useState(persisted?.halationEnabled ?? false);
   const [halationIntensity, setHalationIntensity] = useState<OverlayIntensity>(
@@ -941,6 +964,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const textureSettings: TextureOverlaySettings = useMemo(
     () => ({
+      gradientOverlayEnabled,
+      gradientOverlayColor,
+      gradientOverlayOpacity,
+      gradientOverlayStrength,
+      gradientOverlayDirection,
       filmDustEnabled,
       halationEnabled,
       halationIntensity,
@@ -962,6 +990,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       keywordPunchIntensity,
     }),
     [
+      gradientOverlayEnabled,
+      gradientOverlayColor,
+      gradientOverlayOpacity,
+      gradientOverlayStrength,
+      gradientOverlayDirection,
       filmDustEnabled,
       halationEnabled,
       halationIntensity,
@@ -1095,6 +1128,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       splitLeftFocalY,
       splitRightFocalX,
       splitRightFocalY,
+      gradientOverlayEnabled,
+      gradientOverlayColor,
+      gradientOverlayOpacity,
+      gradientOverlayStrength,
+      gradientOverlayDirection,
       filmDustEnabled,
       halationEnabled,
       halationIntensity,
@@ -1199,6 +1237,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     customBackdrop,
     customBackdropColor,
     customBackdropGradient,
+    gradientOverlayEnabled,
+    gradientOverlayColor,
+    gradientOverlayOpacity,
+    gradientOverlayStrength,
+    gradientOverlayDirection,
     filmDustEnabled,
     halationEnabled,
     halationIntensity,
@@ -1402,6 +1445,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setSplitRightFocalY(converted.frameSettings.splitRightFocalY ?? 0.5);
 
     // Set textures
+    setGradientOverlayEnabled(converted.textureSettings.gradientOverlayEnabled);
+    setGradientOverlayColor(converted.textureSettings.gradientOverlayColor);
+    setGradientOverlayOpacity(converted.textureSettings.gradientOverlayOpacity);
+    setGradientOverlayStrength(converted.textureSettings.gradientOverlayStrength);
+    setGradientOverlayDirection(converted.textureSettings.gradientOverlayDirection);
     setFilmDustEnabled(converted.textureSettings.filmDustEnabled);
     setHalationEnabled(converted.textureSettings.halationEnabled);
     setHalationIntensity(converted.textureSettings.halationIntensity);
@@ -1535,6 +1583,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       chromaticAberrationIntensity,
       filmGrainEnabled,
       filmGrainIntensity,
+      gradientOverlayEnabled,
+      gradientOverlayColor,
+      gradientOverlayOpacity,
+      gradientOverlayStrength,
+      gradientOverlayDirection,
       audioPulseEnabled,
       audioPulseIntensity,
       keywordPunchEnabled,
@@ -1573,7 +1626,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     splitLeftFocalY, splitRightFocalX, splitRightFocalY, filmDustEnabled, halationEnabled, halationIntensity,
     gridEnabled, gridIntensity, crtScanlinesEnabled, crtScanlinesIntensity, halftoneEnabled, halftoneIntensity,
     lightLeakEnabled, lightLeakIntensity, chromaticAberrationEnabled, chromaticAberrationIntensity,
-    filmGrainEnabled, filmGrainIntensity, audioPulseEnabled, audioPulseIntensity, keywordPunchEnabled,
+    filmGrainEnabled, filmGrainIntensity, gradientOverlayEnabled, gradientOverlayColor, gradientOverlayOpacity,
+    gradientOverlayStrength, gradientOverlayDirection, audioPulseEnabled, audioPulseIntensity, keywordPunchEnabled,
     keywordPunchIntensity, codeBlockEnabled, codeBlockCode, codeBlockLanguage, codeBlockPosition,
     codeBlockLinesPerPage, numberCounterEnabled, numberCounterStart, numberCounterEnd, numberCounterPrefix,
     numberCounterSuffix, tickerEnabled, tickerText, tickerDirection, tickerPosition, videoMotion,
@@ -1781,6 +1835,16 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setFilmGrainEnabled,
         filmGrainIntensity,
         setFilmGrainIntensity,
+        gradientOverlayEnabled,
+        setGradientOverlayEnabled,
+        gradientOverlayColor,
+        setGradientOverlayColor,
+        gradientOverlayOpacity,
+        setGradientOverlayOpacity,
+        gradientOverlayStrength,
+        setGradientOverlayStrength,
+        gradientOverlayDirection,
+        setGradientOverlayDirection,
         audioPulseEnabled,
         setAudioPulseEnabled,
         audioPulseIntensity,

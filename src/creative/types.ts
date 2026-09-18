@@ -17,7 +17,7 @@ import type {
   FrameSettings,
   FrameVariant,
 } from '../frames/types.js';
-import type { OverlayIntensity, TextureOverlaySettings } from '../textures/types.js';
+import type { GradientOverlayDirection, OverlayIntensity, TextureOverlaySettings } from '../textures/types.js';
 import type { OverlaySettings, ProgressBarPosition, WatermarkPosition } from '../overlay/types.js';
 import type { CodeBlockPosition, CodeLanguage, MotionGraphicsSettings, TickerDirection, TickerPosition } from '../motion/types.js';
 import type {
@@ -34,6 +34,8 @@ export type CreativeInputMode = 'idea' | 'srt' | 'transcript' | 'text';
 export type CreativeInputIdea = {
   mode: 'idea';
   text: string;
+  sourceLanguage?: string;
+  outputLanguage?: string;
   [key: string]: unknown;
 };
 
@@ -42,6 +44,8 @@ export type CreativeInputSrt = {
   rawSrt?: string;
   text?: string;
   fileName?: string;
+  sourceLanguage?: string;
+  outputLanguage?: string;
   [key: string]: unknown;
 };
 
@@ -57,6 +61,8 @@ export type CreativeInputTranscript = {
   mode: 'transcript';
   entries?: CreativeInputTranscriptEntry[];
   text?: string;
+  sourceLanguage?: string;
+  outputLanguage?: string;
   [key: string]: unknown;
 };
 
@@ -64,6 +70,8 @@ export type CreativeInputText = {
   mode: 'text';
   rawText?: string;
   text?: string;
+  sourceLanguage?: string;
+  outputLanguage?: string;
   [key: string]: unknown;
 };
 
@@ -355,6 +363,11 @@ export type ProjectStateExportInput = {
   splitLeftFocalY: number;
   splitRightFocalX: number;
   splitRightFocalY: number;
+  gradientOverlayEnabled?: boolean;
+  gradientOverlayColor?: string;
+  gradientOverlayOpacity?: number;
+  gradientOverlayStrength?: number;
+  gradientOverlayDirection?: GradientOverlayDirection;
   filmDustEnabled: boolean;
   halationEnabled: boolean;
   halationIntensity: OverlayIntensity;

@@ -104,11 +104,14 @@
   --text-body-sm--font-weight: 400;
 }
 
-body {
+html, body {
   font-family: 'Inter', sans-serif;
   margin: 0;
+  padding: 0;
   background-color: var(--color-background);
   color: var(--color-on-surface);
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .material-symbols-outlined {
@@ -138,4 +141,8 @@ body {
 .caption-preview-text {
   text-shadow: 0px 2px 4px rgba(0, 0, 0, 0.5);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.font-handwriting {
+  font-family: 'Caveat', cursive;
 }

@@ -9,8 +9,8 @@ export const AppLayout: React.FC = () => {
       <TopBar />
       <div className="flex flex-1 pt-16 h-full overflow-hidden relative">
         <Sidebar />
-        {/* Main layout container shifting content based on sidebar size */}
-        <div className="flex-1 ml-[80px] lg:ml-panel-width h-full transition-all">
+        {/* Main layout container shifting content based on sidebar size and mobile bottom nav */}
+        <div className="flex-1 ml-0 md:ml-[80px] lg:ml-panel-width pb-16 md:pb-0 h-full overflow-hidden transition-all">
           <Outlet />
         </div>
       </div>

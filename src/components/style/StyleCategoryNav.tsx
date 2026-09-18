@@ -37,7 +37,7 @@ export const StyleCategoryNav: React.FC<StyleCategoryNavProps> = ({
   return (
     <nav
       aria-label="Style categories"
-      className="w-[105px] min-w-[105px] max-w-[105px] bg-surface-bright border-r border-outline-variant/60 flex flex-col p-2.5 gap-1.5 shrink-0 select-none overflow-y-auto custom-scrollbar"
+      className="w-full lg:w-[105px] lg:min-w-[105px] lg:max-w-[105px] bg-surface-bright border-b lg:border-b-0 lg:border-r border-outline-variant/60 flex flex-row lg:flex-col p-2 lg:p-2.5 gap-1.5 shrink-0 select-none overflow-x-auto lg:overflow-y-auto custom-scrollbar"
     >
       {CATEGORIES.map((cat) => {
         const isActive = activeCategory === cat.id;
@@ -46,7 +46,7 @@ export const StyleCategoryNav: React.FC<StyleCategoryNavProps> = ({
             key={cat.id}
             type="button"
             onClick={() => onSelectCategory(cat.id)}
-            className={`flex flex-col items-center justify-center py-2.5 px-1.5 rounded-xl transition-all duration-150 cursor-pointer text-center group border ${
+            className={`flex flex-row lg:flex-col items-center justify-center py-2 px-3 lg:py-2.5 lg:px-1.5 rounded-xl transition-all duration-150 cursor-pointer text-center group border whitespace-nowrap shrink-0 gap-1.5 lg:gap-0 ${
               isActive
                 ? 'bg-white shadow-xs border-primary/40 text-primary font-bold'
                 : 'border-transparent text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface'
@@ -54,13 +54,13 @@ export const StyleCategoryNav: React.FC<StyleCategoryNavProps> = ({
             title={cat.description}
           >
             <span
-              className={`material-symbols-outlined text-[21px] transition-transform group-hover:scale-105 ${
+              className={`material-symbols-outlined text-[19px] lg:text-[21px] transition-transform group-hover:scale-105 ${
                 isActive ? 'text-primary' : 'text-outline group-hover:text-on-surface'
               }`}
             >
               {cat.icon}
             </span>
-            <span className={`text-[11px] mt-1 leading-tight ${isActive ? 'text-primary font-bold' : 'font-medium'}`}>
+            <span className={`text-[11px] lg:mt-1 leading-tight ${isActive ? 'text-primary font-bold' : 'font-medium'}`}>
               {cat.label}
             </span>
           </button>

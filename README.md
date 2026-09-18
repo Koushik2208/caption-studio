@@ -1,52 +1,114 @@
 # Caption Studio
 
-Caption Studio is a creative caption and video editing tool built on [Remotion](https://www.remotion.dev/). It converts video and subtitle/transcript files (.srt) or Creative JSON documents into editable, content-aware caption treatments, dynamic compositions, and server-rendered MP4 video exports.
+Caption Studio is a creator-focused web application for turning transcripts, ideas, and raw video footage into engaging, beautifully styled short-form video content (UGC, Reels, Shorts, and TikToks). Built with React, Tailwind CSS, and [Remotion](https://www.remotion.dev/), it provides structured storytelling, semantic beat-based caption choreography, rich visual effects, and server-side MP4 rendering.
 
 ---
 
-## Input Workflows
+## What It Does
 
-Caption Studio supports three primary input workflows:
+Caption Studio bridges the gap between raw transcripts or creative concepts and polished, animated short-form video. Rather than acting as a generic, complex video editor, Caption Studio focuses on the creative storytelling workflow:
 
-1. **Video + SRT Subtitles**: Upload media (MP4, MOV, etc.) along with an existing `.srt` file. Word-level timings are automatically parsed and mapped into animated captions.
-2. **Transcript/SRT-based Creative JSON**: Generate or load a structured Creative JSON specification created from transcript or SRT data to orchestrate styling, layouts, and effects.
-3. **Direct Creative JSON Import**: Paste or load complete Creative JSON specifications directly into the studio to configure full multi-beat projects, typography, transitions, audio effects, and composition settings.
+- **Structure Stories**: Organize content into narrative beats (Hook, Conflict, Journey, Outcome).
+- **Style Captions**: Apply curated typography, vibrant color palettes, badges, stroke, shadow, and kinetic animations.
+- **Compose Layouts**: Frame videos with full-bleed, split-screen, or card-container layouts.
+- **Layer Effects**: Add film grain, scanlines, chromatic aberration, camera motion, and customizable gradient overlays.
+- **Sound Design & Transitions**: Place timed transition overlays (film burns, flashes) and SFX audio hits (cinematic impacts, whooshes, UI pops).
+- **Render & Export**: Produce final MP4 videos, green-screen caption overlays, or updated SRT subtitles.
+
+---
+
+## Workflow
+
+```
+Idea / SRT / Transcript
+       │
+       ▼
+Creative Planning (ChatGPT + Creative Director Prompt)
+       │
+       ▼
+Portable Creative JSON Specification
+       │
+       ▼
+Caption Studio Editor (Beats, Styling, Composition, Overlays, SFX)
+       │
+       ▼
+Real-Time Player Preview
+       │
+       ▼
+Server-Side Export (MP4 Video / Chroma Key / SRT)
+```
+
+### Working with External Tools
+
+Caption Studio fits seamlessly into existing creator workflows alongside tools you already use:
+
+1. **Get your transcript**: Export an `.srt` subtitle file from any transcription tool or video editor (such as Microsoft Clipchamp).
+2. **Generate your creative plan**: Pass your transcript or idea to ChatGPT using the **Creative Director** system prompt (`CREATIVE_DIRECTOR_SYSTEM_PROMPT.md`) to create a schema-validated Creative JSON.
+3. **Multilingual support**: Non-English transcripts can be translated into English creative caption text while preserving the exact source timestamps.
+4. **Style and customize**: Import the JSON into Caption Studio to fine-tune typography, timing, transitions, audio, and visual composition.
+5. **Preview & export**: Verify in the real-time player and render the final video.
+
+---
+
+## Features & Capabilities
+
+- **SRT & Transcript Parsing**: Ingest standard `.srt` files and automatically partition them into word-level timestamps.
+- **Creative JSON Import & Export**: Full bidirectional serialization of project state, beats, overrides, and creative choices.
+- **Semantic Narrative Beats**: Segment video pacing into distinct narrative beats with start/end frames and beat-specific overrides.
+- **Typography & Styling**:
+  - Curated fonts (Inter, Montserrat, Bebas Neue, Anton, Playfair Display, etc.)
+  - Text transforms (uppercase, lowercase), alignment, letter spacing, line height
+  - Text colors, fill gradients, outlines, drop shadows, and background highlight boxes
+  - Word-level typography overrides for targeted keyword emphasis
+- **Kinetic Caption Animations**:
+  - Karaoke word-by-word highlight
+  - Kinetic word stamp
+  - Bounce and fade
+  - Typewriter
+  - Slide in / out
+  - Street split
+- **Video Motion & Framing**:
+  - Dynamic pan, zoom in/out, Ken Burns camera drift, and subtle sway animations
+  - Composition layouts: Full Bleed, Floating Card, Top/Bottom Split, and Left/Right Split
+- **Textures & Overlays**:
+  - Film grain, chromatic aberration, scanlines, vignettes, and audio-reactive pulse
+  - Brand watermark and dynamic progress bars
+- **Configurable Gradient Overlay**:
+  - Directional video dimming (top, bottom, left, right, diagonals)
+  - Configurable opacity and strength for optimal caption contrast
+  - Global defaults with beat-level overrides
+- **Transitions & SFX**:
+  - Frame-accurate video transition overlays (`film_burn`, `flash`)
+  - 20 registered sound effects (impacts, bass drops, whooshes, risers, clicks, pops)
+  - User-friendly time input in decimal seconds (auto-converted to frame accuracy)
+- **Responsive Workspace**:
+  - Desktop: Multi-panel creative studio with persistent video preview, category navigation, and inspector.
+  - Mobile & Tablet: Responsive layout for project loading, previewing, and mobile-friendly setting edits.
 
 ---
 
 ## Creative JSON
 
-**Creative JSON** is the portable creative specification format used by Caption Studio to define and serialize project state. It contains:
+**Creative JSON** is the canonical, portable project format used by Caption Studio. It encapsulates the complete artistic direction of a video:
 
-- **Semantic Beats**: Segmented narrative blocks with frame-accurate start/end timing.
-- **Timing & Alignment**: Word-level timestamps, anchor points, and positional coordinates.
-- **Typography & Styling**: Font presets, size multipliers, custom colors, gradients, stroke, shadow, glow, and backdrops.
-- **Animation Variants**: Animated kinetic presets (karaoke, kinetic word stamp, bounce, fade, typewriter, slide, street split, etc.).
-- **Visual Composition**: Full bleed, card containers, top/bottom split, and left/right split layouts with aspect ratio and border controls.
-- **Video Motion & Effects**: Dynamic camera pans, zoom in/out, Ken Burns motion, and sway animations.
-- **Overlays & Textures**: Film grain, chromatic aberration, scanlines, vignettes, and audio-reactive pulse.
-- **Transitions**: Frame-accurate visual transition overlays (e.g. film burns, flashes).
-- **SFX**: Timed sound effects mapped to key beats and narrative cues.
-- **Asset References**: Structured references to video media and studio audio/visual assets.
+- **Document Metadata**: Version, mode (`idea`, `srt`, `transcript`, `plain_text`), author, and source.
+- **Timeline & Media**: Duration in frames, frame rate (30fps default), canvas dimensions (e.g., 1080x1920), and media asset bindings.
+- **Global Settings**: Default typography, caption position, animations, layouts, motion, textures, and gradient overlay.
+- **Semantic Beats Array**: Chronological narrative segments with word-level captions, custom beat styling, gradient overrides, transition triggers, and SFX cues.
+- **Strict Validation**: Validated against JSON schemas (`src/creative/schema.ts`) with zero-tolerance checks for frame overlap, unregistered assets, or duration limits (5-minute maximum).
 
 ---
 
-## Built-In Asset Library
+## Creative Director System Prompt
 
-Caption Studio comes with a built-in library of registered assets ready for composition and audio design:
+The repository includes a production-tested system prompt for LLMs located at:
 
-- **Transition Overlays (2)**: High-energy overlay transitions (`film_burn`, `flash`).
-- **Sound Effects (20)**: Cinematic impacts, bass hits, whooshes, risers, UI clicks, pops, typing, and camera shutter effects.
+[`CREATIVE_DIRECTOR_SYSTEM_PROMPT.md`](./CREATIVE_DIRECTOR_SYSTEM_PROMPT.md)
 
----
-
-## Rendering Pipeline
-
-Caption Studio renders final output videos via Remotion's server-side rendering pipeline (`server/index.ts`):
-
-- **Video Export (MP4)**: Bundles the Remotion composition with `<OffthreadVideo>` and renders H.264 MP4 with hardware-accelerated frame extraction.
-- **Green Screen Export (MP4)**: Renders captions and visual overlays on a chroma key background for overlaying in external NLEs.
-- **SRT Export**: Exports clean, formatted `.srt` subtitle files with edited text and timestamps.
+This prompt guides AI models (such as ChatGPT) to act as an automated creative director:
+- Converts unstructured ideas, transcripts, or multilingual SRT files into valid Creative JSON.
+- Segments continuous speech into punchy narrative beats.
+- Selects appropriate animations, keyword highlights, SFX placements, and composition layouts based on content sentiment.
 
 ---
 
@@ -54,40 +116,102 @@ Caption Studio renders final output videos via Remotion's server-side rendering 
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) 20 or later
-- Windows, macOS, or Linux
+- [Node.js](https://nodejs.org/) (version 20 or later recommended)
+- npm
 
 ### Installation
 
 ```bash
-# 1. Clone repository
 git clone <repository-url>
 cd caption-studio
-
-# 2. Install dependencies
 npm install
 ```
 
-### Running the Application
+### Running Locally
 
 ```bash
-# Start both Vite client (port 5173) and Express render server (port 5175)
+# Start both Vite client (port 5173) and Express rendering server (port 5175)
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser.
+The web application will be available at [http://localhost:5173](http://localhost:5173).
 
 ### Available Scripts
 
-- `npm run dev` — Starts Vite dev server and Express server concurrently.
-- `npm run dev:client` — Runs the Vite development frontend only.
-- `npm run dev:server` — Runs the Express Remotion rendering backend server only.
-- `npm run build` — Type-checks TypeScript (`tsc -b`) and builds the Vite production bundle.
-- `npm run lint` — Runs ESLint across the codebase.
-- `npm run preview` — Previews the production build locally.
+- `npm run dev`: Starts Vite frontend and Express server concurrently.
+- `npm run dev:client`: Runs the Vite frontend development server only.
+- `npm run dev:server`: Runs the Express Remotion backend server only.
+- `npm run build`: Type-checks TypeScript (`tsc -b`) and builds the Vite production bundle.
+- `npm run lint`: Runs ESLint across the codebase.
+- `npm run preview`: Previews the production build locally.
+
+### Verification Test Suites
+
+You can run the built-in test suites using `tsx`:
+
+```bash
+# Verify Creative JSON schemas, validation, serialization, and beat partitioning
+npx tsx scripts/verifyCreativeJson.ts
+
+# Verify asset catalog and registry integrity
+npx tsx scripts/verifyAssetLibrary.ts
+
+# Verify multilingual prompt requirements and translation rules
+npx tsx scripts/verifyMultilingualPrompt.ts
+
+# Verify gradient overlay system and beat overrides
+npx tsx scripts/verifyGradientOverlay.ts
+
+# Verify custom card and composition layouts
+npx tsx scripts/verifyCustomCards.ts
+
+# Verify video motion calculations
+npx tsx scripts/verifyVideoMotion.ts
+
+# Verify seconds-to-frames transition & SFX placement UX
+npx tsx scripts/verifyManualPlacementUx.ts
+```
 
 ---
 
-## Important Limitations
+## Rendering Pipeline
 
-- **Speech-to-Text Transcription**: Caption Studio does not bundle or provide a local speech-to-text transcription engine. Users should supply an existing `.srt` subtitle file or use Creative JSON specifications containing transcript timestamps.
+Caption Studio uses a dual-engine architecture:
+
+1. **Client-Side Live Preview**: Rendered in real-time via `@remotion/player`, allowing creators to scrub, play, and preview caption animations, transitions, and overlays instantly.
+2. **Server-Side Render Engine** (`server/index.ts`): Express server powered by `@remotion/renderer` and `@remotion/bundler`:
+   - **Video Export (MP4)**: Bundles the Remotion composition with `<OffthreadVideo>` and hardware-accelerated H.264 rendering.
+   - **Green Screen Export (MP4)**: Renders animated captions and graphics against a pure chroma-key background for importing into external NLEs (Premiere, Final Cut, DaVinci Resolve).
+   - **SRT Subtitle Export**: Generates clean, timestamped `.srt` subtitle files with edited text.
+
+---
+
+## Project Structure
+
+```
+caption-studio/
+├── CREATIVE_DIRECTOR_SYSTEM_PROMPT.md  # LLM system prompt for Creative JSON generation
+├── server/                             # Express backend for Remotion bundling & MP4 rendering
+│   └── index.ts
+├── public/assets/                      # Sound effects, transition assets, and static media
+├── scripts/                            # Verification and test suites
+└── src/
+    ├── captions/                       # Caption parsing, layout, and kinetic animation components
+    ├── components/                     # Shared UI components, layout shell, inspector panels
+    ├── context/                        # ProjectContext state management & persistence
+    ├── creative/                       # Creative JSON schema, capability catalog, and validation
+    ├── frames/                         # Visual composition frames and borders
+    ├── motion/                         # Text and graphic animation presets
+    ├── overlay/                        # Gradient overlays, watermarks, progress bars
+    ├── pages/                          # WelcomePage, ImportPage, StylePage, ExportPage
+    ├── preview/                        # Remotion Player integration and canvas wrappers
+    ├── remotion/                       # Remotion Root compositions and video pipelines
+    ├── textures/                       # Film grain, scanlines, chromatic aberration shaders
+    └── videoMotion/                    # Dynamic camera pans, zooms, and sway transforms
+```
+
+---
+
+## Status
+
+Caption Studio is an actively developed creator tool. It focuses on fast, reliable, and expressive caption creation for short-form UGC and storytelling video production.

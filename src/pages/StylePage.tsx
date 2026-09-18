@@ -51,16 +51,16 @@ export const StylePage: React.FC = () => {
         </div>
       </div>
 
-      {/* TWO-COLUMN WORKSPACE: CATEGORY NAV + DETAIL CONTROLS */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Left: Minimal Style Category Navigation */}
+      {/* WORKSPACE: CATEGORY NAV + DETAIL CONTROLS */}
+      <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden">
+        {/* Minimal Style Category Navigation */}
         <StyleCategoryNav
           activeCategory={activeCategory}
           onSelectCategory={setActiveCategory}
         />
 
-        {/* Right: Detailed Contextual Inspector */}
-        <div className="flex-1 flex flex-col h-full bg-surface-container-lowest border-l border-outline-variant/40 overflow-hidden min-w-0">
+        {/* Detailed Contextual Inspector */}
+        <div className="flex-1 flex flex-col h-full bg-surface-container-lowest border-t lg:border-t-0 lg:border-l border-outline-variant/40 overflow-hidden min-w-0">
           {/* Active Category Sub-header */}
           <div className="px-4 py-2.5 border-b border-outline-variant/40 flex items-center justify-between shrink-0 bg-surface-container-low/40">
             <div className="flex items-center gap-1.5">

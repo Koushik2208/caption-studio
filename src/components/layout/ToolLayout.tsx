@@ -13,17 +13,17 @@ type CanvasConfig = {
 
 const CANVAS_CONFIG: Record<string, CanvasConfig> = {
   '/import': {
-    mainClassName: 'flex-1 p-canvas-margin flex items-center justify-center bg-surface-container overflow-hidden relative',
-    canvasClassName: 'relative bg-black rounded-2xl overflow-hidden canvas-shadow border border-outline-variant/30 transition-all duration-300',
+    mainClassName: 'w-full lg:flex-1 p-2 sm:p-4 lg:p-canvas-margin flex items-center justify-center bg-surface-container overflow-hidden relative shrink-0',
+    canvasClassName: 'relative bg-black rounded-xl sm:rounded-2xl overflow-hidden canvas-shadow border border-outline-variant/30 transition-all duration-300',
   },
   '/style': {
-    mainClassName: 'flex-1 p-canvas-margin flex items-center justify-center bg-surface overflow-hidden relative',
-    canvasClassName: 'relative bg-black rounded-2xl overflow-hidden canvas-shadow border border-outline-variant/30 transition-all duration-300',
+    mainClassName: 'w-full lg:flex-1 p-2 sm:p-4 lg:p-canvas-margin flex items-center justify-center bg-surface overflow-hidden relative shrink-0',
+    canvasClassName: 'relative bg-black rounded-xl sm:rounded-2xl overflow-hidden canvas-shadow border border-outline-variant/30 transition-all duration-300',
     showAspectTag: true,
   },
   '/export': {
-    mainClassName: 'flex-1 bg-surface-container flex items-center justify-center p-canvas-margin overflow-hidden relative',
-    canvasClassName: 'relative bg-black rounded-xl overflow-hidden preview-canvas-shadow border-8 border-white/5 transition-all duration-300',
+    mainClassName: 'w-full lg:flex-1 bg-surface-container flex items-center justify-center p-2 sm:p-4 lg:p-canvas-margin overflow-hidden relative shrink-0',
+    canvasClassName: 'relative bg-black rounded-xl overflow-hidden preview-canvas-shadow border-4 sm:border-8 border-white/5 transition-all duration-300',
   },
 };
 
@@ -40,11 +40,13 @@ export const ToolLayout: React.FC = () => {
   const config = CANVAS_CONFIG[baseSegment] ?? CANVAS_CONFIG['/import'];
 
   return (
-    <div className="flex h-full w-full overflow-hidden">
+    <div className="flex flex-col lg:flex-row h-full w-full overflow-y-auto lg:overflow-hidden">
       <main className={config.mainClassName}>
         <div
           className={`${config.canvasClassName} ${
-            layoutMode === 'horizontal' ? 'aspect-video w-full max-w-[800px] h-auto' : 'aspect-9/16 h-[calc(100vh-160px)] max-h-[720px]'
+            layoutMode === 'horizontal'
+              ? 'aspect-video w-full max-w-[95%] sm:max-w-[480px] md:max-w-[600px] lg:max-w-[800px] h-auto mx-auto'
+              : 'aspect-9/16 h-[260px] sm:h-[350px] md:h-[400px] lg:h-[calc(100vh-160px)] max-h-[46vh] lg:max-h-[720px] max-w-full mx-auto'
           }`}
         >
           <PreviewPlayer />
@@ -53,7 +55,7 @@ export const ToolLayout: React.FC = () => {
         {pathname === '/import' && <ImportCanvasOverlay />}
 
         {(config.showAspectTag || config.showResolutionTag) && (
-          <div className="absolute top-8 left-8 flex items-center gap-2">
+          <div className="hidden sm:flex absolute top-3 left-3 lg:top-8 lg:left-8 items-center gap-2">
             {config.showAspectTag && (
               <div className="px-3 py-1 bg-surface-container-lowest rounded-full border border-outline-variant/60 flex items-center gap-1.5 shadow-xs">
                 <span className="material-symbols-outlined text-[15px] text-on-surface-variant">aspect_ratio</span>
@@ -74,8 +76,8 @@ export const ToolLayout: React.FC = () => {
         )}
       </main>
 
-      {/* Fixed-Width Right Panel: Locked width across all tabs to prevent center preview shift */}
-      <div className="w-[460px] min-w-[460px] max-w-[460px] h-full shrink-0 grow-0 border-l border-outline-variant bg-surface-bright flex flex-col overflow-hidden">
+      {/* Right Panel: Fixed-width on Desktop (>= 1024px), Full-width on Mobile/Tablet */}
+      <div className="w-full lg:w-[460px] lg:min-w-[460px] lg:max-w-[460px] flex-1 lg:flex-initial lg:h-full shrink-0 grow-0 border-t lg:border-t-0 lg:border-l border-outline-variant bg-surface-bright flex flex-col overflow-hidden min-h-[380px] lg:min-h-0">
         <Outlet />
       </div>
     </div>
