@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import multer from "multer";
+import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import type { Caption } from "@remotion/captions";
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
@@ -34,8 +35,7 @@ const PUBLIC_DIR = fs.existsSync(path.resolve(process.cwd(), "public"))
   ? path.resolve(process.cwd(), "public")
   : path.resolve(import.meta.dirname ?? "", "../public");
 
-// Disk-backed storage config for video uploads to preserve file extension
-// for OffthreadVideo's frame extraction.
+// Disk-backed storage config for local fallback video uploads
 const videoUpload = multer({
   storage: multer.diskStorage({
     destination: UPLOAD_DIR,
@@ -66,18 +66,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// Remotion's renderer hard-rejects local filesystem paths for OffthreadVideo/
-// Video/Audio src (it only downloads http(s):// URLs, even server-side - see
-// LEARNINGS.md), so an uploaded export video has to be reachable over HTTP
-// during the render, not just present on disk.
+// Local media serving for Remotion renderer and local preview/dev
 app.use("/tmp-media", express.static(path.resolve(UPLOAD_DIR)));
-
-const cleanup = (...filePaths: (string | undefined)[]) => {
-  for (const filePath of filePaths) {
-    if (!filePath) continue;
-    fs.rm(filePath, { force: true }, () => {});
-  }
-};
 
 let bundlePromise: Promise<string> | null = null;
 const getServeUrl = (): Promise<string> => {
@@ -127,6 +117,13 @@ type GreenScreenRequestBody = {
   durationInFrames: number;
   scale?: number;
   orientation?: "vertical" | "horizontal";
+};
+
+type VideoRequestBody = GreenScreenRequestBody & {
+  mediaUrl: string;
+  mediaFilename?: string;
+  mediaMimeType?: string;
+  mediaSize?: number;
 };
 
 const runGreenScreenRender = async (jobId: string, body: GreenScreenRequestBody, requestId?: string) => {
@@ -195,55 +192,16 @@ const runGreenScreenRender = async (jobId: string, body: GreenScreenRequestBody,
   }
 };
 
-app.get("/api/health", (_req, res) => {
-  res.json({
-    ok: true,
-    service: "caption-studio-api",
-    environment: process.env.VERCEL ? "production" : (process.env.NODE_ENV ?? "development"),
-    timestamp: new Date().toISOString(),
-    version: "1.0.0",
-  });
-});
-
-app.post("/api/export-green-screen", (req, res) => {
-  const requestId = (req as any).requestId;
-  const body = req.body as Partial<GreenScreenRequestBody>;
-
-  if (!Array.isArray(body.captions) || body.captions.length === 0) {
-    res.status(400).json({ ok: false, error: "Missing required 'captions' array" });
-    return;
-  }
-
-  const lastCaptionEndMs = Math.max(...body.captions.map((c: any) => (typeof c?.endMs === 'number' ? c.endMs : 0)));
-  const captionDurationFrames = lastCaptionEndMs > 0 ? Math.ceil((lastCaptionEndMs / 1000) * 30) : 150;
-  const durationInFrames = Math.max(
-    typeof body.durationInFrames === "number" && body.durationInFrames > 0 ? body.durationInFrames : 0,
-    captionDurationFrames
-  );
-
-  const jobId = randomUUID();
-  exportJobs.set(jobId, { status: "rendering", progress: 0 });
-
-  void runGreenScreenRender(jobId, {
-    ...body,
-    durationInFrames,
-  } as GreenScreenRequestBody, requestId);
-
-  res.status(202).json({ jobId });
-});
-
-type VideoRequestBody = GreenScreenRequestBody;
-
-const runVideoRender = async (jobId: string, mediaPath: string, body: VideoRequestBody, requestId?: string) => {
+const runVideoRender = async (jobId: string, body: VideoRequestBody, requestId?: string) => {
   const job = exportJobs.get(jobId);
   if (!job) return;
 
   const startTime = Date.now();
-  console.log(`[EXPORT] requestId=${requestId ?? 'unknown'} jobId=${jobId} type=video render=started captionsCount=${body.captions.length} durationInFrames=${body.durationInFrames}`);
+  console.log(`[EXPORT] requestId=${requestId ?? 'unknown'} jobId=${jobId} type=video render=started captionsCount=${body.captions.length} durationInFrames=${body.durationInFrames} mediaUrl=${body.mediaUrl}`);
 
   try {
     const serveUrl = await getServeUrl();
-    const mediaUrl = `http://localhost:${PORT}/tmp-media/${path.basename(mediaPath)}`;
+    const mediaUrl = body.mediaUrl;
     const lastCaptionEndMs = Array.isArray(body.captions) && body.captions.length > 0
       ? Math.max(...body.captions.map((c: any) => (typeof c?.endMs === 'number' ? c.endMs : 0)))
       : 0;
@@ -299,30 +257,67 @@ const runVideoRender = async (jobId: string, mediaPath: string, body: VideoReque
     console.error(`[EXPORT] jobId=${jobId} render=failed duration=${elapsed}ms error=`, error);
     job.status = "error";
     job.error = error instanceof Error ? error.message : "Render failed";
-  } finally {
-    cleanup(mediaPath);
   }
 };
 
-app.post("/api/export-video", videoUpload.single("media"), (req, res) => {
-  const requestId = (req as any).requestId;
-  const mediaFile = req.file;
-  if (!mediaFile) {
+app.get("/api/health", (_req, res) => {
+  res.json({
+    ok: true,
+    service: "caption-studio-api",
+    environment: process.env.VERCEL ? "production" : (process.env.NODE_ENV ?? "development"),
+    timestamp: new Date().toISOString(),
+    version: "1.0.0",
+  });
+});
+
+// Vercel Blob client upload token generation handler
+app.post("/api/blob-upload", async (req, res) => {
+  const body = req.body as HandleUploadBody;
+  try {
+    const jsonResponse = await handleUpload({
+      body,
+      request: req as any,
+      onBeforeGenerateToken: async (pathname) => {
+        return {
+          allowedContentTypes: [
+            "video/mp4",
+            "video/quicktime",
+            "video/webm",
+            "video/x-matroska",
+            "audio/mpeg",
+            "audio/wav",
+            "audio/mp4",
+          ],
+          tokenPayload: JSON.stringify({ pathname }),
+        };
+      },
+      onUploadCompleted: async ({ blob, tokenPayload }) => {
+        console.log(`[BLOB UPLOAD COMPLETED] url=${blob.url} payload=${tokenPayload}`);
+      },
+    });
+    res.json(jsonResponse);
+  } catch (error) {
+    console.error("[BLOB UPLOAD ERROR]", error);
+    res.status(400).json({ ok: false, error: (error as Error).message });
+  }
+});
+
+// Local dev fallback endpoint for media upload (preserves local workflow without cloud token)
+app.post("/api/upload-media", videoUpload.single("media"), (req, res) => {
+  const file = req.file;
+  if (!file) {
     res.status(400).json({ ok: false, error: "Missing required 'media' file" });
     return;
   }
+  const mediaUrl = `http://localhost:${PORT}/tmp-media/${path.basename(file.path)}`;
+  res.json({ ok: true, mediaUrl, filename: file.filename });
+});
 
-  let body: Partial<VideoRequestBody>;
-  try {
-    body = JSON.parse(req.body.payload ?? "{}");
-  } catch {
-    cleanup(mediaFile.path);
-    res.status(400).json({ ok: false, error: "Invalid 'payload' JSON" });
-    return;
-  }
+app.post("/api/export-green-screen", (req, res) => {
+  const requestId = (req as any).requestId;
+  const body = req.body as Partial<GreenScreenRequestBody>;
 
   if (!Array.isArray(body.captions) || body.captions.length === 0) {
-    cleanup(mediaFile.path);
     res.status(400).json({ ok: false, error: "Missing required 'captions' array" });
     return;
   }
@@ -337,7 +332,40 @@ app.post("/api/export-video", videoUpload.single("media"), (req, res) => {
   const jobId = randomUUID();
   exportJobs.set(jobId, { status: "rendering", progress: 0 });
 
-  void runVideoRender(jobId, mediaFile.path, {
+  void runGreenScreenRender(jobId, {
+    ...body,
+    durationInFrames,
+  } as GreenScreenRequestBody, requestId);
+
+  res.status(202).json({ jobId });
+});
+
+// Export video now accepts small JSON metadata with media reference URL
+app.post("/api/export-video", (req, res) => {
+  const requestId = (req as any).requestId;
+  const body = req.body as Partial<VideoRequestBody>;
+
+  if (!body.mediaUrl) {
+    res.status(400).json({ ok: false, error: "Missing required 'mediaUrl' reference" });
+    return;
+  }
+
+  if (!Array.isArray(body.captions) || body.captions.length === 0) {
+    res.status(400).json({ ok: false, error: "Missing required 'captions' array" });
+    return;
+  }
+
+  const lastCaptionEndMs = Math.max(...body.captions.map((c: any) => (typeof c?.endMs === 'number' ? c.endMs : 0)));
+  const captionDurationFrames = lastCaptionEndMs > 0 ? Math.ceil((lastCaptionEndMs / 1000) * 30) : 150;
+  const durationInFrames = Math.max(
+    typeof body.durationInFrames === "number" && body.durationInFrames > 0 ? body.durationInFrames : 0,
+    captionDurationFrames
+  );
+
+  const jobId = randomUUID();
+  exportJobs.set(jobId, { status: "rendering", progress: 0 });
+
+  void runVideoRender(jobId, {
     ...body,
     durationInFrames,
   } as VideoRequestBody, requestId);

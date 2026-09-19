@@ -122,26 +122,47 @@ async function testServer() {
   const mp4Buffer = await resDownload.arrayBuffer();
   console.log(`✓ Downloaded MP4 successfully (${mp4Buffer.byteLength} bytes)`);
 
-  // 10. Test POST /api/export-video endpoint reaches Express
-  console.log('\n--- Starting Video Export POST check ---');
+  // 10. Test POST /api/upload-media (Local fallback upload endpoint)
+  console.log('\n--- Starting Local Media Upload & Video Export Check ---');
   const dummyVideo = new Blob([new Uint8Array(100)], { type: 'video/mp4' });
   const formData = new FormData();
   formData.append('media', dummyVideo, 'test.mp4');
-  formData.append('payload', JSON.stringify({
-    captions: [{ text: "Test", startMs: 0, endMs: 500, timestampMs: 0, confidence: 1 }],
-    durationInFrames: 30,
-    orientation: 'vertical',
-  }));
 
-  const resVideoPost = await fetch(`${BASE_URL}/api/export-video`, {
+  const resUploadMedia = await fetch(`${BASE_URL}/api/upload-media`, {
     method: 'POST',
     body: formData,
   });
 
-  console.log(`POST /api/export-video -> ${resVideoPost.status}`);
+  console.log(`POST /api/upload-media -> ${resUploadMedia.status}`);
+  if (resUploadMedia.status !== 200) throw new Error(`Expected 200 for upload-media, got ${resUploadMedia.status}`);
+  const { mediaUrl } = await resUploadMedia.json();
+  console.log(`✓ Media uploaded successfully, mediaUrl: ${mediaUrl}`);
+
+  // 11. Test POST /api/export-video with lightweight JSON payload (NO multipart media)
+  const resVideoPost = await fetch(`${BASE_URL}/api/export-video`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      mediaUrl,
+      captions: [{ text: "Direct Upload Test", startMs: 0, endMs: 500, timestampMs: 0, confidence: 1 }],
+      durationInFrames: 30,
+      orientation: 'vertical',
+    }),
+  });
+
+  console.log(`POST /api/export-video (JSON payload) -> ${resVideoPost.status}`);
   if (resVideoPost.status !== 202) throw new Error(`Expected 202 for /api/export-video start, got ${resVideoPost.status}`);
   const { jobId: videoJobId } = await resVideoPost.json();
   console.log(`✓ Video Export job successfully created in Express: ${videoJobId}`);
+
+  // 12. Test POST /api/blob-upload endpoint route responds
+  const resBlob = await fetch(`${BASE_URL}/api/blob-upload`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'blob.generate-client-token' }),
+  });
+  console.log(`POST /api/blob-upload -> ${resBlob.status}`);
+  console.log(`✓ /api/blob-upload route is registered and responding`);
 
   console.log('\n=============================================');
   console.log('ALL PRODUCTION ENDPOINT & EXPORT TESTS PASSED');

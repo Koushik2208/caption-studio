@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { serializeSrt } from '@remotion/captions';
+import { upload } from '@vercel/blob/client';
 import { useLayout } from '../context/LayoutContext';
 import { useProject } from '../context/ProjectContext';
 import { useMediaDurationFrames } from '../preview/useMediaDurationFrames';
@@ -10,6 +11,8 @@ import { serializeCreativeProject } from '../creative/index.js';
 
 const FPS = 30;
 const POLL_INTERVAL_MS = 1000;
+
+type ExportStage = 'idle' | 'uploading' | 'upload_complete' | 'preparing' | 'rendering' | 'done' | 'error';
 
 const triggerBlobDownload = (blob: Blob, filename: string) => {
   const url = URL.createObjectURL(blob);
@@ -53,6 +56,8 @@ export const ExportPage: React.FC = () => {
   const [resolution, setResolution] = useState<ResolutionOption>(RESOLUTION_OPTIONS[0]);
 
   const [isExporting, setIsExporting] = useState(false);
+  const [exportStage, setExportStage] = useState<ExportStage>('idle');
+  const [stageMessage, setStageMessage] = useState('');
   const [exportProgress, setExportProgress] = useState(0);
   const [exportComplete, setExportComplete] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -115,6 +120,7 @@ export const ExportPage: React.FC = () => {
     triggerBlobDownload(new Blob([srtContent], { type: 'text/plain' }), `${safeFilename}.srt`);
     setExportProgress(100);
     setExportComplete(true);
+    setExportStage('done');
     setLastRender(new Date().toLocaleTimeString());
   };
 
@@ -124,12 +130,11 @@ export const ExportPage: React.FC = () => {
     triggerBlobDownload(new Blob([jsonContent], { type: 'application/json' }), `${safeFilename}.creative.json`);
     setExportProgress(100);
     setExportComplete(true);
+    setExportStage('done');
     setLastRender(new Date().toLocaleTimeString());
   };
 
-  // Shared by exportGreenScreen/exportVideo: both start a server render job
-  // and then poll+download identically, only the endpoint prefix (and how
-  // the start request itself is built - JSON vs multipart) differs.
+  // Shared by exportGreenScreen/exportVideo: tracks job status polling and download
   const trackRenderJob = async (startResponse: Response, endpointBase: string) => {
     if (!startResponse.ok) {
       const body = await startResponse.json().catch(() => null);
@@ -137,6 +142,8 @@ export const ExportPage: React.FC = () => {
     }
 
     const { jobId }: { jobId: string } = await startResponse.json();
+    setExportStage('rendering');
+    setStageMessage('Rendering video...');
 
     await new Promise<void>((resolve, reject) => {
       pollHandle.current = setInterval(async () => {
@@ -169,6 +176,8 @@ export const ExportPage: React.FC = () => {
 
     setExportProgress(100);
     setExportComplete(true);
+    setExportStage('done');
+    setStageMessage('Render Successful');
     setLastRender(new Date().toLocaleTimeString());
   };
 
@@ -176,6 +185,8 @@ export const ExportPage: React.FC = () => {
     if (!captions || captions.length === 0) return;
 
     setIsExporting(true);
+    setExportStage('preparing');
+    setStageMessage('Preparing export...');
     setExportProgress(0);
     setExportComplete(false);
     setExportError(null);
@@ -203,6 +214,7 @@ export const ExportPage: React.FC = () => {
 
       await trackRenderJob(startResponse, '/api/export-green-screen');
     } catch (error) {
+      setExportStage('error');
       setExportError(error instanceof Error ? error.message : 'Export failed');
     } finally {
       setIsExporting(false);
@@ -213,16 +225,66 @@ export const ExportPage: React.FC = () => {
     if (!captions || captions.length === 0 || !mediaFile || !mp4Available) return;
 
     setIsExporting(true);
+    setExportStage('uploading');
+    setStageMessage('Uploading media directly to storage...');
     setExportProgress(0);
     setExportComplete(false);
     setExportError(null);
 
     try {
-      const formData = new FormData();
-      formData.append('media', mediaFile);
-      formData.append(
-        'payload',
-        JSON.stringify({
+      let resolvedMediaUrl: string | null = null;
+
+      // 1. If mediaUrl is already an external HTTPS URL (e.g. pre-uploaded or external source), use directly
+      if (mediaUrl && mediaUrl.startsWith('https://') && !mediaUrl.startsWith('blob:')) {
+        resolvedMediaUrl = mediaUrl;
+      } else {
+        // Direct client upload via Vercel Blob
+        try {
+          const blobResult = await upload(mediaFile.name, mediaFile, {
+            access: 'public',
+            handleUploadUrl: '/api/blob-upload',
+          });
+          resolvedMediaUrl = blobResult.url;
+          setExportStage('upload_complete');
+          setStageMessage('Upload complete');
+        } catch (blobError) {
+          // If Blob client upload fails (e.g. running locally without VERCEL BLOB token),
+          // fallback to local upload endpoint for local development environments
+          const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+          if (isLocal) {
+            setStageMessage('Uploading to local media storage...');
+            const localFormData = new FormData();
+            localFormData.append('media', mediaFile);
+            const localUploadRes = await fetch('/api/upload-media', {
+              method: 'POST',
+              body: localFormData,
+            });
+            if (!localUploadRes.ok) {
+              const errBody = await localUploadRes.json().catch(() => null);
+              throw new Error(errBody?.error ?? 'Local media upload failed');
+            }
+            const { mediaUrl: localUrl } = await localUploadRes.json();
+            resolvedMediaUrl = localUrl;
+            setExportStage('upload_complete');
+            setStageMessage('Upload complete');
+          } else {
+            throw new Error(`Media upload failed: ${blobError instanceof Error ? blobError.message : 'Storage upload error'}`);
+          }
+        }
+      }
+
+      setExportStage('preparing');
+      setStageMessage('Preparing export request...');
+
+      // 2. Send lightweight JSON metadata (~5-50 KB) to /api/export-video bypassing 4.5 MB Function limit
+      const startResponse = await fetch('/api/export-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mediaUrl: resolvedMediaUrl,
+          mediaFilename: mediaFile.name,
+          mediaMimeType: mediaFile.type,
+          mediaSize: mediaFile.size,
           captions,
           styleVariant,
           styleOverrides,
@@ -237,15 +299,11 @@ export const ExportPage: React.FC = () => {
           scale: RESOLUTION_SCALE[resolution],
           orientation: layoutMode,
         }),
-      );
-
-      const startResponse = await fetch('/api/export-video', {
-        method: 'POST',
-        body: formData,
       });
 
       await trackRenderJob(startResponse, '/api/export-video');
     } catch (error) {
+      setExportStage('error');
       setExportError(error instanceof Error ? error.message : 'Export failed');
     } finally {
       setIsExporting(false);
@@ -388,7 +446,7 @@ export const ExportPage: React.FC = () => {
                     ? 'Downloaded'
                     : 'Download Ready'
                   : isExporting
-                    ? 'Rendering...'
+                    ? (stageMessage || 'Processing...')
                     : 'Export Project'}
               </button>
 
@@ -422,16 +480,16 @@ export const ExportPage: React.FC = () => {
               <div className="bg-white border border-primary/20 rounded-xl p-4 export-progress-pulse">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-label-caps font-label-caps text-primary font-bold">
-                    {exportComplete ? 'Render Successful' : 'Rendering...'}
+                    {exportComplete ? 'Render Successful' : (stageMessage || 'Rendering...')}
                   </span>
                   <span className="text-label-caps font-label-caps text-primary" id="progress-text">
-                    {Math.round(exportProgress)}%
+                    {exportStage === 'uploading' ? '...' : `${Math.round(exportProgress)}%`}
                   </span>
                 </div>
                 <div className="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
                   <div
                     className="bg-primary h-full transition-all duration-300"
-                    style={{ width: `${exportProgress}%` }}
+                    style={{ width: exportStage === 'uploading' ? '100%' : `${exportProgress}%` }}
                   />
                 </div>
               </div>
