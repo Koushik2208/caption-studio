@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BeforeYouRecordSection } from '../components/welcome/BeforeYouRecordSection';
 
 export const WelcomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -38,6 +39,12 @@ export const WelcomePage: React.FC = () => {
               className="hover:text-indigo-600 transition-colors py-1 cursor-pointer"
             >
               Story Framework
+            </a>
+            <a
+              href="#before-you-record"
+              className="hover:text-indigo-600 transition-colors py-1 cursor-pointer"
+            >
+              Before You Record
             </a>
             <a
               href="#workflow"
@@ -467,7 +474,12 @@ export const WelcomePage: React.FC = () => {
       </section>
 
       {/* ========================================================================= */}
-      {/* 4. WORKFLOW SECTION                                                       */}
+      {/* 4. BEFORE YOU RECORD SECTION (Storytelling Prompts)                       */}
+      {/* ========================================================================= */}
+      <BeforeYouRecordSection />
+
+      {/* ========================================================================= */}
+      {/* 5. WORKFLOW SECTION                                                       */}
       {/* ========================================================================= */}
       <section
         id="workflow"
@@ -551,7 +563,7 @@ export const WelcomePage: React.FC = () => {
       </section>
 
       {/* ========================================================================= */}
-      {/* 5. FINAL CTA SECTION                                                      */}
+      {/* 6. FINAL CTA SECTION                                                      */}
       {/* ========================================================================= */}
       <section
         id="inspire"
@@ -617,7 +629,7 @@ export const WelcomePage: React.FC = () => {
       </section>
 
       {/* ========================================================================= */}
-      {/* 6. FOOTER                                                                 */}
+      {/* 7. FOOTER                                                                 */}
       {/* ========================================================================= */}
       <footer className="w-full bg-white border-t border-gray-200/70 py-10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-6 text-xs text-gray-500 font-medium">
@@ -638,6 +650,9 @@ export const WelcomePage: React.FC = () => {
             </button>
             <a href="#storytelling" className="hover:text-indigo-600 transition-colors">
               Story Framework
+            </a>
+            <a href="#before-you-record" className="hover:text-indigo-600 transition-colors">
+              Before You Record
             </a>
             <a href="#workflow" className="hover:text-indigo-600 transition-colors">
               Workflow
