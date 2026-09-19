@@ -1,7 +1,30 @@
+import { spawn } from "child_process";
+
+async function waitForServer(url: string, timeoutMs = 10000): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const res = await fetch(`${url}/api/health`);
+      if (res.ok) return;
+    } catch {}
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  throw new Error(`Server at ${url} failed to start within ${timeoutMs}ms`);
+}
+
 async function testServer() {
   const BASE_URL = 'http://localhost:5175';
 
-  console.log('Testing Production Server at:', BASE_URL);
+  console.log('Starting Production Server...');
+  const serverProcess = spawn('npx', ['tsx', 'server/index.ts'], {
+    shell: true,
+    stdio: 'inherit',
+    env: { ...process.env, PORT: '5175' },
+  });
+
+  try {
+    await waitForServer(BASE_URL);
+    console.log('Testing Production Server at:', BASE_URL);
 
   // 1. Test GET /
   const resRoot = await fetch(`${BASE_URL}/`);
@@ -123,6 +146,9 @@ async function testServer() {
   console.log('\n=============================================');
   console.log('ALL PRODUCTION ENDPOINT & EXPORT TESTS PASSED');
   console.log('=============================================');
+  } finally {
+    serverProcess.kill();
+  }
 }
 
 testServer().catch((err) => {
