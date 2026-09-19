@@ -18,8 +18,10 @@ import {
   SUPPORTED_FRAME_VARIANTS,
   SUPPORTED_GRADIENT_OVERLAY_DIRECTIONS,
   SUPPORTED_VIDEO_MOTION_TYPES,
+  SUPPORTED_WATERMARK_POSITIONS,
   VALID_GRADIENT_OVERLAY_DIRECTIONS,
   VALID_INPUT_MODES,
+  normalizeWatermarkPosition,
 } from './schema.js';
 
 export type ValidationError = {
@@ -231,6 +233,124 @@ export function validateEffectsSettings(
         message: `Unsupported gradientOverlayDirection '${effects.gradientOverlayDirection}'. Supported directions: ${SUPPORTED_GRADIENT_OVERLAY_DIRECTIONS.join(', ')}`,
         code: 'UNSUPPORTED_GRADIENT_OVERLAY_DIRECTION',
       });
+    }
+  }
+
+  return errors;
+}
+
+export function validateOverlaySettings(
+  overlay: unknown,
+  pathPrefix: string,
+): ValidationError[] {
+  const errors: ValidationError[] = [];
+  if (overlay === undefined || overlay === null) return errors;
+
+  if (!isPlainObject(overlay)) {
+    errors.push({
+      path: pathPrefix,
+      message: 'Overlay settings must be an object',
+      code: 'INVALID_OVERLAY_SETTINGS',
+    });
+    return errors;
+  }
+
+  // Helper to validate position
+  const checkPosition = (pos: unknown, path: string) => {
+    if (pos !== undefined) {
+      if (typeof pos !== 'string' || !normalizeWatermarkPosition(pos)) {
+        errors.push({
+          path,
+          message: `Unsupported watermark position '${pos}'. Supported positions: ${SUPPORTED_WATERMARK_POSITIONS.join(', ')}`,
+          code: 'UNSUPPORTED_WATERMARK_POSITION',
+        });
+      }
+    }
+  };
+
+  // Helper to validate opacity
+  const checkOpacity = (op: unknown, path: string) => {
+    if (op !== undefined) {
+      if (
+        typeof op !== 'number' ||
+        !Number.isFinite(op) ||
+        op < 0 ||
+        op > 100
+      ) {
+        errors.push({
+          path,
+          message: 'Watermark opacity must be a finite number between 0.0 and 1.0 (or 0 to 100)',
+          code: 'INVALID_WATERMARK_OPACITY',
+        });
+      }
+    }
+  };
+
+  // Helper to validate size
+  const checkSize = (sz: unknown, path: string) => {
+    if (sz !== undefined) {
+      if (
+        typeof sz !== 'number' ||
+        !Number.isFinite(sz) ||
+        sz <= 0 ||
+        sz > 100
+      ) {
+        errors.push({
+          path,
+          message: 'Watermark size must be a positive finite number (e.g. 0.15 or 15)',
+          code: 'INVALID_WATERMARK_SIZE',
+        });
+      }
+    }
+  };
+
+  // Helper to validate assetId
+  const checkAssetId = (aid: unknown, path: string, isEnabled?: boolean) => {
+    if (aid !== undefined) {
+      if (typeof aid !== 'string' || !aid.trim()) {
+        errors.push({
+          path,
+          message: 'Watermark assetId must be a non-empty string when specified',
+          code: isEnabled ? 'MISSING_WATERMARK_ASSET_ID' : 'INVALID_WATERMARK_ASSET_ID',
+        });
+      }
+    }
+  };
+
+  // 1. Check flat properties
+  if (overlay.watermarkEnabled !== undefined && typeof overlay.watermarkEnabled !== 'boolean') {
+    errors.push({
+      path: `${pathPrefix}.watermarkEnabled`,
+      message: 'watermarkEnabled must be a boolean',
+      code: 'INVALID_WATERMARK_ENABLED',
+    });
+  }
+  checkPosition(overlay.watermarkPosition, `${pathPrefix}.watermarkPosition`);
+  checkOpacity(overlay.watermarkOpacity, `${pathPrefix}.watermarkOpacity`);
+  checkSize(overlay.watermarkSize, `${pathPrefix}.watermarkSize`);
+  checkAssetId(overlay.watermarkAssetId, `${pathPrefix}.watermarkAssetId`, overlay.watermarkEnabled === true);
+
+  // 2. Check structured overlay.watermark if present
+  if (overlay.watermark !== undefined) {
+    if (!isPlainObject(overlay.watermark)) {
+      errors.push({
+        path: `${pathPrefix}.watermark`,
+        message: 'watermark must be an object',
+        code: 'INVALID_WATERMARK_CONFIG',
+      });
+    } else {
+      const wm = overlay.watermark as Record<string, unknown>;
+      if (wm.enabled !== undefined && typeof wm.enabled !== 'boolean') {
+        errors.push({
+          path: `${pathPrefix}.watermark.enabled`,
+          message: 'Watermark enabled must be a boolean',
+          code: 'INVALID_WATERMARK_ENABLED',
+        });
+      }
+      checkPosition(wm.position, `${pathPrefix}.watermark.position`);
+      checkOpacity(wm.opacity, `${pathPrefix}.watermark.opacity`);
+      checkSize(wm.size, `${pathPrefix}.watermark.size`);
+      checkAssetId(wm.assetId, `${pathPrefix}.watermark.assetId`, wm.enabled === true);
     }
   }
 
@@ -456,6 +576,9 @@ export function validateBeat(
       if (beat.visual.effects !== undefined) {
         errors.push(...validateEffectsSettings(beat.visual.effects, `${pathPrefix}.visual.effects`));
       }
+      if (beat.visual.overlay !== undefined) {
+        errors.push(...validateOverlaySettings(beat.visual.overlay, `${pathPrefix}.visual.overlay`));
+      }
     }
   }
 
@@ -666,6 +789,9 @@ export function validateCreativeProject(data: unknown): ValidationResult<Creativ
     if (gs.effects !== undefined) {
       errors.push(...validateEffectsSettings(gs.effects, 'globalSettings.effects'));
     }
+    if (gs.overlay !== undefined) {
+      errors.push(...validateOverlaySettings(gs.overlay, 'globalSettings.overlay'));
+    }
   }
 
   // 8. Beats check
@@ -858,3 +984,56 @@ export function parseCreativeProject(jsonString: string): ValidationResult<Creat
 export function serializeCreativeProject(project: CreativeProject, pretty = true): string {
   return pretty ? JSON.stringify(project, null, 2) : JSON.stringify(project);
 }
+
+export type WatermarkResolutionResult = {
+  status: 'resolved' | 'missing' | 'none';
+  assetId?: string;
+  name?: string;
+  warning?: string;
+};
+
+/**
+ * Resolves whether a referenced watermark asset is available in workspace.
+ */
+export function resolveCreativeProjectWatermark(
+  project: CreativeProject,
+  availableWatermark?: { id?: string; name?: string; file?: File | null } | null,
+): WatermarkResolutionResult {
+  const globalOverlay = project.globalSettings?.overlay;
+  const watermarkObj = globalOverlay && isPlainObject(globalOverlay.watermark) ? (globalOverlay.watermark as Record<string, unknown>) : null;
+  const isEnabled = watermarkObj ? (watermarkObj.enabled as boolean) : globalOverlay?.watermarkEnabled;
+  const targetAssetId = (watermarkObj?.assetId as string) || globalOverlay?.watermarkAssetId;
+
+  if (!isEnabled && !targetAssetId) {
+    return { status: 'none' };
+  }
+
+  // Find declared watermark in assets.media
+  const declaredAsset = project.assets?.media?.find(
+    (m: { id?: string; name?: string; type?: string }) => m && m.type === 'image' && (m.id === targetAssetId || (!targetAssetId && m.id?.startsWith('watermark'))),
+  );
+
+  const assetId = targetAssetId || declaredAsset?.id || 'watermark_01';
+  const assetName = declaredAsset?.name || 'watermark image';
+
+  if (availableWatermark && (availableWatermark.file || availableWatermark.name)) {
+    if (
+      availableWatermark.id === assetId ||
+      (availableWatermark.name && declaredAsset?.name && availableWatermark.name.toLowerCase() === declaredAsset.name.toLowerCase())
+    ) {
+      return {
+        status: 'resolved',
+        assetId,
+        name: assetName,
+      };
+    }
+  }
+
+  return {
+    status: 'missing',
+    assetId,
+    name: assetName,
+    warning: `Referenced watermark asset "${assetName}" (${assetId}) was not found in local workspace. Watermark settings preserved; you can upload an image in Style → Overlay.`,
+  };
+}
+

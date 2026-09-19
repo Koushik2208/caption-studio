@@ -10,4 +10,23 @@ export default defineConfig({
       '/api': 'http://localhost:5175',
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('remotion') || id.includes('@remotion')) {
+              return 'vendor-remotion';
+            }
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+              return 'vendor-react';
+            }
+            return 'vendor';
+          }
+        },
+      },
+    },
+    chunkSizeWarningLimit: 800,
+  },
 })
+

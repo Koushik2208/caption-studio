@@ -100,11 +100,17 @@ export const CaptionExportComposition: React.FC<CaptionExportProps> = ({
     />
   );
 
-  const overlayElement = (
+  const watermarkElement = overlaySettings?.watermarkEnabled ? (
+    <WatermarkOverlay
+      opacity={overlaySettings.watermarkOpacity}
+      position={overlaySettings.watermarkPosition}
+      size={overlaySettings.watermarkSize}
+      imageSrc={overlaySettings.watermarkUrl}
+    />
+  ) : null;
+
+  const otherOverlaysElement = (
     <>
-      {overlaySettings?.watermarkEnabled && (
-        <WatermarkOverlay opacity={overlaySettings.watermarkOpacity} position={overlaySettings.watermarkPosition} />
-      )}
       {overlaySettings?.progressBarEnabled && (
         <ProgressBarOverlay color={overlaySettings.progressBarColor} position={overlaySettings.progressBarPosition} />
       )}
@@ -117,7 +123,12 @@ export const CaptionExportComposition: React.FC<CaptionExportProps> = ({
       frameSettings={frameSettings}
       media={mediaElement}
       captions={captionElement}
-      overlays={overlayElement}
+      overlays={
+        <>
+          {watermarkElement}
+          {otherOverlaysElement}
+        </>
+      }
       textures={textureElement}
       assetOverlays={assetOverlaysElement}
       sfx={sfxElement}
@@ -127,9 +138,10 @@ export const CaptionExportComposition: React.FC<CaptionExportProps> = ({
         {textureElement}
         {assetOverlaysElement}
         {sfxElement}
+        {watermarkElement}
         <AbsoluteFill style={hasFrameInset ? { zIndex: 1 } : undefined}>
           {captionElement}
-          {overlayElement}
+          {otherOverlaysElement}
         </AbsoluteFill>
       </AbsoluteFill>
     </FrameRenderer>

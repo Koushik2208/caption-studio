@@ -82,6 +82,87 @@ export const VALID_GRADIENT_OVERLAY_DIRECTIONS = new Set<string>(
   SUPPORTED_GRADIENT_OVERLAY_DIRECTIONS,
 );
 
+import type { CanonicalWatermarkPosition } from '../overlay/types.js';
+
+
+export const SUPPORTED_WATERMARK_POSITIONS: readonly CanonicalWatermarkPosition[] = [
+  'top-left',
+  'top-center',
+  'top-right',
+  'center-left',
+  'center',
+  'center-right',
+  'bottom-left',
+  'bottom-center',
+  'bottom-right',
+] as const;
+
+export const VALID_WATERMARK_POSITIONS = new Set<string>([
+  ...SUPPORTED_WATERMARK_POSITIONS,
+  'tl',
+  'tr',
+  'bl',
+  'br',
+  'tc',
+  'cl',
+  'c',
+  'cr',
+  'bc',
+  'top',
+  'bottom',
+  'left',
+  'right',
+]);
+
+const WATERMARK_POSITION_MAP: Record<string, CanonicalWatermarkPosition> = {
+  'top-left': 'top-left',
+  top_left: 'top-left',
+  topleft: 'top-left',
+  tl: 'top-left',
+  'top-center': 'top-center',
+  top_center: 'top-center',
+  topcenter: 'top-center',
+  tc: 'top-center',
+  top: 'top-center',
+  'top-right': 'top-right',
+  top_right: 'top-right',
+  topright: 'top-right',
+  tr: 'top-right',
+  'center-left': 'center-left',
+  center_left: 'center-left',
+  centerleft: 'center-left',
+  cl: 'center-left',
+  left: 'center-left',
+  center: 'center',
+  middle: 'center',
+  c: 'center',
+  'center-right': 'center-right',
+  center_right: 'center-right',
+  centerright: 'center-right',
+  cr: 'center-right',
+  right: 'center-right',
+  'bottom-left': 'bottom-left',
+  bottom_left: 'bottom-left',
+  bottomleft: 'bottom-left',
+  bl: 'bottom-left',
+  'bottom-center': 'bottom-center',
+  bottom_center: 'bottom-center',
+  bottomcenter: 'bottom-center',
+  bc: 'bottom-center',
+  bottom: 'bottom-center',
+  'bottom-right': 'bottom-right',
+  bottom_right: 'bottom-right',
+  bottomright: 'bottom-right',
+  br: 'bottom-right',
+};
+
+export function normalizeWatermarkPosition(raw: string): CanonicalWatermarkPosition | null {
+  if (!raw || typeof raw !== 'string') return null;
+  const key = raw.trim().toLowerCase();
+  return WATERMARK_POSITION_MAP[key] ?? null;
+}
+
+
 // Normalization lookup maps to be lenient with external AI casing (e.g. "word-stamp" -> "wordStamp", "blur_resolve" -> "blurResolve")
 const ANIMATION_VARIANT_MAP: Record<string, CaptionStyleVariant> = {
   signature: 'signature',

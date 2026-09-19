@@ -332,6 +332,10 @@ export type ProjectStateExportInput = {
   watermarkEnabled: boolean;
   watermarkOpacity: number;
   watermarkPosition: WatermarkPosition;
+  watermarkSize?: number;
+  watermarkAssetId?: string;
+  watermarkFilename?: string;
+  watermarkUrl?: string;
   progressBarEnabled: boolean;
   progressBarColor: string;
   progressBarPosition: ProgressBarPosition;

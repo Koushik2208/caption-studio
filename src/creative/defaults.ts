@@ -121,8 +121,18 @@ export const DEFAULT_CREATIVE_FRAME: FrameSettings = {
 
 export const DEFAULT_CREATIVE_OVERLAY: OverlaySettings = {
   watermarkEnabled: false,
-  watermarkOpacity: 60,
-  watermarkPosition: 'tr',
+  watermarkOpacity: 70,
+  watermarkPosition: 'bottom-right',
+  watermarkSize: 15,
+  watermarkAssetId: undefined,
+  watermarkUrl: undefined,
+  watermarkFilename: undefined,
+  watermark: {
+    enabled: false,
+    position: 'bottom-right',
+    size: 0.15,
+    opacity: 0.7,
+  },
   progressBarEnabled: false,
   progressBarColor: '#3b82f6',
   progressBarPosition: 'bottom',

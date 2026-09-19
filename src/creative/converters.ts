@@ -17,6 +17,7 @@ import {
   normalizeFontPresetName,
   normalizeFrameVariant,
   normalizeVideoMotionType,
+  normalizeWatermarkPosition,
 } from './schema.js';
 import type {
   ConvertedProjectState,
@@ -275,52 +276,78 @@ export function convertCreativeProjectToProjectState(
     keywordPunchIntensity: global.effects?.keywordPunchIntensity || 'medium',
   };
 
-  const rawSettings: Partial<ProjectStateExportInput> = {
-    projectId: project.id,
-    projectName: project.name,
-    durationInFrames: project.durationInFrames,
-    captions,
-    presetName: normalizedPresetName,
-    animation: normalizedAnimation,
-    keywordHighlightEnabled: typography.keywordHighlightEnabled ?? true,
-    highlightIntensity: typography.highlightIntensity ?? 0.5,
-    highlightColor: typography.highlightColor ?? '#0066ff',
-    keywords: typography.keywords ?? [],
-    position: typography.position ?? 'center',
-    captionPositionY: typography.captionPositionY ?? 0.5,
-    textAlign: typography.textAlign ?? 'center',
-    fontSizeMultiplier: typography.fontSizeMultiplier ?? 1.0,
-    textColor: typography.textColor ?? '#FFFFFF',
-    fontWeight: typography.fontWeight ?? 400,
-    strokeEnabled: typography.strokeEnabled ?? false,
-    strokeColor: typography.strokeColor ?? '#000000',
-    strokeWidth: typography.strokeWidth ?? 2,
-    shadowEnabled: typography.shadowEnabled ?? true,
-    glowEnabled: typography.glowEnabled ?? false,
-    glowColor: typography.glowColor ?? '#00e5ff',
-    glowIntensity: typography.glowIntensity ?? 0.5,
-    glowBlur: typography.glowBlur ?? 12,
-    glowOpacity: typography.glowOpacity ?? 0.8,
-    gradientEnabled: typography.gradientEnabled ?? false,
-    gradientStart: typography.gradientStart ?? '#ff007a',
-    gradientEnd: typography.gradientEnd ?? '#7928ca',
-    gradientAngle: typography.gradientAngle ?? 90,
-    letterSpacing: typography.letterSpacing ?? 0,
-    lineHeight: typography.lineHeight ?? 1.2,
-    textTransform: typography.textTransform ?? 'none',
-    backdropEnabled: typography.backdropEnabled ?? false,
-    backdropColor: typography.backdropColor ?? '#000000',
-    backdropOpacity: typography.backdropOpacity ?? 60,
-    backdropRadius: typography.backdropRadius ?? 8,
-    backdropPaddingX: typography.backdropPaddingX ?? 16,
-    backdropPaddingY: typography.backdropPaddingY ?? 8,
-    wordOverrides: typography.wordOverrides ?? {},
-    watermarkEnabled: global.overlay.watermarkEnabled,
-    watermarkOpacity: global.overlay.watermarkOpacity,
-    watermarkPosition: global.overlay.watermarkPosition,
-    progressBarEnabled: global.overlay.progressBarEnabled,
-    progressBarColor: global.overlay.progressBarColor,
-    progressBarPosition: global.overlay.progressBarPosition,
+    const rawOverlay = global.overlay as Record<string, unknown> | undefined;
+    const watermarkObj = rawOverlay && typeof rawOverlay.watermark === 'object' && rawOverlay.watermark !== null
+      ? (rawOverlay.watermark as Record<string, unknown>)
+      : null;
+    const resolvedWatermarkEnabled = watermarkObj?.enabled !== undefined
+      ? !!watermarkObj.enabled
+      : !!rawOverlay?.watermarkEnabled;
+    const rawWmPos = String(watermarkObj?.position || rawOverlay?.watermarkPosition || 'bottom-right');
+    const resolvedWatermarkPos = normalizeWatermarkPosition(rawWmPos) || 'bottom-right';
+    const rawWmOpacity = watermarkObj?.opacity !== undefined ? watermarkObj.opacity : rawOverlay?.watermarkOpacity;
+    const resolvedWatermarkOpacity = typeof rawWmOpacity === 'number'
+      ? (rawWmOpacity <= 1 ? Math.round(rawWmOpacity * 100) : rawWmOpacity)
+      : 70;
+    const rawWmSize = watermarkObj?.size !== undefined ? watermarkObj.size : rawOverlay?.watermarkSize;
+    const resolvedWatermarkSize = typeof rawWmSize === 'number'
+      ? (rawWmSize <= 1 ? Math.round(rawWmSize * 100) : rawWmSize)
+      : 15;
+    const resolvedWatermarkAssetId = (watermarkObj?.assetId as string) || (rawOverlay?.watermarkAssetId as string) || undefined;
+    const referencedWatermarkAsset = resolvedWatermarkAssetId
+      ? project.assets?.media?.find((m) => m && m.type === 'image' && m.id === resolvedWatermarkAssetId)
+      : project.assets?.media?.find((m) => m && m.type === 'image');
+    const resolvedWatermarkFilename = referencedWatermarkAsset?.name || (rawOverlay?.watermarkFilename as string) || undefined;
+
+    const rawSettings: Partial<ProjectStateExportInput> = {
+      projectId: project.id,
+      projectName: project.name,
+      durationInFrames: project.durationInFrames,
+      captions,
+      presetName: normalizedPresetName,
+      animation: normalizedAnimation,
+      keywordHighlightEnabled: typography.keywordHighlightEnabled ?? true,
+      highlightIntensity: typography.highlightIntensity ?? 0.5,
+      highlightColor: typography.highlightColor ?? '#0066ff',
+      keywords: typography.keywords ?? [],
+      position: typography.position ?? 'center',
+      captionPositionY: typography.captionPositionY ?? 0.5,
+      textAlign: typography.textAlign ?? 'center',
+      fontSizeMultiplier: typography.fontSizeMultiplier ?? 1.0,
+      textColor: typography.textColor ?? '#FFFFFF',
+      fontWeight: typography.fontWeight ?? 400,
+      strokeEnabled: typography.strokeEnabled ?? false,
+      strokeColor: typography.strokeColor ?? '#000000',
+      strokeWidth: typography.strokeWidth ?? 2,
+      shadowEnabled: typography.shadowEnabled ?? true,
+      glowEnabled: typography.glowEnabled ?? false,
+      glowColor: typography.glowColor ?? '#00e5ff',
+      glowIntensity: typography.glowIntensity ?? 0.5,
+      glowBlur: typography.glowBlur ?? 12,
+      glowOpacity: typography.glowOpacity ?? 0.8,
+      gradientEnabled: typography.gradientEnabled ?? false,
+      gradientStart: typography.gradientStart ?? '#ff007a',
+      gradientEnd: typography.gradientEnd ?? '#7928ca',
+      gradientAngle: typography.gradientAngle ?? 90,
+      letterSpacing: typography.letterSpacing ?? 0,
+      lineHeight: typography.lineHeight ?? 1.2,
+      textTransform: typography.textTransform ?? 'none',
+      backdropEnabled: typography.backdropEnabled ?? false,
+      backdropColor: typography.backdropColor ?? '#000000',
+      backdropOpacity: typography.backdropOpacity ?? 60,
+      backdropRadius: typography.backdropRadius ?? 8,
+      backdropPaddingX: typography.backdropPaddingX ?? 16,
+      backdropPaddingY: typography.backdropPaddingY ?? 8,
+      wordOverrides: typography.wordOverrides ?? {},
+      watermarkEnabled: resolvedWatermarkEnabled,
+      watermarkOpacity: resolvedWatermarkOpacity,
+      watermarkPosition: resolvedWatermarkPos,
+      watermarkSize: resolvedWatermarkSize,
+      watermarkAssetId: resolvedWatermarkAssetId,
+      watermarkFilename: resolvedWatermarkFilename,
+      progressBarEnabled: global.overlay.progressBarEnabled,
+      progressBarColor: global.overlay.progressBarColor,
+      progressBarPosition: global.overlay.progressBarPosition,
     frameVariant: normalizedFrameVariant,
     frameBgColor: global.composition.bgColor,
     bezelRadiusMultiplier: global.composition.bezelRadiusMultiplier,
@@ -392,13 +419,28 @@ export function convertCreativeProjectToProjectState(
     soundEffects: assetSettings.soundEffects,
   };
 
-  return {
-    projectId: project.id,
-    projectName: project.name,
-    captions,
-    styleVariant: normalizedAnimation,
-    styleOverrides,
-    overlaySettings: global.overlay,
+    return {
+      projectId: project.id,
+      projectName: project.name,
+      captions,
+      styleVariant: normalizedAnimation,
+      styleOverrides,
+      overlaySettings: {
+        ...global.overlay,
+        watermarkEnabled: resolvedWatermarkEnabled,
+        watermarkOpacity: resolvedWatermarkOpacity,
+        watermarkPosition: resolvedWatermarkPos,
+        watermarkSize: resolvedWatermarkSize,
+        watermarkAssetId: resolvedWatermarkAssetId,
+        watermarkFilename: resolvedWatermarkFilename,
+        watermark: {
+          enabled: resolvedWatermarkEnabled,
+          assetId: resolvedWatermarkAssetId,
+          position: resolvedWatermarkPos,
+          size: resolvedWatermarkSize <= 1 ? resolvedWatermarkSize : resolvedWatermarkSize / 100,
+          opacity: resolvedWatermarkOpacity <= 1 ? resolvedWatermarkOpacity : resolvedWatermarkOpacity / 100,
+        },
+      },
     frameSettings: {
       ...global.composition,
       layout: normalizedLayout,
@@ -511,7 +553,7 @@ export function convertProjectStateToCreativeProject(
 
   let maxCaptionEndMs = 0;
   if (captions.length > 0) {
-    maxCaptionEndMs = Math.max(...captions.map((c) => c.endMs));
+    maxCaptionEndMs = Math.max(...captions.map((c: { endMs: number }) => c.endMs));
   }
   const computedDurationInFrames = maxCaptionEndMs > 0
     ? Math.ceil((maxCaptionEndMs / 1000) * fps)
@@ -604,6 +646,30 @@ export function convertProjectStateToCreativeProject(
     wordOverrides: input.wordOverrides,
   };
 
+  const watermarkAssetId = input.watermarkAssetId || (input.watermarkFilename ? 'watermark_01' : undefined);
+  const normalizedWatermarkPos = normalizeWatermarkPosition(input.watermarkPosition) || 'bottom-right';
+  const wmOpacityPercent = input.watermarkOpacity !== undefined ? input.watermarkOpacity : 70;
+  const wmOpacityNormalized = wmOpacityPercent <= 1 ? wmOpacityPercent : wmOpacityPercent / 100;
+  const wmSizePercent = input.watermarkSize !== undefined ? input.watermarkSize : 15;
+  const wmSizeNormalized = wmSizePercent <= 1 ? wmSizePercent : wmSizePercent / 100;
+
+  const mediaAssets: CreativeMediaAsset[] = [];
+  if (input.mediaFileName) {
+    mediaAssets.push({
+      id: 'video_main',
+      type: 'video',
+      name: input.mediaFileName,
+      durationInFrames,
+    });
+  }
+  if (input.watermarkFilename) {
+    mediaAssets.push({
+      id: watermarkAssetId || 'watermark_01',
+      type: 'image',
+      name: input.watermarkFilename,
+    });
+  }
+
   const project = createDefaultCreativeProject({
     id: input.projectId,
     name: input.projectName,
@@ -611,10 +677,10 @@ export function convertProjectStateToCreativeProject(
     durationInFrames,
     input: {
       mode: captions.length > 0 ? 'transcript' : 'idea',
-      text: captions.map((c) => c.text).join(' ').trim(),
+      text: captions.map((c: { text: string }) => c.text).join(' ').trim(),
     },
     content: {
-      text: captions.map((c) => c.text).join(' ').trim(),
+      text: captions.map((c: { text: string }) => c.text).join(' ').trim(),
       transcript: captions,
     },
     creativeIntent: {
@@ -685,9 +751,19 @@ export function convertProjectStateToCreativeProject(
         splitRightFocalY: input.splitRightFocalY,
       },
       overlay: {
-        watermarkEnabled: input.watermarkEnabled,
-        watermarkOpacity: input.watermarkOpacity,
-        watermarkPosition: input.watermarkPosition,
+        watermarkEnabled: input.watermarkEnabled ?? false,
+        watermarkOpacity: wmOpacityPercent,
+        watermarkPosition: normalizedWatermarkPos,
+        watermarkSize: wmSizePercent,
+        watermarkAssetId,
+        watermarkFilename: input.watermarkFilename,
+        watermark: {
+          enabled: input.watermarkEnabled ?? false,
+          assetId: watermarkAssetId,
+          position: normalizedWatermarkPos,
+          size: wmSizeNormalized,
+          opacity: wmOpacityNormalized,
+        },
         progressBarEnabled: input.progressBarEnabled,
         progressBarColor: input.progressBarColor,
         progressBarPosition: input.progressBarPosition,
@@ -711,16 +787,7 @@ export function convertProjectStateToCreativeProject(
       videoMotion: input.videoMotion,
     },
     assets: {
-      media: input.mediaFileName
-        ? [
-            {
-              id: 'video_main',
-              type: 'video',
-              name: input.mediaFileName,
-              durationInFrames,
-            },
-          ]
-        : [],
+      media: mediaAssets,
       transitions: Array.from(new Set((input.transitionOverlays || []).map((t) => t.assetId))),
       sfx: Array.from(new Set((input.soundEffects || []).map((s) => s.assetId))),
     },

@@ -35,6 +35,7 @@ const TRANSCRIPT_STORAGE_KEY = 'caption-studio:cached-transcript';
 // cached the same way and for the same reason, so a page reload restores
 // Audio-Reactive Pulse without re-uploading.
 const AUDIO_AMPLITUDE_STORAGE_KEY = 'caption-studio:cached-audio-amplitude';
+const WATERMARK_ASSET_STORAGE_KEY = 'caption-studio:cached-watermark';
 
 type PersistedState = {
   id: string;
@@ -81,6 +82,9 @@ type PersistedState = {
   watermarkEnabled: boolean;
   watermarkOpacity: number;
   watermarkPosition: WatermarkPosition;
+  watermarkSize?: number;
+  watermarkAssetId?: string | null;
+  watermarkFilename?: string | null;
   progressBarEnabled: boolean;
   progressBarColor: string;
   progressBarPosition: ProgressBarPosition;
@@ -308,6 +312,14 @@ interface ProjectContextType {
   setWatermarkOpacity: (opacity: number) => void;
   watermarkPosition: WatermarkPosition;
   setWatermarkPosition: (position: WatermarkPosition) => void;
+  watermarkSize: number;
+  setWatermarkSize: (size: number) => void;
+  watermarkFile: File | null;
+  watermarkUrl: string | null;
+  watermarkFilename: string | null;
+  watermarkAssetId: string | null;
+  setWatermark: (file: File) => void;
+  removeWatermark: () => void;
   progressBarEnabled: boolean;
   setProgressBarEnabled: (enabled: boolean) => void;
   progressBarColor: string;
@@ -763,9 +775,23 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     ],
   );
 
-  const [watermarkEnabled, setWatermarkEnabled] = useState(persisted?.watermarkEnabled ?? true);
-  const [watermarkOpacity, setWatermarkOpacity] = useState(persisted?.watermarkOpacity ?? 40);
-  const [watermarkPosition, setWatermarkPosition] = useState<WatermarkPosition>(persisted?.watermarkPosition ?? 'tr');
+  const [watermarkEnabled, setWatermarkEnabled] = useState(persisted?.watermarkEnabled ?? false);
+  const [watermarkOpacity, setWatermarkOpacity] = useState(persisted?.watermarkOpacity ?? 70);
+  const [watermarkPosition, setWatermarkPosition] = useState<WatermarkPosition>(
+    persisted?.watermarkPosition ?? 'bottom-right',
+  );
+  const [watermarkSize, setWatermarkSize] = useState<number>(persisted?.watermarkSize ?? 15);
+  const [watermarkAssetId, setWatermarkAssetId] = useState<string | null>(persisted?.watermarkAssetId ?? null);
+  const [watermarkFilename, setWatermarkFilename] = useState<string | null>(persisted?.watermarkFilename ?? null);
+  const [watermarkFile, setWatermarkFile] = useState<File | null>(null);
+  const [watermarkUrl, setWatermarkUrl] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(WATERMARK_ASSET_STORAGE_KEY);
+    } catch {
+      return null;
+    }
+  });
+
   const [progressBarEnabled, setProgressBarEnabled] = useState(persisted?.progressBarEnabled ?? true);
   const [progressBarColor, setProgressBarColor] = useState(persisted?.progressBarColor ?? '#0066ff');
   const [progressBarPosition, setProgressBarPosition] = useState<ProgressBarPosition>(
@@ -892,11 +918,33 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       watermarkEnabled,
       watermarkOpacity,
       watermarkPosition,
+      watermarkSize,
+      watermarkAssetId: watermarkAssetId ?? undefined,
+      watermarkUrl: watermarkUrl ?? undefined,
+      watermarkFilename: watermarkFilename ?? undefined,
+      watermark: {
+        enabled: watermarkEnabled,
+        assetId: watermarkAssetId ?? undefined,
+        position: watermarkPosition,
+        size: watermarkSize <= 1 ? watermarkSize : watermarkSize / 100,
+        opacity: watermarkOpacity <= 1 ? watermarkOpacity : watermarkOpacity / 100,
+      },
       progressBarEnabled,
       progressBarColor,
       progressBarPosition,
     }),
-    [watermarkEnabled, watermarkOpacity, watermarkPosition, progressBarEnabled, progressBarColor, progressBarPosition],
+    [
+      watermarkEnabled,
+      watermarkOpacity,
+      watermarkPosition,
+      watermarkSize,
+      watermarkAssetId,
+      watermarkUrl,
+      watermarkFilename,
+      progressBarEnabled,
+      progressBarColor,
+      progressBarPosition,
+    ],
   );
 
   const frameSettings: FrameSettings = useMemo(
@@ -1216,6 +1264,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     watermarkEnabled,
     watermarkOpacity,
     watermarkPosition,
+    watermarkSize,
+    watermarkAssetId,
+    watermarkFilename,
     progressBarEnabled,
     progressBarColor,
     progressBarPosition,
@@ -1298,6 +1349,51 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (prev) URL.revokeObjectURL(prev);
       return URL.createObjectURL(file);
     });
+  }, []);
+
+  const setWatermark = useCallback((file: File) => {
+    setWatermarkFile(file);
+    setWatermarkFilename(file.name);
+    setWatermarkAssetId('watermark_01');
+    setWatermarkEnabled(true);
+    const objectUrl = URL.createObjectURL(file);
+    setWatermarkUrl(objectUrl);
+
+    // Cache image in localStorage so it persists across page reloads
+    try {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        if (dataUrl) {
+          try {
+            localStorage.setItem(WATERMARK_ASSET_STORAGE_KEY, dataUrl);
+          } catch (err) {
+            console.warn('Failed to cache watermark in localStorage:', err);
+          }
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.warn('Failed to read watermark file:', err);
+    }
+  }, []);
+
+  const removeWatermark = useCallback(() => {
+    setWatermarkFile(null);
+    setWatermarkFilename(null);
+    setWatermarkAssetId(null);
+    setWatermarkEnabled(false);
+    setWatermarkUrl((prev) => {
+      if (prev && prev.startsWith('blob:')) {
+        URL.revokeObjectURL(prev);
+      }
+      return null;
+    });
+    try {
+      localStorage.removeItem(WATERMARK_ASSET_STORAGE_KEY);
+    } catch (err) {
+      console.warn('Failed to clear cached watermark from localStorage:', err);
+    }
   }, []);
 
   const importSrt = useCallback(async (file: File) => {
@@ -1410,6 +1506,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setWatermarkEnabled(converted.overlaySettings.watermarkEnabled);
     setWatermarkOpacity(converted.overlaySettings.watermarkOpacity);
     setWatermarkPosition(converted.overlaySettings.watermarkPosition);
+    if (converted.overlaySettings.watermarkSize !== undefined) {
+      setWatermarkSize(converted.overlaySettings.watermarkSize);
+    }
+    if (converted.overlaySettings.watermarkAssetId !== undefined) {
+      setWatermarkAssetId(converted.overlaySettings.watermarkAssetId);
+    }
+    if (converted.overlaySettings.watermarkFilename !== undefined) {
+      setWatermarkFilename(converted.overlaySettings.watermarkFilename);
+    }
     setProgressBarEnabled(converted.overlaySettings.progressBarEnabled);
     setProgressBarColor(converted.overlaySettings.progressBarColor);
     setProgressBarPosition(converted.overlaySettings.progressBarPosition);
@@ -1537,6 +1642,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       watermarkEnabled,
       watermarkOpacity,
       watermarkPosition,
+      watermarkSize,
+      watermarkAssetId: watermarkAssetId ?? undefined,
+      watermarkFilename: watermarkFilename ?? (watermarkFile ? watermarkFile.name : undefined),
+      watermarkUrl: watermarkUrl ?? undefined,
       progressBarEnabled,
       progressBarColor,
       progressBarPosition,
@@ -1637,6 +1746,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const clearCachedTranscript = useCallback(() => {
     localStorage.removeItem(TRANSCRIPT_STORAGE_KEY);
     localStorage.removeItem(AUDIO_AMPLITUDE_STORAGE_KEY);
+    localStorage.removeItem(WATERMARK_ASSET_STORAGE_KEY);
     setCaptions(null);
     setAudioAmplitude(null);
   }, []);
@@ -1741,6 +1851,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setWatermarkOpacity,
         watermarkPosition,
         setWatermarkPosition,
+        watermarkSize,
+        setWatermarkSize,
+        watermarkFile,
+        watermarkUrl,
+        watermarkFilename,
+        watermarkAssetId,
+        setWatermark,
+        removeWatermark,
         progressBarEnabled,
         setProgressBarEnabled,
         progressBarColor,

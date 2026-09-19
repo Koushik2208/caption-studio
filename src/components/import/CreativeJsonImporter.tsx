@@ -8,8 +8,9 @@ import {
   parseCreativeProject,
   serializeCreativeProject,
   validateCreativeProject,
-  createDefaultCreativeProject,
   resolveCreativeProjectMedia,
+  resolveCreativeProjectWatermark,
+  createDefaultCreativeProject,
   type CreativeProject,
   type ValidationError,
 } from '../../creative/index.js';
@@ -126,7 +127,7 @@ const SAMPLE_CREATIVE_JSON: CreativeProject = createDefaultCreativeProject({
 });
 
 export const CreativeJsonImporter: React.FC = () => {
-  const { loadCreativeProject, captions, mediaFile, srtFile } = useProject();
+  const { loadCreativeProject, captions, mediaFile, srtFile, watermarkFile, watermarkFilename, watermarkAssetId } = useProject();
   const navigate = useNavigate();
 
   const [jsonText, setJsonText] = useState<string>('');
@@ -261,6 +262,13 @@ export const CreativeJsonImporter: React.FC = () => {
 
   const project = validationResult.project;
   const mediaResolution = project ? resolveCreativeProjectMedia(project, mediaFile, srtFile) : null;
+  const watermarkResolution = project
+    ? resolveCreativeProjectWatermark(project, {
+        id: watermarkAssetId ?? undefined,
+        name: watermarkFilename ?? (watermarkFile ? watermarkFile.name : undefined),
+        file: watermarkFile,
+      })
+    : null;
 
   return (
     <div className="flex flex-col gap-3 h-full">
@@ -415,6 +423,24 @@ export const CreativeJsonImporter: React.FC = () => {
                 {mediaResolution?.action === 'preserve' && mediaResolution.matchedAsset
                   ? `Preserving matching video "${mediaFile.name}".`
                   : `Preserving currently loaded video "${mediaFile.name}".`}
+              </span>
+            </div>
+          )}
+
+          {/* Watermark Resolution Status */}
+          {watermarkResolution?.status === 'missing' && (
+            <div className="flex items-start gap-1.5 text-[11px] text-amber-200 bg-amber-500/10 p-2 rounded-lg border border-amber-500/30">
+              <span className="material-symbols-outlined text-xs text-amber-400 mt-0.5">branding_watermark</span>
+              <span>
+                {watermarkResolution.warning}
+              </span>
+            </div>
+          )}
+          {watermarkResolution?.status === 'resolved' && (
+            <div className="flex items-start gap-1.5 text-[11px] text-primary/90 bg-primary/5 p-2 rounded-lg border border-primary/20">
+              <span className="material-symbols-outlined text-xs text-primary mt-0.5">branding_watermark</span>
+              <span>
+                Referenced watermark "{watermarkResolution.name}" matches currently active watermark.
               </span>
             </div>
           )}

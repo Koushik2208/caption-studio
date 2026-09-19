@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useProject } from '../../context/ProjectContext';
 import { useLayout } from '../../context/LayoutContext';
 import { FRAME_OPTIONS, FRAME_SHELL_COLORS } from '../../pages/overlayOptions';
@@ -11,6 +11,7 @@ import {
   type TickerPosition,
 } from '../../motion/types';
 import type { ProgressBarPosition, WatermarkPosition } from '../../overlay/types';
+import { normalizeWatermarkPosition } from '../../creative/schema';
 
 const LAYOUT_OPTIONS: { value: CompositionLayout; label: string; icon: string; sub: string }[] = [
   { value: 'floating-card', label: 'Floating Card', icon: 'crop_free', sub: 'Framed card' },
@@ -50,11 +51,16 @@ const BACKDROP_GRADIENT_PRESETS = [
   { name: 'Smoke', gradient: 'linear-gradient(180deg, #27272a 0%, #09090b 100%)' },
 ];
 
-const WATERMARK_POSITIONS: { value: WatermarkPosition; label: string }[] = [
-  { value: 'tl', label: 'Top-L' },
-  { value: 'tr', label: 'Top-R' },
-  { value: 'bl', label: 'Btm-L' },
-  { value: 'br', label: 'Btm-R' },
+const WATERMARK_GRID_POSITIONS: { value: WatermarkPosition; label: string; icon: string }[] = [
+  { value: 'top-left', label: 'Top-L', icon: 'north_west' },
+  { value: 'top-center', label: 'Top-C', icon: 'north' },
+  { value: 'top-right', label: 'Top-R', icon: 'north_east' },
+  { value: 'center-left', label: 'Mid-L', icon: 'west' },
+  { value: 'center', label: 'Center', icon: 'filter_center_focus' },
+  { value: 'center-right', label: 'Mid-R', icon: 'east' },
+  { value: 'bottom-left', label: 'Btm-L', icon: 'south_west' },
+  { value: 'bottom-center', label: 'Btm-C', icon: 'south' },
+  { value: 'bottom-right', label: 'Btm-R', icon: 'south_east' },
 ];
 
 const PROGRESS_POSITIONS: { value: ProgressBarPosition; label: string }[] = [
@@ -98,6 +104,20 @@ const TICKER_DIRECTIONS: { value: TickerDirection; label: string }[] = [
  */
 export const OverlayInspector: React.FC = () => {
   const { setIsCodeEditorOpen } = useLayout();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleWatermarkUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const validExtensions = /\.(png|jpe?g|webp|svg)$/i;
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/svg+xml'];
+    if (!validTypes.includes(file.type) && !validExtensions.test(file.name)) {
+      alert('Please select a valid image file (.png, .jpg, .webp, .svg). PNG or WebP with transparency is recommended.');
+      return;
+    }
+    setWatermark(file);
+    e.target.value = '';
+  };
   const {
     layout,
     setLayout,
@@ -161,6 +181,13 @@ export const OverlayInspector: React.FC = () => {
     setWatermarkOpacity,
     watermarkPosition,
     setWatermarkPosition,
+    watermarkSize,
+    setWatermarkSize,
+    watermarkFile,
+    watermarkUrl,
+    watermarkFilename,
+    setWatermark,
+    removeWatermark,
     progressBarEnabled,
     setProgressBarEnabled,
     progressBarColor,
@@ -1189,7 +1216,7 @@ export const OverlayInspector: React.FC = () => {
             <span className="text-xs font-semibold uppercase tracking-wider text-outline font-label-caps">
               Watermark
             </span>
-            <span className="text-[11px] text-outline">Brand badge overlay</span>
+            <span className="text-[11px] text-outline">Brand badge & logo overlay</span>
           </div>
           <button
             type="button"
@@ -1208,8 +1235,114 @@ export const OverlayInspector: React.FC = () => {
           </button>
         </div>
 
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/svg+xml"
+          className="hidden"
+          onChange={handleWatermarkUpload}
+        />
+
         {watermarkEnabled && (
-          <div className="flex flex-col gap-3 p-3 bg-surface-container-low rounded-lg border border-outline-variant/40">
+          <div className="flex flex-col gap-3.5 p-3 bg-surface-container-low rounded-lg border border-outline-variant/40">
+            {/* Upload / Replace / Remove Watermark */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-medium text-on-surface">Logo Asset</span>
+              {watermarkUrl ? (
+                <div className="flex items-center gap-2.5 p-2 bg-surface-container rounded-lg border border-outline-variant/30">
+                  <div className="w-10 h-10 rounded bg-black/40 flex items-center justify-center overflow-hidden shrink-0 border border-outline-variant/20 p-1">
+                    <img src={watermarkUrl} alt="Watermark Preview" className="max-w-full max-h-full object-contain" />
+                  </div>
+                  <div className="flex flex-col flex-1 min-w-0">
+                    <span className="text-xs font-semibold text-on-surface truncate">
+                      {watermarkFilename || watermarkFile?.name || 'Custom Watermark'}
+                    </span>
+                    <span className="text-[10px] text-outline truncate">
+                      {watermarkFile ? `${(watermarkFile.size / 1024).toFixed(1)} KB` : 'Local Asset'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="p-1.5 rounded-md text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors cursor-pointer"
+                      title="Replace watermark"
+                      aria-label="Replace watermark image"
+                    >
+                      <span className="material-symbols-outlined text-base">swap_horiz</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={removeWatermark}
+                      className="p-1.5 rounded-md text-on-surface-variant hover:text-error hover:bg-surface-container-high transition-colors cursor-pointer"
+                      title="Remove watermark"
+                      aria-label="Remove watermark image"
+                    >
+                      <span className="material-symbols-outlined text-base">delete</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-lg border border-dashed border-outline hover:border-primary bg-surface-container/40 hover:bg-surface-container text-on-surface text-xs font-medium transition-all cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-base text-primary">add_photo_alternate</span>
+                  <span>Upload Logo (PNG, WebP, SVG, JPG)</span>
+                </button>
+              )}
+            </div>
+
+            {/* Position 3x3 Grid */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex justify-between text-xs text-on-surface">
+                <span className="text-[11px] font-medium">Position</span>
+                <span className="font-mono text-outline capitalize text-[10px]">
+                  {watermarkPosition.replace('-', ' ')}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-1 bg-surface-container p-1 rounded-md">
+                {WATERMARK_GRID_POSITIONS.map((pos) => {
+                  const isSelected = normalizeWatermarkPosition(watermarkPosition) === pos.value;
+                  return (
+                    <button
+                      key={pos.value}
+                      type="button"
+                      onClick={() => setWatermarkPosition(pos.value)}
+                      title={pos.label}
+                      className={`h-7 rounded text-[10px] font-medium transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                        isSelected
+                          ? 'bg-white text-primary font-bold shadow-2xs'
+                          : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/60'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-xs">{pos.icon}</span>
+                      <span>{pos.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Size Slider */}
+            <div className="flex flex-col gap-1">
+              <div className="flex justify-between text-xs text-on-surface">
+                <span className="text-[11px] font-medium">Size</span>
+                <span className="font-mono text-outline">{watermarkSize}%</span>
+              </div>
+              <input
+                type="range"
+                min={5}
+                max={40}
+                value={watermarkSize}
+                onChange={(e) => setWatermarkSize(Number(e.target.value))}
+                className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
+              />
+            </div>
+
+            {/* Opacity Slider */}
             <div className="flex flex-col gap-1">
               <div className="flex justify-between text-xs text-on-surface">
                 <span className="text-[11px] font-medium">Opacity</span>
@@ -1223,26 +1356,6 @@ export const OverlayInspector: React.FC = () => {
                 onChange={(e) => setWatermarkOpacity(Number(e.target.value))}
                 className="w-full cursor-pointer accent-primary h-1.5 bg-surface-container-high rounded appearance-none"
               />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <span className="text-[11px] font-medium text-on-surface">Corner Position</span>
-              <div className="grid grid-cols-4 gap-1 bg-surface-container p-1 rounded-md">
-                {WATERMARK_POSITIONS.map((pos) => (
-                  <button
-                    key={pos.value}
-                    type="button"
-                    onClick={() => setWatermarkPosition(pos.value)}
-                    className={`h-7 rounded text-[11px] font-medium transition-all cursor-pointer ${
-                      watermarkPosition === pos.value
-                        ? 'bg-white text-primary font-bold shadow-2xs'
-                        : 'text-on-surface-variant hover:text-on-surface'
-                    }`}
-                  >
-                    {pos.label}
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
         )}

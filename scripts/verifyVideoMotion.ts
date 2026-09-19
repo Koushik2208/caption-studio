@@ -9,10 +9,18 @@ async function runVerification() {
   fs.mkdirSync(outputDir, { recursive: true });
 
   const entryPoint = path.resolve('src/remotion/index.ts');
-  console.log('Bundling Remotion entry point...');
   const bundleLocation = await bundle({
     entryPoint,
-    webpackOverride: (config) => config,
+    webpackOverride: (config) => ({
+      ...config,
+      resolve: {
+        ...config.resolve,
+        extensionAlias: {
+          '.js': ['.ts', '.tsx', '.js'],
+          ...(config.resolve?.extensionAlias || {}),
+        },
+      },
+    }),
   });
 
   const testCaptions = [
