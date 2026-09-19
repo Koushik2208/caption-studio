@@ -4,7 +4,13 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import multer from "multer";
-import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
+import {
+  handleUpload,
+  handleUploadPresigned,
+  type HandleUploadBody,
+  type HandleUploadPresignedBody,
+} from "@vercel/blob/client";
+import { issueSignedToken } from "@vercel/blob";
 import type { Caption } from "@remotion/captions";
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
@@ -270,70 +276,144 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
-// Vercel Blob client upload token generation handler
+// Vercel Blob client upload handler (supports modern OIDC presigned uploads & legacy token mode)
 app.post("/api/blob-upload", async (req, res) => {
   const requestId = (req as any).requestId || randomUUID().slice(0, 8);
   const start = Date.now();
-  const hasToken = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
-  const authMode = hasToken ? "BLOB_READ_WRITE_TOKEN" : "NONE_DETECTED";
+  const body = req.body;
+  const bodyType = body?.type;
 
-  console.log(`[BLOB] request received requestId=${requestId} path=${req.path} bodyType=${req.body?.type ?? "unknown"}`);
-  console.log(`[BLOB] environment/config status requestId=${requestId} tokenConfigured=${hasToken}`);
-  console.log(`[BLOB] store/auth mode detected requestId=${requestId} authMode=${authMode}`);
+  const storeIdConfigured = Boolean(process.env.BLOB_STORE_ID);
+  const legacyTokenConfigured = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+  const webhookKeyConfigured = Boolean(process.env.BLOB_WEBHOOK_PUBLIC_KEY);
+  const oidcEnvironmentDetected = Boolean(process.env.VERCEL_OIDC_TOKEN || (process.env.VERCEL && storeIdConfigured));
+  const authMode = storeIdConfigured ? "OIDC" : legacyTokenConfigured ? "LEGACY" : "UNKNOWN";
 
-  if (!hasToken) {
-    const elapsed = Date.now() - start;
-    const msg = "Vercel Blob: No read-write token found. The Vercel Blob Store is not attached to this project or BLOB_READ_WRITE_TOKEN is missing in environment variables.";
-    console.error(`[BLOB] handleUpload failed requestId=${requestId} duration=${elapsed}ms errorName=BlobError errorMessage="${msg}"`);
-    res.status(500).json({
-      ok: false,
-      error: "Blob storage not configured",
-      requestId,
-      message: msg,
-      details: {
-        tokenConfigured: false,
-        hint: "Create a Vercel Blob Store in the Vercel Dashboard (under Storage tab) and link it to this project to automatically inject BLOB_READ_WRITE_TOKEN.",
-      },
-    });
-    return;
-  }
+  console.log(`[BLOB] request received requestId=${requestId} path=${req.path} bodyType=${bodyType ?? "unknown"}`);
+  console.log(`[BLOB] storeIdConfigured=${storeIdConfigured} legacyTokenConfigured=${legacyTokenConfigured} webhookKeyConfigured=${webhookKeyConfigured} oidcEnvironmentDetected=${oidcEnvironmentDetected} authMode=${authMode}`);
 
-  const body = req.body as HandleUploadBody;
+  const allowedContentTypes = [
+    "video/mp4",
+    "video/quicktime",
+    "video/webm",
+    "video/x-matroska",
+    "audio/mpeg",
+    "audio/wav",
+    "audio/mp4",
+  ];
+  const maximumSizeInBytes = 500 * 1024 * 1024; // 500MB
+
   try {
-    console.log(`[BLOB] handleUpload started requestId=${requestId}`);
-    const jsonResponse = await handleUpload({
-      body,
-      request: req as any,
-      onBeforeGenerateToken: async (pathname, clientPayload, multipart) => {
-        return {
-          allowedContentTypes: [
-            "video/mp4",
-            "video/quicktime",
-            "video/webm",
-            "video/x-matroska",
-            "audio/mpeg",
-            "audio/wav",
-            "audio/mp4",
-          ],
-          tokenPayload: JSON.stringify({ pathname, clientPayload, multipart }),
-        };
-      },
-      onUploadCompleted: async ({ blob, tokenPayload }) => {
-        console.log(`[BLOB UPLOAD COMPLETED] url=${blob.url} payload=${tokenPayload}`);
-      },
+    if (bodyType === "blob.generate-presigned-url") {
+      console.log(`[BLOB] handleUploadPresigned started requestId=${requestId}`);
+      const jsonResponse = await handleUploadPresigned({
+        body: body as HandleUploadPresignedBody,
+        request: req as any,
+        getSignedToken: async (pathname, clientPayload, multipart) => {
+          const token = await issueSignedToken({
+            pathname,
+            operations: ["put"],
+            allowedContentTypes,
+            maximumSizeInBytes,
+          });
+          return {
+            token,
+            urlOptions: {
+              addRandomSuffix: true,
+              tokenPayload: JSON.stringify({ pathname, clientPayload, multipart }),
+            },
+          };
+        },
+        onUploadCompleted: async ({ blob, tokenPayload }) => {
+          console.log(`[BLOB UPLOAD COMPLETED] url=${blob.url} payload=${tokenPayload}`);
+        },
+      });
+      const elapsed = Date.now() - start;
+      console.log(`[BLOB] handleUploadPresigned succeeded requestId=${requestId} duration=${elapsed}ms`);
+      res.json(jsonResponse);
+      return;
+    }
+
+    if (bodyType === "blob.generate-client-token") {
+      if (legacyTokenConfigured) {
+        console.log(`[BLOB] handleUpload started (legacy token mode) requestId=${requestId}`);
+        const jsonResponse = await handleUpload({
+          body: body as HandleUploadBody,
+          request: req as any,
+          onBeforeGenerateToken: async (pathname, clientPayload, multipart) => {
+            return {
+              allowedContentTypes,
+              maximumSizeInBytes,
+              addRandomSuffix: true,
+              tokenPayload: JSON.stringify({ pathname, clientPayload, multipart }),
+            };
+          },
+          onUploadCompleted: async ({ blob, tokenPayload }) => {
+            console.log(`[BLOB UPLOAD COMPLETED] url=${blob.url} payload=${tokenPayload}`);
+          },
+        });
+        const elapsed = Date.now() - start;
+        console.log(`[BLOB] handleUpload succeeded requestId=${requestId} duration=${elapsed}ms`);
+        res.json(jsonResponse);
+        return;
+      }
+
+      const elapsed = Date.now() - start;
+      console.warn(`[BLOB] handleUpload legacy client-token requested without BLOB_READ_WRITE_TOKEN requestId=${requestId} duration=${elapsed}ms (OIDC store detected=${storeIdConfigured})`);
+      res.status(400).json({
+        ok: false,
+        error: "Legacy client-token requested but store is configured with OIDC. Use uploadPresigned.",
+        requestId,
+        authMode,
+      });
+      return;
+    }
+
+    if (bodyType === "blob.upload-completed") {
+      console.log(`[BLOB] handleUpload upload-completed callback received requestId=${requestId}`);
+      if (webhookKeyConfigured) {
+        const jsonResponse = await handleUploadPresigned({
+          body: body as HandleUploadPresignedBody,
+          request: req as any,
+          getSignedToken: async () => {
+            throw new Error("getSignedToken should not be called for upload-completed event");
+          },
+          onUploadCompleted: async ({ blob, tokenPayload }) => {
+            console.log(`[BLOB UPLOAD COMPLETED] url=${blob.url} payload=${tokenPayload}`);
+          },
+        });
+        res.json(jsonResponse);
+        return;
+      } else if (legacyTokenConfigured) {
+        const jsonResponse = await handleUpload({
+          body: body as HandleUploadBody,
+          request: req as any,
+          onBeforeGenerateToken: async () => {
+            throw new Error("onBeforeGenerateToken should not be called for upload-completed event");
+          },
+          onUploadCompleted: async ({ blob, tokenPayload }) => {
+            console.log(`[BLOB UPLOAD COMPLETED] url=${blob.url} payload=${tokenPayload}`);
+          },
+        });
+        res.json(jsonResponse);
+        return;
+      }
+    }
+
+    res.status(400).json({
+      ok: false,
+      error: `Unsupported blob event type: ${bodyType ?? "unknown"}`,
+      requestId,
     });
-    const elapsed = Date.now() - start;
-    console.log(`[BLOB] handleUpload succeeded requestId=${requestId} duration=${elapsed}ms`);
-    res.json(jsonResponse);
   } catch (error) {
     const elapsed = Date.now() - start;
     const err = error as any;
     console.error(`[BLOB] handleUpload failed requestId=${requestId} duration=${elapsed}ms errorName=${err?.name || "Error"} errorMessage="${err?.message || "Unknown error"}" status=${err?.status || 500}`);
     res.status(err?.status || 500).json({
       ok: false,
-      error: "Blob upload token generation failed",
+      error: "Blob upload processing failed",
       requestId,
-      message: err?.message || "Failed to generate client upload token",
+      message: err?.message || "Failed to process blob upload request",
     });
   }
 });

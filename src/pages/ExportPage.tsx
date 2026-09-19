@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { serializeSrt } from '@remotion/captions';
-import { upload } from '@vercel/blob/client';
+import { uploadPresigned } from '@vercel/blob/client';
 import { useLayout } from '../context/LayoutContext';
 import { useProject } from '../context/ProjectContext';
 import { useMediaDurationFrames } from '../preview/useMediaDurationFrames';
@@ -238,9 +238,9 @@ export const ExportPage: React.FC = () => {
       if (mediaUrl && mediaUrl.startsWith('https://') && !mediaUrl.startsWith('blob:')) {
         resolvedMediaUrl = mediaUrl;
       } else {
-        // Direct client upload via Vercel Blob
+        // Direct client upload via Vercel Blob (OIDC presigned upload)
         try {
-          const blobResult = await upload(mediaFile.name, mediaFile, {
+          const blobResult = await uploadPresigned(mediaFile.name, mediaFile, {
             access: 'public',
             handleUploadUrl: '/api/blob-upload',
           });
