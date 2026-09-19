@@ -1004,7 +1004,7 @@ export const EffectsInspector: React.FC = () => {
           <span className="text-xs font-semibold uppercase tracking-wider text-outline font-label-caps">
             Sound Effects (SFX)
           </span>
-          <span className="text-[11px] text-outline">20 Audio Cues</span>
+          <span className="text-[11px] text-outline">{SOUND_EFFECTS.length} Audio Cues</span>
         </div>
 
         {/* Add SFX Card */}

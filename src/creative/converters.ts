@@ -115,40 +115,111 @@ export function extractAssetPlacements(project: CreativeProject): AssetSettings 
     });
   }
 
-  // 2. Collect beat-level transitions and SFX
+  // 2. Collect beat-level transitions and SFX (supports both objects and string IDs)
   project.beats.forEach((beat, index) => {
     // Collect beat transition
-    if (beat.transition) {
-      transitionOverlays.push({
-        id: beat.transition.id ?? `trans_${beat.id || index}_${beat.transition.startFrame}`,
-        assetId: beat.transition.assetId,
-        startFrame: beat.transition.startFrame,
-        durationInFrames: beat.transition.durationInFrames,
-        opacity: beat.transition.opacity ?? 1.0,
-      });
+    const rawTrans = beat.transition as unknown;
+    if (rawTrans) {
+      if (typeof rawTrans === 'string' && rawTrans.trim()) {
+        transitionOverlays.push({
+          id: `trans_${beat.id || index}_${beat.startFrame}`,
+          assetId: rawTrans.trim(),
+          startFrame: beat.startFrame,
+          durationInFrames: Math.min(15, Math.max(1, beat.endFrame - beat.startFrame)),
+          opacity: 1.0,
+        });
+      } else if (typeof rawTrans === 'object' && 'assetId' in rawTrans && (rawTrans as CreativeTransitionPlacement).assetId) {
+        const transObj = rawTrans as CreativeTransitionPlacement;
+        transitionOverlays.push({
+          id: transObj.id ?? `trans_${beat.id || index}_${transObj.startFrame ?? beat.startFrame}`,
+          assetId: transObj.assetId,
+          startFrame: transObj.startFrame ?? beat.startFrame,
+          durationInFrames: transObj.durationInFrames ?? 15,
+          opacity: transObj.opacity ?? 1.0,
+        });
+      }
     }
 
     // Collect beat SFX
-    if (beat.sfx) {
-      if (Array.isArray(beat.sfx)) {
-        beat.sfx.forEach((sfx, sfxIdx) => {
-          soundEffects.push({
-            id: sfx.id ?? `sfx_${beat.id || index}_${sfxIdx}_${sfx.startFrame}`,
-            assetId: sfx.assetId,
-            startFrame: sfx.startFrame,
-            volume: sfx.volume ?? 0.8,
-          });
+    const rawSfx = beat.sfx as unknown;
+    if (rawSfx) {
+      if (Array.isArray(rawSfx)) {
+        rawSfx.forEach((sfxItem, sfxIdx) => {
+          if (typeof sfxItem === 'string' && sfxItem.trim()) {
+            soundEffects.push({
+              id: `sfx_${beat.id || index}_${sfxIdx}_${beat.startFrame}`,
+              assetId: sfxItem.trim(),
+              startFrame: beat.startFrame,
+              volume: 0.8,
+            });
+          } else if (sfxItem && typeof sfxItem === 'object' && 'assetId' in sfxItem && (sfxItem as CreativeSfxPlacement).assetId) {
+            const sfxObj = sfxItem as CreativeSfxPlacement;
+            soundEffects.push({
+              id: sfxObj.id ?? `sfx_${beat.id || index}_${sfxIdx}_${sfxObj.startFrame ?? beat.startFrame}`,
+              assetId: sfxObj.assetId,
+              startFrame: sfxObj.startFrame ?? beat.startFrame,
+              volume: sfxObj.volume ?? 0.8,
+            });
+          }
         });
-      } else {
+      } else if (typeof rawSfx === 'string' && rawSfx.trim()) {
         soundEffects.push({
-          id: beat.sfx.id ?? `sfx_${beat.id || index}_${beat.sfx.startFrame}`,
-          assetId: beat.sfx.assetId,
-          startFrame: beat.sfx.startFrame,
-          volume: beat.sfx.volume ?? 0.8,
+          id: `sfx_${beat.id || index}_${beat.startFrame}`,
+          assetId: rawSfx.trim(),
+          startFrame: beat.startFrame,
+          volume: 0.8,
+        });
+      } else if (typeof rawSfx === 'object' && 'assetId' in rawSfx && (rawSfx as CreativeSfxPlacement).assetId) {
+        const sfxObj = rawSfx as CreativeSfxPlacement;
+        soundEffects.push({
+          id: sfxObj.id ?? `sfx_${beat.id || index}_${sfxObj.startFrame ?? beat.startFrame}`,
+          assetId: sfxObj.assetId,
+          startFrame: sfxObj.startFrame ?? beat.startFrame,
+          volume: sfxObj.volume ?? 0.8,
         });
       }
     }
   });
+
+  // 3. Fallback for root-level string declarations not yet placed on beats
+  if (project.assets?.transitions && Array.isArray(project.assets.transitions)) {
+    project.assets.transitions.forEach((trans: unknown, idx) => {
+      if (typeof trans === 'string' && trans.trim()) {
+        const assetId = trans.trim();
+        const alreadyPlaced = transitionOverlays.some((t) => t.assetId === assetId);
+        if (!alreadyPlaced) {
+          const targetBeat = project.beats[idx] ?? project.beats[0];
+          const startFrame = targetBeat ? targetBeat.startFrame : 0;
+          transitionOverlays.push({
+            id: `trans_root_str_${idx}_${startFrame}`,
+            assetId,
+            startFrame,
+            durationInFrames: 15,
+            opacity: 1.0,
+          });
+        }
+      }
+    });
+  }
+
+  if (project.assets?.sfx && Array.isArray(project.assets.sfx)) {
+    project.assets.sfx.forEach((sfx: unknown, idx) => {
+      if (typeof sfx === 'string' && sfx.trim()) {
+        const assetId = sfx.trim();
+        const alreadyPlaced = soundEffects.some((s) => s.assetId === assetId);
+        if (!alreadyPlaced) {
+          const targetBeat = project.beats[idx] ?? project.beats[0];
+          const startFrame = targetBeat ? targetBeat.startFrame : 0;
+          soundEffects.push({
+            id: `sfx_root_str_${idx}_${startFrame}`,
+            assetId,
+            startFrame,
+            volume: 0.8,
+          });
+        }
+      }
+    });
+  }
 
   return {
     transitionOverlays,
