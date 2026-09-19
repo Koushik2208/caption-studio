@@ -28,8 +28,8 @@ export const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, to, onCli
         onClick={handleClick}
         className={`flex flex-col items-center justify-center flex-1 py-1.5 px-1 rounded-xl transition-all duration-150 cursor-pointer ${
           isActive
-            ? 'text-primary bg-primary-container/10 font-bold'
-            : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container/60 font-medium'
+            ? 'text-text-primary bg-brand-accent-soft font-bold'
+            : 'text-text-secondary hover:text-text-primary hover:bg-surface-subtle font-medium'
         }`}
         aria-label={label}
       >
@@ -46,17 +46,17 @@ export const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, to, onCli
   return (
     <button
       onClick={handleClick}
-      className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 cursor-pointer ${
+      className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-150 cursor-pointer ${
         isActive
-          ? 'bg-primary-container text-on-primary-container font-semibold translate-x-1'
-          : 'text-on-surface-variant hover:bg-surface-container font-medium'
+          ? 'bg-brand-accent-soft text-text-primary font-semibold border border-brand-accent/50 shadow-2xs translate-x-0.5'
+          : 'text-text-secondary hover:text-text-primary hover:bg-surface-subtle border border-transparent font-medium'
       }`}
       aria-label={label}
     >
       <span className="material-symbols-outlined" aria-hidden="true">
         {icon}
       </span>
-      <span className="hidden lg:inline text-label-caps font-label-caps">
+      <span className="hidden lg:inline text-body-md">
         {label}
       </span>
     </button>

@@ -398,7 +398,7 @@ export const WelcomePage: React.FC = () => {
               
               {/* Creator Quote / Tip Box */}
               <div className="w-full bg-[#FFF5F5] rounded-2xl p-4 text-left border border-rose-100/80 mt-auto">
-                <span className="text-rose-400 font-serif text-2xl leading-none block -mb-2">“</span>
+                <span className="text-rose-400 font-handwriting text-3xl font-bold leading-none block -mb-2">“</span>
                 <p className="text-xs text-gray-700 font-medium italic leading-relaxed">
                   Ask a question, show a surprising fact, or make a bold statement.
                 </p>
@@ -419,7 +419,7 @@ export const WelcomePage: React.FC = () => {
 
               {/* Creator Quote / Tip Box */}
               <div className="w-full bg-[#FFFBEB] rounded-2xl p-4 text-left border border-amber-100/80 mt-auto">
-                <span className="text-amber-400 font-serif text-2xl leading-none block -mb-2">“</span>
+                <span className="text-amber-400 font-handwriting text-3xl font-bold leading-none block -mb-2">“</span>
                 <p className="text-xs text-gray-700 font-medium italic leading-relaxed">
                   Make it relatable. This is where people feel seen.
                 </p>
@@ -440,7 +440,7 @@ export const WelcomePage: React.FC = () => {
 
               {/* Creator Quote / Tip Box */}
               <div className="w-full bg-[#FAF5FF] rounded-2xl p-4 text-left border border-purple-100/80 mt-auto">
-                <span className="text-purple-400 font-serif text-2xl leading-none block -mb-2">“</span>
+                <span className="text-purple-400 font-handwriting text-3xl font-bold leading-none block -mb-2">“</span>
                 <p className="text-xs text-gray-700 font-medium italic leading-relaxed">
                   <span className="font-bold text-gray-900">Be real.</span> Share challenges, what you tried and what you learned.
                 </p>
@@ -461,7 +461,7 @@ export const WelcomePage: React.FC = () => {
 
               {/* Creator Quote / Tip Box */}
               <div className="w-full bg-[#ECFDF5] rounded-2xl p-4 text-left border border-emerald-100/80 mt-auto">
-                <span className="text-emerald-400 font-serif text-2xl leading-none block -mb-2">“</span>
+                <span className="text-emerald-400 font-handwriting text-3xl font-bold leading-none block -mb-2">“</span>
                 <p className="text-xs text-gray-700 font-medium italic leading-relaxed">
                   Give a clear takeaway. Inspire them to take action (or think differently).
                 </p>

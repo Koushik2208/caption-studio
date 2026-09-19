@@ -329,7 +329,7 @@ export const TranscriptEditor: React.FC = () => {
               title={allSelectedAreItalic ? 'Remove italic (set normal)' : 'Apply italic'}
               aria-label="Toggle italic"
               aria-pressed={allSelectedAreItalic}
-              className={`h-7 px-2.5 flex items-center justify-center rounded-md font-serif italic text-xs font-bold transition-all cursor-pointer ${
+              className={`h-7 px-2.5 flex items-center justify-center rounded-md font-sans italic text-xs font-bold transition-all cursor-pointer ${
                 allSelectedAreItalic
                   ? 'bg-primary text-white shadow-2xs'
                   : 'bg-surface border border-outline-variant/70 text-on-surface hover:border-primary/60 hover:bg-surface-container-low'

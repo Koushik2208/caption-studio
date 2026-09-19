@@ -13,16 +13,16 @@ type CanvasConfig = {
 
 const CANVAS_CONFIG: Record<string, CanvasConfig> = {
   '/import': {
-    mainClassName: 'w-full lg:flex-1 p-2 sm:p-4 lg:p-canvas-margin flex items-center justify-center bg-surface-container overflow-hidden relative shrink-0',
-    canvasClassName: 'relative bg-black rounded-xl sm:rounded-2xl overflow-hidden canvas-shadow border border-outline-variant/30 transition-all duration-300',
+    mainClassName: 'w-full lg:flex-1 p-2 sm:p-4 lg:p-canvas-margin flex items-center justify-center bg-canvas overflow-hidden relative shrink-0',
+    canvasClassName: 'relative bg-black rounded-xl sm:rounded-2xl overflow-hidden canvas-shadow border border-border/40 transition-all duration-300',
   },
   '/style': {
-    mainClassName: 'w-full lg:flex-1 p-2 sm:p-4 lg:p-canvas-margin flex items-center justify-center bg-surface overflow-hidden relative shrink-0',
-    canvasClassName: 'relative bg-black rounded-xl sm:rounded-2xl overflow-hidden canvas-shadow border border-outline-variant/30 transition-all duration-300',
+    mainClassName: 'w-full lg:flex-1 p-2 sm:p-4 lg:p-canvas-margin flex items-center justify-center bg-canvas overflow-hidden relative shrink-0',
+    canvasClassName: 'relative bg-black rounded-xl sm:rounded-2xl overflow-hidden canvas-shadow border border-border/40 transition-all duration-300',
     showAspectTag: true,
   },
   '/export': {
-    mainClassName: 'w-full lg:flex-1 bg-surface-container flex items-center justify-center p-2 sm:p-4 lg:p-canvas-margin overflow-hidden relative shrink-0',
+    mainClassName: 'w-full lg:flex-1 bg-canvas flex items-center justify-center p-2 sm:p-4 lg:p-canvas-margin overflow-hidden relative shrink-0',
     canvasClassName: 'relative bg-black rounded-xl overflow-hidden preview-canvas-shadow border-4 sm:border-8 border-white/5 transition-all duration-300',
   },
 };
