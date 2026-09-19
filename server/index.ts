@@ -24,6 +24,12 @@ const EXPORT_DIR = path.join("tmp", "exports");
 fs.mkdirSync(EXPORT_DIR, { recursive: true });
 
 const REMOTION_ENTRY = path.resolve("src/remotion/index.ts");
+const DIST_DIR = fs.existsSync(path.resolve(process.cwd(), "dist"))
+  ? path.resolve(process.cwd(), "dist")
+  : path.resolve(import.meta.dirname ?? "", "../dist");
+const PUBLIC_DIR = fs.existsSync(path.resolve(process.cwd(), "public"))
+  ? path.resolve(process.cwd(), "public")
+  : path.resolve(import.meta.dirname ?? "", "../public");
 
 // Disk-backed storage config for video uploads to preserve file extension
 // for OffthreadVideo's frame extraction.
@@ -47,6 +53,9 @@ app.use(express.json({ limit: "20mb" }));
 // its root by default.
 app.use("/tmp-media", express.static(path.resolve(UPLOAD_DIR)));
 
+// Serve production frontend assets from Vite's built dist directory
+app.use(express.static(DIST_DIR));
+
 const cleanup = (...filePaths: (string | undefined)[]) => {
   for (const filePath of filePaths) {
     if (!filePath) continue;
@@ -62,6 +71,7 @@ const getServeUrl = (): Promise<string> => {
   if (!bundlePromise) {
     bundlePromise = bundle({
       entryPoint: REMOTION_ENTRY,
+      publicDir: PUBLIC_DIR,
       onProgress: () => {},
       webpackOverride: (config) => ({
         ...config,
@@ -339,6 +349,18 @@ registerJobRoutes("/api/export-video");
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
+});
+
+// SPA fallback for client-side routing: returns index.html for non-API/non-media GET requests
+app.use((req, res, next) => {
+  if (req.method === "GET" && !req.path.startsWith("/api/") && !req.path.startsWith("/tmp-media/")) {
+    const indexPath = path.join(DIST_DIR, "index.html");
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+      return;
+    }
+  }
+  next();
 });
 
 app.listen(PORT, () => {

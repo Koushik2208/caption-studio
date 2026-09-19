@@ -10,6 +10,11 @@ export default defineConfig({
       '/api': 'http://localhost:5175',
     },
   },
+  preview: {
+    proxy: {
+      '/api': 'http://localhost:5175',
+    },
+  },
   build: {
     rollupOptions: {
       output: {
