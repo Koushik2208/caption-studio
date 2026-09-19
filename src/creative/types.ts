@@ -7,7 +7,7 @@ import type {
   CaptionTextTransform,
   WordTypographyOverride,
 } from '../captions/styles/types.js';
-import type { FontPresetName } from '../captions/styles/presets.js';
+import type { FontPresetName } from '../captions/styles/presets';
 import type {
   CardAspectRatio,
   CardBackdrop,

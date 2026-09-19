@@ -12,7 +12,16 @@ async function runVerification() {
   console.log('Bundling Remotion entry point...');
   const bundleLocation = await bundle({
     entryPoint,
-    webpackOverride: (config) => config,
+    webpackOverride: (config) => ({
+      ...config,
+      resolve: {
+        ...config.resolve,
+        extensionAlias: {
+          '.js': ['.ts', '.tsx', '.js'],
+          ...(config.resolve?.extensionAlias || {}),
+        },
+      },
+    }),
   });
 
   const testCaptions = [

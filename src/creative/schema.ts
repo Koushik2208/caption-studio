@@ -1,5 +1,5 @@
 import type { CaptionStyleVariant } from '../captions/styles/types.js';
-import { FONT_PRESETS, type FontPresetName } from '../captions/styles/presets.js';
+import { FONT_PRESETS, type FontPresetName } from '../captions/styles/presets';
 import type { CompositionLayout, FrameCardMode, FrameVariant } from '../frames/types.js';
 import type { VideoMotionType } from '../videoMotion/types.js';
 import type { GradientOverlayDirection } from '../textures/types.js';

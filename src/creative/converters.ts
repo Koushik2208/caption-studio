@@ -1,7 +1,7 @@
 import { parseSrt, type Caption } from '@remotion/captions';
 import { ensureWordLevelCaptions } from '../captions/processCaptions.js';
 import type { CaptionStyleOverrides, CaptionStyleVariant } from '../captions/styles/types.js';
-import type { FontPresetName } from '../captions/styles/presets.js';
+import type { FontPresetName } from '../captions/styles/presets';
 import type { CompositionLayout, FrameVariant } from '../frames/types.js';
 import type { VideoMotionSettings, VideoMotionType } from '../videoMotion/types.js';
 import type { AssetSettings, SoundEffectPlacement, TransitionOverlayPlacement } from '../assets/types.js';

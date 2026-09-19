@@ -7,13 +7,13 @@ import multer from "multer";
 import type { Caption } from "@remotion/captions";
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
-import type { CaptionStyleOverrides, CaptionStyleVariant } from "../src/captions/styles/types.js";
-import type { OverlaySettings } from "../src/overlay/types.js";
-import type { FrameSettings } from "../src/frames/types.js";
-import type { TextureOverlaySettings } from "../src/textures/types.js";
-import type { MotionGraphicsSettings } from "../src/motion/types.js";
-import type { VideoMotionSettings } from "../src/videoMotion/types.js";
-import type { AssetSettings } from "../src/assets/types.js";
+import type { CaptionStyleOverrides, CaptionStyleVariant } from "../src/captions/styles/types";
+import type { OverlaySettings } from "../src/overlay/types";
+import type { FrameSettings } from "../src/frames/types";
+import type { TextureOverlaySettings } from "../src/textures/types";
+import type { MotionGraphicsSettings } from "../src/motion/types";
+import type { VideoMotionSettings } from "../src/videoMotion/types";
+import type { AssetSettings } from "../src/assets/types";
 
 const PORT = Number(process.env.PORT ?? process.env.TRANSCRIBE_SERVER_PORT ?? 5175);
 
@@ -60,7 +60,23 @@ const cleanup = (...filePaths: (string | undefined)[]) => {
 let bundlePromise: Promise<string> | null = null;
 const getServeUrl = (): Promise<string> => {
   if (!bundlePromise) {
-    bundlePromise = bundle({ entryPoint: REMOTION_ENTRY, onProgress: () => {} });
+    bundlePromise = bundle({
+      entryPoint: REMOTION_ENTRY,
+      onProgress: () => {},
+      webpackOverride: (config) => ({
+        ...config,
+        resolve: {
+          ...config.resolve,
+          extensionAlias: {
+            '.js': ['.ts', '.tsx', '.js'],
+            ...(config.resolve?.extensionAlias || {}),
+          },
+        },
+      }),
+    }).catch((err) => {
+      bundlePromise = null;
+      throw err;
+    });
   }
   return bundlePromise;
 };

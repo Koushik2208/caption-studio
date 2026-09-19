@@ -1,5 +1,5 @@
 import { DEFAULT_KEYWORDS } from '../captions/styles/applyKeywordEmphasis.js';
-import type { FontPresetName } from '../captions/styles/presets.js';
+import type { FontPresetName } from '../captions/styles/presets';
 import { DEFAULT_VIDEO_MOTION, type VideoMotionSettings } from '../videoMotion/types.js';
 import type {
   CreativeBeatVisual,
