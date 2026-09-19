@@ -272,12 +272,39 @@ app.get("/api/health", (_req, res) => {
 
 // Vercel Blob client upload token generation handler
 app.post("/api/blob-upload", async (req, res) => {
+  const requestId = (req as any).requestId || randomUUID().slice(0, 8);
+  const start = Date.now();
+  const hasToken = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+  const authMode = hasToken ? "BLOB_READ_WRITE_TOKEN" : "NONE_DETECTED";
+
+  console.log(`[BLOB] request received requestId=${requestId} path=${req.path} bodyType=${req.body?.type ?? "unknown"}`);
+  console.log(`[BLOB] environment/config status requestId=${requestId} tokenConfigured=${hasToken}`);
+  console.log(`[BLOB] store/auth mode detected requestId=${requestId} authMode=${authMode}`);
+
+  if (!hasToken) {
+    const elapsed = Date.now() - start;
+    const msg = "Vercel Blob: No read-write token found. The Vercel Blob Store is not attached to this project or BLOB_READ_WRITE_TOKEN is missing in environment variables.";
+    console.error(`[BLOB] handleUpload failed requestId=${requestId} duration=${elapsed}ms errorName=BlobError errorMessage="${msg}"`);
+    res.status(500).json({
+      ok: false,
+      error: "Blob storage not configured",
+      requestId,
+      message: msg,
+      details: {
+        tokenConfigured: false,
+        hint: "Create a Vercel Blob Store in the Vercel Dashboard (under Storage tab) and link it to this project to automatically inject BLOB_READ_WRITE_TOKEN.",
+      },
+    });
+    return;
+  }
+
   const body = req.body as HandleUploadBody;
   try {
+    console.log(`[BLOB] handleUpload started requestId=${requestId}`);
     const jsonResponse = await handleUpload({
       body,
       request: req as any,
-      onBeforeGenerateToken: async (pathname) => {
+      onBeforeGenerateToken: async (pathname, clientPayload, multipart) => {
         return {
           allowedContentTypes: [
             "video/mp4",
@@ -288,17 +315,26 @@ app.post("/api/blob-upload", async (req, res) => {
             "audio/wav",
             "audio/mp4",
           ],
-          tokenPayload: JSON.stringify({ pathname }),
+          tokenPayload: JSON.stringify({ pathname, clientPayload, multipart }),
         };
       },
       onUploadCompleted: async ({ blob, tokenPayload }) => {
         console.log(`[BLOB UPLOAD COMPLETED] url=${blob.url} payload=${tokenPayload}`);
       },
     });
+    const elapsed = Date.now() - start;
+    console.log(`[BLOB] handleUpload succeeded requestId=${requestId} duration=${elapsed}ms`);
     res.json(jsonResponse);
   } catch (error) {
-    console.error("[BLOB UPLOAD ERROR]", error);
-    res.status(400).json({ ok: false, error: (error as Error).message });
+    const elapsed = Date.now() - start;
+    const err = error as any;
+    console.error(`[BLOB] handleUpload failed requestId=${requestId} duration=${elapsed}ms errorName=${err?.name || "Error"} errorMessage="${err?.message || "Unknown error"}" status=${err?.status || 500}`);
+    res.status(err?.status || 500).json({
+      ok: false,
+      error: "Blob upload token generation failed",
+      requestId,
+      message: err?.message || "Failed to generate client upload token",
+    });
   }
 });
 
