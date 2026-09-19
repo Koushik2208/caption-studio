@@ -55,6 +55,7 @@ export const PreviewPlayer: React.FC<PreviewPlayerProps> = ({ className }) => {
   return (
     <Player
       acknowledgeRemotionLicense
+      numberOfSharedAudioTags={12}
       component={CaptionPreviewComposition}
       inputProps={{
         captions,

@@ -10,8 +10,8 @@ async function main() {
   console.log(`Transition overlays: ${TRANSITION_OVERLAYS.length}`);
   console.log(`Sound effects: ${SOUND_EFFECTS.length}`);
 
-  if (ALL_BUILT_IN_ASSETS.length !== 22) {
-    throw new Error(`Expected 22 assets, found ${ALL_BUILT_IN_ASSETS.length}`);
+  if (ALL_BUILT_IN_ASSETS.length !== 23) {
+    throw new Error(`Expected 23 assets, found ${ALL_BUILT_IN_ASSETS.length}`);
   }
 
   // 2. Check each file exists on disk in public/
@@ -45,14 +45,19 @@ async function main() {
     throw new Error('vine_boom lookup failed');
   }
 
+  const cameraFlash = getAssetById('camera_flash');
+  if (!cameraFlash || cameraFlash.category !== 'foley' || cameraFlash.type !== 'sfx') {
+    throw new Error('camera_flash lookup failed');
+  }
+
   const whooshes = getAssetsByCategory('whoosh');
   if (whooshes.length < 4) {
     throw new Error(`Expected at least 4 whooshes, got ${whooshes.length}`);
   }
 
   const sfxList = getAssetsByType('sfx');
-  if (sfxList.length !== 20) {
-    throw new Error(`Expected 20 SFX, got ${sfxList.length}`);
+  if (sfxList.length !== 21) {
+    throw new Error(`Expected 21 SFX, got ${sfxList.length}`);
   }
 
   console.log('[OK] All registry lookups passed.');

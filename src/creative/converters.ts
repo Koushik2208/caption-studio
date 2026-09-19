@@ -85,18 +85,10 @@ export function extractAssetPlacements(project: CreativeProject): AssetSettings 
   const transitionOverlays: TransitionOverlayPlacement[] = [];
   const soundEffects: SoundEffectPlacement[] = [];
 
-  // 1. Collect root-level assets if present
+  // 1. Collect root-level asset placement objects if present
   if (project.assets?.transitions && Array.isArray(project.assets.transitions)) {
     project.assets.transitions.forEach((trans: unknown, idx) => {
-      if (typeof trans === 'string' && trans.trim()) {
-        transitionOverlays.push({
-          id: `trans_root_${idx}_0`,
-          assetId: trans.trim(),
-          startFrame: 0,
-          durationInFrames: 15,
-          opacity: 1.0,
-        });
-      } else if (trans && typeof trans === 'object' && 'assetId' in trans) {
+      if (trans && typeof trans === 'object' && 'assetId' in trans) {
         const obj = trans as CreativeTransitionPlacement;
         transitionOverlays.push({
           id: obj.id ?? `trans_root_${idx}_${obj.startFrame ?? 0}`,
@@ -111,14 +103,7 @@ export function extractAssetPlacements(project: CreativeProject): AssetSettings 
 
   if (project.assets?.sfx && Array.isArray(project.assets.sfx)) {
     project.assets.sfx.forEach((sfx: unknown, idx) => {
-      if (typeof sfx === 'string' && sfx.trim()) {
-        soundEffects.push({
-          id: `sfx_root_${idx}_0`,
-          assetId: sfx.trim(),
-          startFrame: 0,
-          volume: 0.8,
-        });
-      } else if (sfx && typeof sfx === 'object' && 'assetId' in sfx) {
+      if (sfx && typeof sfx === 'object' && 'assetId' in sfx) {
         const obj = sfx as CreativeSfxPlacement;
         soundEffects.push({
           id: obj.id ?? `sfx_root_${idx}_${obj.startFrame ?? 0}`,

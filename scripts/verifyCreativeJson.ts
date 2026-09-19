@@ -291,6 +291,7 @@ function runTests() {
           sfx: [
             { assetId: 'vine_boom', startFrame: 5, volume: 0.9 },
             { assetId: 'pop_bubble', startFrame: 45, volume: 0.4 },
+            { assetId: 'camera_flash', startFrame: 90, volume: 0.8 },
           ],
         },
       ],
@@ -557,10 +558,10 @@ function runTests() {
   });
 
   // 19. Existing asset registry compatibility
-  test('19. Capability catalog & asset registry remain authoritative (22 assets, 2 transitions, 20 SFX)', () => {
-    if (ALL_BUILT_IN_ASSETS.length !== 22) throw new Error(`Asset count mismatch: ${ALL_BUILT_IN_ASSETS.length}`);
+  test('19. Capability catalog & asset registry remain authoritative (23 assets, 2 transitions, 21 SFX)', () => {
+    if (ALL_BUILT_IN_ASSETS.length !== 23) throw new Error(`Asset count mismatch: ${ALL_BUILT_IN_ASSETS.length}`);
     if (TRANSITION_OVERLAYS.length !== 2) throw new Error(`Transition count mismatch: ${TRANSITION_OVERLAYS.length}`);
-    if (SOUND_EFFECTS.length !== 20) throw new Error(`SFX count mismatch: ${SOUND_EFFECTS.length}`);
+    if (SOUND_EFFECTS.length !== 21) throw new Error(`SFX count mismatch: ${SOUND_EFFECTS.length}`);
     if (CAPABILITY_CATALOG.animations.length !== 9) throw new Error('Animation catalog count mismatch');
     if (CAPABILITY_CATALOG.fontPresets.length !== 9) throw new Error('Font preset catalog count mismatch');
   });

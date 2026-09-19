@@ -19,7 +19,7 @@ const RAW_ASSETS: Array<Omit<BuiltInAsset, 'label' | 'path'>> = [
     tags: ['transition', 'flash', 'impact', 'bright', 'fast'],
   },
 
-  // ── Sound Effects (20) ──
+  // ── Sound Effects (21) ──
   {
     id: 'bass_hit_punchy',
     type: 'sfx',
@@ -27,6 +27,14 @@ const RAW_ASSETS: Array<Omit<BuiltInAsset, 'label' | 'path'>> = [
     name: 'Punchy Bass Hit',
     src: 'assets/sfx/bass_hit_punchy.mp3',
     tags: ['bass', 'hit', 'punchy', 'impact', 'low-end', 'emphasis'],
+  },
+  {
+    id: 'camera_flash',
+    type: 'sfx',
+    category: 'foley',
+    name: 'Camera Flash',
+    src: 'assets/sfx/camera_flash.mp3',
+    tags: ['camera', 'flash', 'photo', 'snap', 'reveal', 'paparazzi', 'snapshot'],
   },
   {
     id: 'camera_shutter',
