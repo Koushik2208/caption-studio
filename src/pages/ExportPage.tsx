@@ -11,7 +11,7 @@ import { serializeCreativeProject } from '../creative/index.js';
 const FPS = 30;
 const POLL_INTERVAL_MS = 1000;
 
-type ExportStage = 'idle' | 'uploading' | 'upload_complete' | 'preparing' | 'rendering' | 'done' | 'error';
+type ExportStage = 'idle' | 'preparing' | 'rendering' | 'done' | 'error';
 
 const triggerBlobDownload = (blob: Blob, filename: string) => {
   const url = URL.createObjectURL(blob);
@@ -224,108 +224,32 @@ export const ExportPage: React.FC = () => {
     if (!captions || captions.length === 0 || !mediaFile || !mp4Available) return;
 
     setIsExporting(true);
-    setExportStage('uploading');
-    setStageMessage('Uploading media directly to storage...');
+    setExportStage('preparing');
+    setStageMessage('Uploading video and preparing export...');
     setExportProgress(0);
     setExportComplete(false);
     setExportError(null);
 
     try {
-      let resolvedMediaUrl: string | null = null;
+      const formData = new FormData();
+      formData.append('media', mediaFile);
+      formData.append('captions', JSON.stringify(captions));
+      if (styleVariant) formData.append('styleVariant', styleVariant);
+      if (styleOverrides) formData.append('styleOverrides', JSON.stringify(styleOverrides));
+      if (overlaySettings) formData.append('overlaySettings', JSON.stringify(overlaySettings));
+      if (frameSettings) formData.append('frameSettings', JSON.stringify(frameSettings));
+      if (textureSettings) formData.append('textureSettings', JSON.stringify(textureSettings));
+      if (motionSettings) formData.append('motionSettings', JSON.stringify(motionSettings));
+      if (videoMotion) formData.append('videoMotion', JSON.stringify(videoMotion));
+      if (assetSettings) formData.append('assetSettings', JSON.stringify(assetSettings));
+      if (audioAmplitude) formData.append('audioAmplitude', JSON.stringify(audioAmplitude));
+      formData.append('durationInFrames', String(effectiveDurationFrames));
+      formData.append('scale', String(RESOLUTION_SCALE[resolution]));
+      formData.append('orientation', layoutMode);
 
-      // 1. If mediaUrl is already an external HTTPS URL (e.g. pre-uploaded or external source), use directly
-      if (mediaUrl && mediaUrl.startsWith('https://') && !mediaUrl.startsWith('blob:')) {
-        resolvedMediaUrl = mediaUrl;
-      } else {
-        // Direct client upload via Vercel Blob (OIDC issueSignedToken -> presignUrl -> browser PUT)
-        try {
-          const presignRes = await fetch('/api/blob-upload', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              pathname: mediaFile.name,
-              contentType: mediaFile.type,
-            }),
-          });
-
-          if (!presignRes.ok) {
-            const errBody = await presignRes.json().catch(() => null);
-            throw new Error(errBody?.message || errBody?.error || 'Failed to obtain upload authorization');
-          }
-
-          const { presignedUrl } = await presignRes.json();
-          if (!presignedUrl) {
-            throw new Error('Missing presigned upload URL from server');
-          }
-
-          const uploadRes = await fetch(presignedUrl, {
-            method: 'PUT',
-            body: mediaFile,
-            headers: {
-              'x-content-type': mediaFile.type,
-            },
-          });
-
-          if (!uploadRes.ok) {
-            throw new Error(`Blob storage upload failed with status ${uploadRes.status}`);
-          }
-
-          const blobResult = await uploadRes.json();
-          resolvedMediaUrl = blobResult.url;
-          setExportStage('upload_complete');
-          setStageMessage('Upload complete');
-        } catch (blobError) {
-          // If Blob client upload fails (e.g. running locally without VERCEL BLOB token),
-          // fallback to local upload endpoint for local development environments
-          const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-          if (isLocal) {
-            setStageMessage('Uploading to local media storage...');
-            const localFormData = new FormData();
-            localFormData.append('media', mediaFile);
-            const localUploadRes = await fetch('/api/upload-media', {
-              method: 'POST',
-              body: localFormData,
-            });
-            if (!localUploadRes.ok) {
-              const errBody = await localUploadRes.json().catch(() => null);
-              throw new Error(errBody?.error ?? 'Local media upload failed');
-            }
-            const { mediaUrl: localUrl } = await localUploadRes.json();
-            resolvedMediaUrl = localUrl;
-            setExportStage('upload_complete');
-            setStageMessage('Upload complete');
-          } else {
-            throw new Error(`Media upload failed: ${blobError instanceof Error ? blobError.message : 'Storage upload error'}`);
-          }
-        }
-      }
-
-      setExportStage('preparing');
-      setStageMessage('Preparing export request...');
-
-      // 2. Send lightweight JSON metadata (~5-50 KB) to /api/export-video bypassing 4.5 MB Function limit
       const startResponse = await fetch('/api/export-video', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mediaUrl: resolvedMediaUrl,
-          mediaFilename: mediaFile.name,
-          mediaMimeType: mediaFile.type,
-          mediaSize: mediaFile.size,
-          captions,
-          styleVariant,
-          styleOverrides,
-          overlaySettings,
-          frameSettings,
-          textureSettings,
-          motionSettings,
-          videoMotion,
-          assetSettings,
-          audioAmplitude,
-          durationInFrames: effectiveDurationFrames,
-          scale: RESOLUTION_SCALE[resolution],
-          orientation: layoutMode,
-        }),
+        body: formData,
       });
 
       await trackRenderJob(startResponse, '/api/export-video');
@@ -503,20 +427,20 @@ export const ExportPage: React.FC = () => {
           </div>
 
           {(isExporting || (exportComplete && (selectedFormat === 'chroma' || selectedFormat === 'mp4'))) && (
-            <div className="animate-in fade-in duration-200 mt-4">
+            <div className="animate-in fade-in duration-200 mt-4" data-stage={exportStage}>
               <div className="bg-white border border-primary/20 rounded-xl p-4 export-progress-pulse">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-label-caps font-label-caps text-primary font-bold">
                     {exportComplete ? 'Render Successful' : (stageMessage || 'Rendering...')}
                   </span>
                   <span className="text-label-caps font-label-caps text-primary" id="progress-text">
-                    {exportStage === 'uploading' ? '...' : `${Math.round(exportProgress)}%`}
+                    {`${Math.round(exportProgress)}%`}
                   </span>
                 </div>
                 <div className="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
                   <div
                     className="bg-primary h-full transition-all duration-300"
-                    style={{ width: exportStage === 'uploading' ? '100%' : `${exportProgress}%` }}
+                    style={{ width: `${exportProgress}%` }}
                   />
                 </div>
               </div>
