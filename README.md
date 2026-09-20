@@ -1,3 +1,5 @@
+<img width="1896" height="1078" alt="image" src="https://github.com/user-attachments/assets/62329eea-6bff-4857-b56a-d0d4ee27ff05" />
+
 # Caption Studio
 
 Caption Studio is a creator-focused web application for turning transcripts, ideas, and raw video footage into engaging, beautifully styled short-form video content (UGC, Reels, Shorts, and TikToks). Built with React, Tailwind CSS, and [Remotion](https://www.remotion.dev/), it provides structured storytelling, semantic beat-based caption choreography, rich visual effects, and server-side MP4 rendering.
@@ -7,6 +9,8 @@ Caption Studio is a creator-focused web application for turning transcripts, ide
 ## What It Does
 
 Caption Studio bridges the gap between raw transcripts or creative concepts and polished, animated short-form video. Rather than acting as a generic, complex video editor, Caption Studio focuses on the creative storytelling workflow:
+
+**Language:** Caption Studio supports source transcripts in any language, but its generated caption/subtitle output is **English only**. Non-English speech is translated into English while preserving the original timing and meaning.
 
 - **Structure Stories**: Organize content into narrative beats (Hook, Conflict, Journey, Outcome).
 - **Style Captions**: Apply curated typography, vibrant color palettes, badges, stroke, shadow, and kinetic animations.
@@ -44,7 +48,7 @@ Caption Studio fits seamlessly into existing creator workflows alongside tools y
 
 1. **Get your transcript**: Export an `.srt` subtitle file from any transcription tool or video editor (such as Microsoft Clipchamp).
 2. **Generate your creative plan**: Pass your transcript or idea to ChatGPT using the **Creative Director** system prompt (`CREATIVE_DIRECTOR_SYSTEM_PROMPT.md`) to create a schema-validated Creative JSON.
-3. **Multilingual support**: Non-English transcripts can be translated into English creative caption text while preserving the exact source timestamps.
+3. **Multilingual support**: Caption Studio accepts transcripts in any language, but the generated captions/subtitles are **English only**. Non-English transcripts are translated into English while preserving the original meaning, sequence, and exact source timestamps.
 4. **Style and customize**: Import the JSON into Caption Studio to fine-tune typography, timing, transitions, audio, and visual composition.
 5. **Preview & export**: Verify in the real-time player and render the final video.
 
