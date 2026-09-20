@@ -155,27 +155,17 @@ async function testServer() {
   const { jobId: videoJobId } = await resVideoPost.json();
   console.log(`✓ Video Export job successfully created in Express: ${videoJobId}`);
 
-  // 12. Test POST /api/blob-upload endpoint with presigned URL event and legacy token event
-  const resBlobPresigned = await fetch(`${BASE_URL}/api/blob-upload`, {
+  // 12. Test POST /api/blob-upload endpoint (issueSignedToken -> presignUrl)
+  const resBlob = await fetch(`${BASE_URL}/api/blob-upload`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      type: 'blob.generate-presigned-url',
-      payload: { pathname: 'test-video.mp4', clientPayload: null, multipart: false },
+      pathname: 'caption-studio-test.mp4',
+      contentType: 'video/mp4',
     }),
   });
-  console.log(`POST /api/blob-upload (blob.generate-presigned-url) -> ${resBlobPresigned.status}`);
-
-  const resBlobLegacy = await fetch(`${BASE_URL}/api/blob-upload`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      type: 'blob.generate-client-token',
-      payload: { pathname: 'caption-studio-test.mp4', clientPayload: null, multipart: false },
-    }),
-  });
-  console.log(`POST /api/blob-upload (blob.generate-client-token) -> ${resBlobLegacy.status}`);
-  console.log(`✓ /api/blob-upload route is registered and responding appropriately to both OIDC presigned and legacy payloads`);
+  console.log(`POST /api/blob-upload -> ${resBlob.status}`);
+  console.log(`✓ /api/blob-upload route is registered and responding to direct OIDC presign requests`);
 
   console.log('\n=============================================');
   console.log('ALL PRODUCTION ENDPOINT & EXPORT TESTS PASSED');

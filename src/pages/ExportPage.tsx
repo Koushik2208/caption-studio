@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { serializeSrt } from '@remotion/captions';
-import { uploadPresigned } from '@vercel/blob/client';
 import { useLayout } from '../context/LayoutContext';
 import { useProject } from '../context/ProjectContext';
 import { useMediaDurationFrames } from '../preview/useMediaDurationFrames';
@@ -238,12 +237,40 @@ export const ExportPage: React.FC = () => {
       if (mediaUrl && mediaUrl.startsWith('https://') && !mediaUrl.startsWith('blob:')) {
         resolvedMediaUrl = mediaUrl;
       } else {
-        // Direct client upload via Vercel Blob (OIDC presigned upload)
+        // Direct client upload via Vercel Blob (OIDC issueSignedToken -> presignUrl -> browser PUT)
         try {
-          const blobResult = await uploadPresigned(mediaFile.name, mediaFile, {
-            access: 'public',
-            handleUploadUrl: '/api/blob-upload',
+          const presignRes = await fetch('/api/blob-upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              pathname: mediaFile.name,
+              contentType: mediaFile.type,
+            }),
           });
+
+          if (!presignRes.ok) {
+            const errBody = await presignRes.json().catch(() => null);
+            throw new Error(errBody?.message || errBody?.error || 'Failed to obtain upload authorization');
+          }
+
+          const { presignedUrl } = await presignRes.json();
+          if (!presignedUrl) {
+            throw new Error('Missing presigned upload URL from server');
+          }
+
+          const uploadRes = await fetch(presignedUrl, {
+            method: 'PUT',
+            body: mediaFile,
+            headers: {
+              'x-content-type': mediaFile.type,
+            },
+          });
+
+          if (!uploadRes.ok) {
+            throw new Error(`Blob storage upload failed with status ${uploadRes.status}`);
+          }
+
+          const blobResult = await uploadRes.json();
           resolvedMediaUrl = blobResult.url;
           setExportStage('upload_complete');
           setStageMessage('Upload complete');

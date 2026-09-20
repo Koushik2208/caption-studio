@@ -4,13 +4,7 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import multer from "multer";
-import {
-  handleUpload,
-  handleUploadPresigned,
-  type HandleUploadBody,
-  type HandleUploadPresignedBody,
-} from "@vercel/blob/client";
-import { issueSignedToken } from "@vercel/blob";
+import { issueSignedToken, presignUrl } from "@vercel/blob";
 import type { Caption } from "@remotion/captions";
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
@@ -276,21 +270,20 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
-// Vercel Blob client upload handler (supports modern OIDC presigned uploads & legacy token mode)
+// Vercel Blob OIDC presign endpoint: issueSignedToken -> presignUrl -> browser PUT
 app.post("/api/blob-upload", async (req, res) => {
   const requestId = (req as any).requestId || randomUUID().slice(0, 8);
   const start = Date.now();
-  const body = req.body;
-  const bodyType = body?.type;
+  const rawPathname = req.body?.pathname || req.body?.payload?.pathname || "caption-studio-video.mp4";
+  const pathname = path.basename(rawPathname);
 
   const storeIdConfigured = Boolean(process.env.BLOB_STORE_ID);
   const legacyTokenConfigured = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
-  const webhookKeyConfigured = Boolean(process.env.BLOB_WEBHOOK_PUBLIC_KEY);
   const oidcEnvironmentDetected = Boolean(process.env.VERCEL_OIDC_TOKEN || (process.env.VERCEL && storeIdConfigured));
   const authMode = storeIdConfigured ? "OIDC" : legacyTokenConfigured ? "LEGACY" : "UNKNOWN";
 
-  console.log(`[BLOB] request received requestId=${requestId} path=${req.path} bodyType=${bodyType ?? "unknown"}`);
-  console.log(`[BLOB] storeIdConfigured=${storeIdConfigured} legacyTokenConfigured=${legacyTokenConfigured} webhookKeyConfigured=${webhookKeyConfigured} oidcEnvironmentDetected=${oidcEnvironmentDetected} authMode=${authMode}`);
+  console.log(`[BLOB] request received requestId=${requestId} path=${req.path} pathname=${pathname}`);
+  console.log(`[BLOB] storeIdConfigured=${storeIdConfigured} legacyTokenConfigured=${legacyTokenConfigured} oidcEnvironmentDetected=${oidcEnvironmentDetected} authMode=${authMode}`);
 
   const allowedContentTypes = [
     "video/mp4",
@@ -304,116 +297,37 @@ app.post("/api/blob-upload", async (req, res) => {
   const maximumSizeInBytes = 500 * 1024 * 1024; // 500MB
 
   try {
-    if (bodyType === "blob.generate-presigned-url") {
-      console.log(`[BLOB] handleUploadPresigned started requestId=${requestId}`);
-      const jsonResponse = await handleUploadPresigned({
-        body: body as HandleUploadPresignedBody,
-        request: req as any,
-        getSignedToken: async (pathname, clientPayload, multipart) => {
-          const token = await issueSignedToken({
-            pathname,
-            operations: ["put"],
-            allowedContentTypes,
-            maximumSizeInBytes,
-          });
-          return {
-            token,
-            urlOptions: {
-              addRandomSuffix: true,
-              tokenPayload: JSON.stringify({ pathname, clientPayload, multipart }),
-            },
-          };
-        },
-        onUploadCompleted: async ({ blob, tokenPayload }) => {
-          console.log(`[BLOB UPLOAD COMPLETED] url=${blob.url} payload=${tokenPayload}`);
-        },
-      });
-      const elapsed = Date.now() - start;
-      console.log(`[BLOB] handleUploadPresigned succeeded requestId=${requestId} duration=${elapsed}ms`);
-      res.json(jsonResponse);
-      return;
-    }
+    console.log(`[BLOB] issueSignedToken + presignUrl started requestId=${requestId}`);
+    const signedToken = await issueSignedToken({
+      pathname,
+      operations: ["put"],
+      allowedContentTypes,
+      maximumSizeInBytes,
+    });
 
-    if (bodyType === "blob.generate-client-token") {
-      if (legacyTokenConfigured) {
-        console.log(`[BLOB] handleUpload started (legacy token mode) requestId=${requestId}`);
-        const jsonResponse = await handleUpload({
-          body: body as HandleUploadBody,
-          request: req as any,
-          onBeforeGenerateToken: async (pathname, clientPayload, multipart) => {
-            return {
-              allowedContentTypes,
-              maximumSizeInBytes,
-              addRandomSuffix: true,
-              tokenPayload: JSON.stringify({ pathname, clientPayload, multipart }),
-            };
-          },
-          onUploadCompleted: async ({ blob, tokenPayload }) => {
-            console.log(`[BLOB UPLOAD COMPLETED] url=${blob.url} payload=${tokenPayload}`);
-          },
-        });
-        const elapsed = Date.now() - start;
-        console.log(`[BLOB] handleUpload succeeded requestId=${requestId} duration=${elapsed}ms`);
-        res.json(jsonResponse);
-        return;
-      }
+    const { presignedUrl } = await presignUrl(signedToken, {
+      operation: "put",
+      pathname,
+      access: "public",
+      addRandomSuffix: true,
+    });
 
-      const elapsed = Date.now() - start;
-      console.warn(`[BLOB] handleUpload legacy client-token requested without BLOB_READ_WRITE_TOKEN requestId=${requestId} duration=${elapsed}ms (OIDC store detected=${storeIdConfigured})`);
-      res.status(400).json({
-        ok: false,
-        error: "Legacy client-token requested but store is configured with OIDC. Use uploadPresigned.",
-        requestId,
-        authMode,
-      });
-      return;
-    }
-
-    if (bodyType === "blob.upload-completed") {
-      console.log(`[BLOB] handleUpload upload-completed callback received requestId=${requestId}`);
-      if (webhookKeyConfigured) {
-        const jsonResponse = await handleUploadPresigned({
-          body: body as HandleUploadPresignedBody,
-          request: req as any,
-          getSignedToken: async () => {
-            throw new Error("getSignedToken should not be called for upload-completed event");
-          },
-          onUploadCompleted: async ({ blob, tokenPayload }) => {
-            console.log(`[BLOB UPLOAD COMPLETED] url=${blob.url} payload=${tokenPayload}`);
-          },
-        });
-        res.json(jsonResponse);
-        return;
-      } else if (legacyTokenConfigured) {
-        const jsonResponse = await handleUpload({
-          body: body as HandleUploadBody,
-          request: req as any,
-          onBeforeGenerateToken: async () => {
-            throw new Error("onBeforeGenerateToken should not be called for upload-completed event");
-          },
-          onUploadCompleted: async ({ blob, tokenPayload }) => {
-            console.log(`[BLOB UPLOAD COMPLETED] url=${blob.url} payload=${tokenPayload}`);
-          },
-        });
-        res.json(jsonResponse);
-        return;
-      }
-    }
-
-    res.status(400).json({
-      ok: false,
-      error: `Unsupported blob event type: ${bodyType ?? "unknown"}`,
-      requestId,
+    const elapsed = Date.now() - start;
+    console.log(`[BLOB] presignedUrl generated requestId=${requestId} duration=${elapsed}ms`);
+    res.json({
+      ok: true,
+      presignedUrl,
+      pathname,
     });
   } catch (error) {
     const elapsed = Date.now() - start;
     const err = error as any;
-    console.error(`[BLOB] handleUpload failed requestId=${requestId} duration=${elapsed}ms errorName=${err?.name || "Error"} errorMessage="${err?.message || "Unknown error"}" status=${err?.status || 500}`);
+    console.error(`[BLOB] presignUrl failed requestId=${requestId} duration=${elapsed}ms errorName=${err?.name || "Error"} errorMessage="${err?.message || "Unknown error"}" status=${err?.status || 500}`);
     res.status(err?.status || 500).json({
       ok: false,
-      error: "Blob upload processing failed",
+      error: "Blob upload presign failed",
       requestId,
-      message: err?.message || "Failed to process blob upload request",
+      message: err?.message || "Failed to generate presigned upload URL",
     });
   }
 });
